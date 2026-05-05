@@ -1,7 +1,9 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv("/root/rab9/.env")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_GROUP_ID = os.getenv("TELEGRAM_GROUP_ID")
@@ -12,8 +14,9 @@ ARKHAM_API_KEY = os.getenv("ARKHAM_API_KEY")
 DEXSCREENER_BASE_URL = os.getenv("DEXSCREENER_BASE_URL", "https://api.dexscreener.com")
 XAI_BASE_URL = os.getenv("XAI_BASE_URL", "https://api.x.ai")
 
-WATCHLIST_PATH = "/root/rab9/watchlist.json"
-ALERT_STATE_PATH = "/root/rab9/alert_state.json"
+WATCHLIST_PATH = os.path.join(BASE_DIR, "watchlist.json")
+ALERT_STATE_PATH = os.path.join(BASE_DIR, "alert_state.json")
+WALLET_WATCHLIST_PATH = os.path.join(BASE_DIR, "wallet_watchlist.json")
 
 ALERT_INTERVAL_SECONDS = int(os.getenv("ALERT_INTERVAL_SECONDS", "3600"))
 ALERT_COOLDOWN_SECONDS = int(os.getenv("ALERT_COOLDOWN_SECONDS", "3600"))

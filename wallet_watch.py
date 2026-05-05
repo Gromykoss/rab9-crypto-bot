@@ -1,11 +1,9 @@
 import os
 import json
 
+from config import WALLET_WATCHLIST_PATH
 from utils import utc_now_text
 from arkham import get_address_intelligence_all, format_usage
-
-
-WALLET_WATCHLIST_PATH = "/root/rab9/wallet_watchlist.json"
 
 
 def wallet_key(address: str):
