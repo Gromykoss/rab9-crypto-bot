@@ -1,0 +1,13 @@
+.env
+venv/
+__pycache__/
+*.pyc
+*.log
+
+watchlist.json
+alert_state.json
+wallet_watchlist.json
+
+*_backup_*.py
+*_before_*.py
+rab9_arkham_monolith_backup_*.py
