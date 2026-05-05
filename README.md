@@ -1,0 +1,184 @@
+# RAB9 Crypto Intel Bot
+
+RAB9 is a Telegram crypto-intel bot for a locked Telegram group. It scans fresh Dexscreener profiles, scores token pairs, builds Grok/xAI-assisted token analysis, keeps token and wallet watchlists, and sends alert messages when watched token metrics change enough to matter.
+
+The bot runs with Telegram polling from `rab9_arkham.py`. Runtime state is stored as JSON files in the project directory.
+
+## What The Bot Does
+
+- Scans Dexscreener latest profiles in four modes: micro, degen, normal, and hot.
+- Scores token pairs by market cap, liquidity, volume, buy/sell pressure, age, and risk flags.
+- Builds token intel reports with Dexscreener data and a Grok decision layer.
+- Tracks a token watchlist and compares current metrics against first snapshots.
+- Tracks a wallet watchlist using Arkham address intelligence.
+- Checks Arkham API status, token intel, and wallet/address intel.
+- Runs a background alert loop after startup and can also check alerts manually.
+- Rejects commands outside the configured `TELEGRAM_GROUP_ID`.
+
+## Commands
+
+Core:
+
+- `/start` - show bot overview and basic command hints.
+- `/menu` - show inline action menu.
+- `/status` - check Telegram config, API keys, Dexscreener, watchlist count, and time.
+
+Scanners:
+
+- `/micro` - scan low market-cap tokens, roughly `$20K-$100K`.
+- `/degen` - scan degen range, roughly `$100K-$2M`.
+- `/scan` - normal scan, roughly `$2M-$15M`.
+- `/hot` - scan for short-term volume and price impulse.
+
+Token intel:
+
+- `/token solana ADDRESS` - analyze a token pair through Dexscreener metrics and Grok.
+- Sending a Solana or EVM address as plain text can trigger token-analysis flow through handlers.
+- `/grok TEXT` - ask Grok for a short crypto-intel answer.
+- `/morning` - generate a morning crypto-intel checklist.
+- `/evening` - generate an evening crypto-intel checklist.
+
+Token watchlist:
+
+- `/watch solana ADDRESS note` - add or update a token watch item.
+- `/watchlist` - show watched tokens and first snapshots.
+- `/checkwatch` - compare watched tokens against current Dexscreener data.
+- `/refreshwatch` - refresh watchlist snapshots.
+- `/unwatch ADDRESS` - remove a token from watchlist.
+- `/alertsnow` - run the alert check immediately.
+
+Arkham and wallets:
+
+- `/arkhamstatus` - check Arkham API availability and usage headers.
+- `/arktoken ADDRESS` - check Arkham token intel on Solana by default.
+- `/arktoken solana ADDRESS` - check Arkham token intel for an explicit chain.
+- `/wallet ADDRESS` - check Arkham wallet/address intelligence.
+- `/watchwallet ADDRESS note` - add or update a wallet watch item.
+- `/walletlist` - show wallet watchlist.
+- `/checkwallets` - refresh wallet snapshots through Arkham.
+- `/unwatchwallet ADDRESS_OR_NUMBER` - remove a wallet by address or list number.
+
+## Module Structure
+
+- `rab9_arkham.py` - application entry point, logging setup, Telegram polling, handler registration.
+- `config.py` - `.env` loading, API keys, base URLs, runtime JSON paths, scan thresholds.
+- `handlers.py` - Telegram command handlers, callback handlers, group lock, long-message splitting.
+- `alerts.py` - background alert loop, alert classification, cooldowns, alert state persistence.
+- `dex.py` - Dexscreener HTTP client helpers and best-pair selection.
+- `scanner.py` - `/micro`, `/degen`, `/scan`, and `/hot` scan builders.
+- `scoring.py` - score/risk calculations for token pair metrics.
+- `token_intel.py` - token intel report and Grok/xAI request logic.
+- `watchlist.py` - token watchlist load/save, snapshots, comparisons, formatting.
+- `wallet_watch.py` - wallet watchlist load/save, Arkham wallet snapshots, formatting.
+- `arkham.py` - Arkham API helpers for status, token intel, and wallet/address intel.
+- `keyboards.py` - Telegram reply and inline keyboards.
+- `utils.py` - formatting, parsing, time, and message chunk utilities.
+- `requirements.txt` - Python package dependencies.
+- `.env.example` - template for required environment variables.
+
+## Run Locally
+
+Use Python 3.12 or a compatible modern Python 3 version.
+
+```powershell
+cd C:\path\to\rab9-crypto-bot
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+Edit `.env` locally and set:
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_GROUP_ID`
+- `XAI_API_KEY`
+- `ARKHAM_API_KEY`
+- optional `DEXSCREENER_BASE_URL`
+- optional `XAI_BASE_URL`
+- optional `ALERT_INTERVAL_SECONDS`
+- optional `ALERT_COOLDOWN_SECONDS`
+
+Start the bot:
+
+```powershell
+python rab9_arkham.py
+```
+
+The bot uses long polling. Keep the process running while testing.
+
+## Deploy To VPS
+
+Example Ubuntu deployment:
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv git
+git clone https://github.com/Gromykoss/rab9-crypto-bot.git
+cd rab9-crypto-bot
+python3 -m venv venv
+./venv/bin/pip install -r requirements.txt
+cp .env.example .env
+nano .env
+```
+
+Create a systemd service:
+
+```ini
+[Unit]
+Description=RAB9 Crypto Intel Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/rab9-crypto-bot
+ExecStart=/opt/rab9-crypto-bot/venv/bin/python /opt/rab9-crypto-bot/rab9_arkham.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Adjust paths if the repo is not in `/opt/rab9-crypto-bot`, then enable it:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable rab9
+sudo systemctl start rab9
+sudo systemctl status rab9
+```
+
+View logs:
+
+```bash
+journalctl -u rab9 -f
+```
+
+## Do Not Commit
+
+Keep these local-only:
+
+- `.env`
+- `venv/`
+- `__pycache__/`
+- `*.pyc`
+- `*.log`
+- `*.save`
+- `rab9_bot.py`
+- `watchlist.json`
+- `alert_state.json`
+- `wallet_watchlist.json`
+- backup files matching `*_backup_*.py`, `*_before_*.py`, or `rab9_arkham_monolith_backup_*.py`
+
+## Troubleshooting
+
+- Bot exits with `Missing required env variable: TELEGRAM_BOT_TOKEN`: create `.env` in the project folder and set the bot token.
+- Commands reply with group-lock error: set `TELEGRAM_GROUP_ID` to the exact Telegram group chat id.
+- `/status` shows Dexscreener error: check VPS networking and Dexscreener availability.
+- Grok commands say API key is missing: set `XAI_API_KEY` and restart the bot.
+- Arkham commands say API key is missing or return errors: set `ARKHAM_API_KEY`, check quota, then retry `/arkhamstatus`.
+- Watchlist or alert data is missing after moving the project: copy `watchlist.json`, `alert_state.json`, and `wallet_watchlist.json` into the project directory.
+- Alerts do not appear immediately after startup: the background alert loop waits briefly, then runs every `ALERT_INTERVAL_SECONDS`; use `/alertsnow` for a manual check.
+- `ModuleNotFoundError`: activate the venv and run `pip install -r requirements.txt`.

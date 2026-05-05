@@ -1,0 +1,274 @@
+# RAB9 Field Testing
+
+This guide is for testers validating the bot in the allowed Telegram group. Do not paste private keys, seed phrases, exchange API keys, or unreleased contract addresses into chat.
+
+## Before Testing
+
+1. Confirm the bot process is running.
+2. Run `/status`.
+3. Check that Dexscreener is online.
+4. Check whether Grok and Arkham keys are loaded if those features are in scope.
+5. Use only the Telegram group configured in `TELEGRAM_GROUP_ID`.
+
+Record for each test:
+
+- command sent;
+- timestamp;
+- whether the bot replied;
+- whether the reply was split cleanly if long;
+- any error text;
+- candidate token or wallet used.
+
+## Scanner Tests
+
+### `/micro`
+
+Run:
+
+```text
+/micro
+```
+
+Expected:
+
+- bot first says it is starting Micro scan;
+- final response contains `RAB9 Scan Micro`;
+- response shows filters, checked pairs, passed count, and rejected/no-data count;
+- if candidates exist, each has chain, DEX, MC, liquidity, volume, score, risk, analyze command, watch command, and Dexscreener URL;
+- if no candidates pass, empty-result text is acceptable.
+
+### `/degen`
+
+Run:
+
+```text
+/degen
+```
+
+Expected:
+
+- bot first says it is starting Degen scan;
+- final response contains `RAB9 Scan Degen`;
+- market-cap filter is the degen range;
+- candidate blocks include `/token` and `/watch` follow-up commands.
+
+### `/scan`
+
+Run:
+
+```text
+/scan
+```
+
+Expected:
+
+- bot first says it is starting Normal scan;
+- final response contains `RAB9 Scan Normal`;
+- candidates, if any, are sorted toward stronger score/volume/liquidity;
+- no crash when Dexscreener returns no suitable pairs.
+
+### `/hot`
+
+Run:
+
+```text
+/hot
+```
+
+Expected:
+
+- bot first says it is starting Hot Scan;
+- final response contains `RAB9 Hot Scan`;
+- response shows 1h volume, 1h price change, sell/buy pressure, score, risk, and hot reason;
+- no candidates is acceptable when the market has no current impulse.
+
+## Token Intel
+
+Use an address from a scanner result.
+
+Run:
+
+```text
+/token solana TOKEN_ADDRESS
+```
+
+Expected:
+
+- bot acknowledges analysis may take a few seconds;
+- response includes token identity, chain, DEX, price/MC/liquidity/volume metrics, score, risk, and decision layer;
+- response does not claim missing data such as holders, audits, smart-money flow, or high/low unless present;
+- if Grok/xAI is unavailable, the error should be visible and the bot should stay alive.
+
+Negative test:
+
+```text
+/token
+```
+
+Expected:
+
+- bot returns usage format instead of crashing.
+
+## Token Watchlist
+
+Use a token address from `/micro`, `/degen`, `/scan`, `/hot`, or `/token`.
+
+Add:
+
+```text
+/watch solana TOKEN_ADDRESS field test
+```
+
+Expected:
+
+- bot says it added or updated the item;
+- chain, address, and note are shown.
+
+List:
+
+```text
+/watchlist
+```
+
+Expected:
+
+- item appears with first snapshot data if Dexscreener had data;
+- output includes analyze and remove hints.
+
+Check:
+
+```text
+/checkwatch
+```
+
+Expected:
+
+- bot compares current metrics against first snapshot;
+- output includes since-added deltas and current risk/signal fields;
+- invalid or no-data entries should report status, not crash.
+
+Refresh:
+
+```text
+/refreshwatch
+```
+
+Expected:
+
+- bot reports updated and failed counts.
+
+Remove:
+
+```text
+/unwatch TOKEN_ADDRESS
+```
+
+Expected:
+
+- bot reports removed count;
+- `/watchlist` no longer shows the item.
+
+## Walletlist
+
+Use a public wallet/address suitable for Arkham lookup.
+
+Check one wallet:
+
+```text
+/wallet WALLET_ADDRESS
+```
+
+Expected:
+
+- bot acknowledges Arkham wallet/address intel check;
+- response includes chain rows, label/entity if available, checked time, and usage info;
+- if Arkham has no data, bot returns a clear no-data or request-failed message.
+
+Add:
+
+```text
+/watchwallet WALLET_ADDRESS field test
+```
+
+Expected:
+
+- bot says it added or updated the wallet;
+- address and note are shown.
+
+List:
+
+```text
+/walletlist
+```
+
+Expected:
+
+- wallet appears with note, first chain/label/entity when available, added time, check command, and remove command.
+
+Check all wallets:
+
+```text
+/checkwallets
+```
+
+Expected:
+
+- bot refreshes each wallet snapshot;
+- output shows updated and failed counts;
+- Arkham failures are reported without stopping the bot.
+
+Remove:
+
+```text
+/unwatchwallet WALLET_ADDRESS
+```
+
+or:
+
+```text
+/unwatchwallet 1
+```
+
+Expected:
+
+- bot removes the wallet by address or list number.
+
+## Alerts
+
+Alerts use token watchlist data and `alert_state.json`.
+
+Manual check:
+
+```text
+/alertsnow
+```
+
+Expected:
+
+- if there are no watched tokens, or no triggers, bot reports no new alert triggers;
+- if triggers exist, alert blocks include severity title, token, chain, address, note, metrics, trigger list, analyze command, and URL;
+- running the command again quickly may suppress repeated alerts because of cooldown/fingerprint logic.
+
+Background check:
+
+1. Ensure at least one token is in `/watchlist`.
+2. Confirm `ALERT_INTERVAL_SECONDS` and `ALERT_COOLDOWN_SECONDS` in `.env`.
+3. Restart the bot.
+4. Wait for the startup delay and one interval.
+
+Expected:
+
+- alert loop starts without crashing;
+- alerts are sent to `TELEGRAM_GROUP_ID` only when watched metrics cross trigger thresholds;
+- no alert is acceptable if metrics are stable.
+
+## Failure Cases To Capture
+
+- Telegram command returns no reply after 60 seconds.
+- Bot process exits or stops polling.
+- Long message is cut mid-section without follow-up chunks.
+- Scanner result has missing analyze/watch commands.
+- `/token` invents unavailable data.
+- Watchlist JSON becomes invalid or loses existing items.
+- Alert repeats the same fingerprint within cooldown unexpectedly.
+- Commands work outside the allowed group.
