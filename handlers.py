@@ -258,16 +258,25 @@ async def wallettx_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "Формат:\n/wallettx WALLET TOKEN",
+            "Формат:\n/wallettx WALLET TOKEN\n/wallettx WALLET TOKEN 25",
             reply_markup=main_reply_keyboard(),
         )
         return
 
     wallet = context.args[0].strip()
     token = context.args[1].strip()
+    limit = 25
 
-    await update.message.reply_text(f"Проверяю Arkham transfers: {wallet} / {token}")
-    text = await asyncio.to_thread(build_wallet_tx_text, wallet, token)
+    if len(context.args) > 2:
+        try:
+            limit = int(context.args[2])
+        except ValueError:
+            limit = 25
+
+    limit = min(max(limit, 1), 50)
+
+    await update.message.reply_text(f"Проверяю Arkham transfers: {wallet} / {token} / limit {limit}")
+    text = await asyncio.to_thread(build_wallet_tx_text, wallet, token, limit)
     await reply_long(update, text, main_reply_keyboard())
 
 

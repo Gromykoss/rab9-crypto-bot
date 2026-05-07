@@ -83,7 +83,8 @@ def get_token_top_flow(chain: str, address: str, time_last="24h"):
     return arkham_get(f"/token/top_flow/{safe_chain}/{safe_address}?timeLast={safe_time_last}")
 
 
-def get_wallet_token_transfers(wallet: str, token: str, chain="solana", limit=5):
+def get_wallet_token_transfers(wallet: str, token: str, chain="solana", limit=25):
+    safe_limit = min(max(int(limit), 1), 50)
     params = {
         "base": wallet,
         "chains": chain,
@@ -91,7 +92,7 @@ def get_wallet_token_transfers(wallet: str, token: str, chain="solana", limit=5)
         "tokens": token,
         "sortKey": "time",
         "sortDir": "desc",
-        "limit": str(limit),
+        "limit": str(safe_limit),
         "offset": "0",
     }
     endpoint = f"/transfers?{urlencode(params)}"
@@ -188,36 +189,50 @@ def extract_transfer_items(data):
 
 
 def transfer_direction(item: dict, wallet: str):
-    direction = pick_first(item, ["direction", "flow", "type"])
-
-    if direction:
-        return direction
-
     from_address = str(pick_nested(item, ["from", "fromAddress", "from_address"]) or "").lower()
     to_address = str(pick_nested(item, ["to", "toAddress", "to_address"]) or "").lower()
     wallet_lower = wallet.lower()
 
-    if from_address == wallet_lower and to_address == wallet_lower:
-        return "self"
+    if to_address == wallet_lower:
+        return "Token IN / possible buy"
 
     if from_address == wallet_lower:
-        return "out"
+        return "Token OUT / possible sell"
 
-    if to_address == wallet_lower:
-        return "in"
+    return "Other transfer"
 
-    return "n/a"
+
+def transfer_counterparty(item: dict, wallet: str):
+    direction = transfer_direction(item, wallet)
+
+    if direction == "Token IN / possible buy":
+        return pick_nested(item, ["from", "fromAddress", "from_address", "fromLabel"])
+
+    if direction == "Token OUT / possible sell":
+        return pick_nested(item, ["to", "toAddress", "to_address", "toLabel"])
+
+    return None
+
+
+def transfer_timestamp(item: dict):
+    return pick_first(item, ["timestamp", "time", "blockTimestamp", "block_time", "datetime"])
 
 
 def format_wallet_transfer_item(item, wallet: str):
     if not isinstance(item, dict):
         return f"Raw: {format_compact_value(item)}"
 
+    from_owner = pick_first(item, ["fromAddressOwner", "fromOwner", "from_address_owner"])
+    to_owner = pick_first(item, ["toAddressOwner", "toOwner", "to_address_owner"])
+
     fields = [
-        ("timestamp", pick_first(item, ["timestamp", "time", "blockTimestamp", "block_time", "datetime"])),
+        ("timestamp", transfer_timestamp(item)),
         ("direction", transfer_direction(item, wallet)),
+        ("counterparty", transfer_counterparty(item, wallet)),
         ("from", pick_nested(item, ["from", "fromAddress", "from_address", "fromLabel"])),
+        ("fromAddressOwner", from_owner),
         ("to", pick_nested(item, ["to", "toAddress", "to_address", "toLabel"])),
+        ("toAddressOwner", to_owner),
         ("token", pick_nested(item, ["token", "tokenAddress", "token_address", "tokenId", "asset"])),
         ("amount", pick_first(item, ["amount", "value", "tokenAmount", "quantity"])),
         ("usdValue", pick_first(item, ["usdValue", "usd", "historicalUsd", "usd_value"])),
@@ -241,6 +256,43 @@ def format_wallet_transfer_item(item, wallet: str):
             lines.append(f"rawKeys: {raw_keys}")
 
     return "\n".join(lines) if lines else "Event: n/a"
+
+
+def summarize_wallet_transfer_items(items: list, wallet: str):
+    token_in_count = 0
+    token_out_count = 0
+    timestamps = []
+    counterparties = set()
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+
+        direction = transfer_direction(item, wallet)
+
+        if direction == "Token IN / possible buy":
+            token_in_count += 1
+        elif direction == "Token OUT / possible sell":
+            token_out_count += 1
+
+        timestamp = transfer_timestamp(item)
+        if timestamp is not None:
+            timestamps.append(str(timestamp))
+
+        counterparty = transfer_counterparty(item, wallet)
+        if counterparty:
+            counterparties.add(str(counterparty))
+
+    sorted_times = sorted(timestamps)
+
+    return {
+        "total": len(items),
+        "token_in": token_in_count,
+        "token_out": token_out_count,
+        "first_time": sorted_times[0] if sorted_times else "n/a",
+        "last_time": sorted_times[-1] if sorted_times else "n/a",
+        "unique_counterparties": len(counterparties),
+    }
 
 
 def format_flow_snapshot(snapshot: dict):
@@ -761,8 +813,9 @@ def build_token_flow_text(chain: str, address: str, time_last="24h"):
     return "\n".join(lines)
 
 
-def build_wallet_tx_text(wallet: str, token: str):
-    result = get_wallet_token_transfers(wallet, token)
+def build_wallet_tx_text(wallet: str, token: str, limit=25):
+    safe_limit = min(max(int(limit), 1), 50)
+    result = get_wallet_token_transfers(wallet, token, limit=safe_limit)
     endpoint = result.get("endpoint") or "/transfers"
     title = "🧪 Arkham Wallet Token Transfers Diagnostic"
 
@@ -787,6 +840,7 @@ def build_wallet_tx_text(wallet: str, token: str):
         f"Status: ok ({result.get('status_code')})",
         format_usage(result.get("usage") or {}),
         f"Items found: {len(items)}",
+        f"Limit: {safe_limit}",
         "",
     ]
 
@@ -799,9 +853,23 @@ def build_wallet_tx_text(wallet: str, token: str):
         )
         return "\n".join(lines)
 
-    lines.append("First 5 events:")
+    summary = summarize_wallet_transfer_items(items, wallet)
 
-    for idx, item in enumerate(items[:5], start=1):
+    lines.extend(
+        [
+            "Summary:",
+            f"- Total events returned: {summary['total']}",
+            f"- Token IN count: {summary['token_in']}",
+            f"- Token OUT count: {summary['token_out']}",
+            f"- First event time: {summary['first_time']}",
+            f"- Last event time: {summary['last_time']}",
+            f"- Unique counterparties count: {summary['unique_counterparties']}",
+            "",
+            f"First {len(items)} events:",
+        ]
+    )
+
+    for idx, item in enumerate(items, start=1):
         lines.extend(["", f"#{idx}", format_wallet_transfer_item(item, wallet)])
 
     return "\n".join(lines)
