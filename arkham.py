@@ -70,15 +70,17 @@ def get_address_intelligence_all(address: str):
     return arkham_get(f"/intelligence/address/{address}/all")
 
 
-def get_address_flow(address: str):
+def get_address_flow(address: str, time_last="24h"):
     safe_address = quote(address, safe="")
-    return arkham_get(f"/flow/address/{safe_address}")
+    safe_time_last = quote(time_last, safe="")
+    return arkham_get(f"/flow/address/{safe_address}?timeLast={safe_time_last}")
 
 
-def get_token_top_flow(chain: str, address: str):
+def get_token_top_flow(chain: str, address: str, time_last="24h"):
     safe_chain = quote(chain, safe="")
     safe_address = quote(address, safe="")
-    return arkham_get(f"/token/top_flow/{safe_chain}/{safe_address}")
+    safe_time_last = quote(time_last, safe="")
+    return arkham_get(f"/token/top_flow/{safe_chain}/{safe_address}?timeLast={safe_time_last}")
 
 
 def format_usage(usage: dict):
@@ -329,12 +331,13 @@ def build_ark_token_text(chain: str, address: str):
     return "\n".join(lines)
 
 
-def build_wallet_flow_text(address: str):
-    result = get_address_flow(address)
+def build_wallet_flow_text(address: str, time_last="24h"):
+    result = get_address_flow(address, time_last)
 
     title = "🌊 Arkham Wallet Flow"
     context = [
         f"Address: {address}",
+        f"TimeLast: {time_last}",
         "Endpoint: /flow/address/{address}",
         "",
     ]
@@ -348,6 +351,7 @@ def build_wallet_flow_text(address: str):
         title,
         "",
         f"Address: {address}",
+        f"TimeLast: {time_last}",
         "Endpoint: /flow/address/{address}",
         "",
         format_flow_collection(data, format_flow_snapshot),
@@ -358,13 +362,14 @@ def build_wallet_flow_text(address: str):
     return "\n".join(lines)
 
 
-def build_token_flow_text(chain: str, address: str):
-    result = get_token_top_flow(chain, address)
+def build_token_flow_text(chain: str, address: str, time_last="24h"):
+    result = get_token_top_flow(chain, address, time_last)
 
     title = "🌊 Arkham Token Top Flow"
     context = [
         f"Chain: {chain}",
         f"Address: {address}",
+        f"TimeLast: {time_last}",
         "Endpoint: /token/top_flow/{chain}/{address}",
         "",
     ]
@@ -379,6 +384,7 @@ def build_token_flow_text(chain: str, address: str):
         "",
         f"Chain: {chain}",
         f"Address: {address}",
+        f"TimeLast: {time_last}",
         "Endpoint: /token/top_flow/{chain}/{address}",
         "",
         format_flow_collection(data, format_generic_flow_record),
