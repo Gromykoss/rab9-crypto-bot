@@ -214,8 +214,9 @@ Expected:
 - bot acknowledges Arkham token top-flow check;
 - response includes chain, token address, endpoint name, top-flow rows or no-data text, and Arkham usage;
 - response says `Total items from Arkham: N` or `Total items from Arkham: n/a`;
-- response says `Enriched: first 5 addresses only`;
-- first 5 flow addresses are enriched with Arkham label/entity data when available;
+- response says `Enriched: first 10 addresses only`;
+- first 10 flow addresses are enriched with Arkham label/entity data when available;
+- enrichment makes up to 10 additional Arkham address lookups per `/tokenflow` call, so this command stays manual;
 - enriched rows include `Type:` and `Action:` classification fields;
 - Jupiter/DEX/router/exchange-style infrastructure is classified as `Infrastructure / Ignore` and is not treated as a smart-money wallet;
 - `Program / Ignore` and `Infrastructure / Ignore` rows include `/wallet ADDRESS` but do not include `/watchwallet`;

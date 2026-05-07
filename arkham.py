@@ -273,7 +273,7 @@ def get_top_flow_list(data):
     return None
 
 
-def extract_top_flow_items(data, max_items=5):
+def extract_top_flow_items(data, max_items=10):
     items = get_top_flow_list(data)
     return items[:max_items] if items is not None else []
 
@@ -419,7 +419,7 @@ def format_token_flow_record(record, chain: str, token_address: str):
     return "\n".join(lines), summary_key
 
 
-def format_enriched_token_flow(data, chain: str, token_address: str, max_items=5):
+def format_enriched_token_flow(data, chain: str, token_address: str, max_items=10):
     items = extract_top_flow_items(data, max_items)
     total_items = get_top_flow_total(data)
     total_text = str(total_items) if total_items is not None else "n/a"
@@ -434,7 +434,7 @@ def format_enriched_token_flow(data, chain: str, token_address: str, max_items=5
         return "\n".join(
             [
                 f"Total items from Arkham: {total_text}",
-                "Enriched: first 5 addresses only",
+                "Enriched: first 10 addresses only",
                 "",
                 "No flow data returned.",
                 "",
@@ -448,7 +448,7 @@ def format_enriched_token_flow(data, chain: str, token_address: str, max_items=5
 
     sections = [
         f"Total items from Arkham: {total_text}",
-        "Enriched: first 5 addresses only",
+        "Enriched: first 10 addresses only",
     ]
 
     for idx, item in enumerate(items, start=1):
