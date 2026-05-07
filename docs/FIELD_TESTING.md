@@ -229,16 +229,22 @@ Check manual wallet/token transfer diagnostics:
 
 ```text
 /wallettx WALLET_ADDRESS TOKEN_ADDRESS
+/wallettx WALLET_ADDRESS TOKEN_ADDRESS 25
+/wallettx WALLET_ADDRESS TOKEN_ADDRESS 50
 ```
 
 Expected:
 
 - bot acknowledges Arkham transfers diagnostics;
-- response includes `/transfers` endpoint, status, Arkham usage, and item count;
-- response shows first 5 raw/normalized events when available;
+- default limit is 25, requested limits above 50 are capped at 50;
+- response includes `/transfers` endpoint, status, Arkham usage, item count, and limit;
+- response includes summary lines for total events returned, token IN count, token OUT count, first event time, last event time, and unique counterparties count;
+- event rows classify direction as `Token IN / possible buy`, `Token OUT / possible sell`, or `Other transfer`;
+- event rows include counterparty, fromAddressOwner, and toAddressOwner when Arkham returns those fields;
 - event rows include timestamp, direction, from, to, token, amount, usdValue, and txHash when Arkham returns those fields;
 - if Arkham returns no data or needs different parameters, response shows a readable no-data or error message;
 - command does not recommend entry/exit decisions;
+- command does not calculate profit or exit quality;
 - command does not add anything to watchlist and does not create background monitoring.
 
 Add:
