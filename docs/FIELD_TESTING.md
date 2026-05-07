@@ -184,6 +184,32 @@ Expected:
 - response includes chain rows, label/entity if available, checked time, and usage info;
 - if Arkham has no data, bot returns a clear no-data or request-failed message.
 
+Check manual wallet flow:
+
+```text
+/walletflow WALLET_ADDRESS
+```
+
+Expected:
+
+- bot acknowledges Arkham wallet flow check;
+- response includes endpoint name, flow rows or no-data text, and Arkham usage;
+- 400/403/404/429/500 responses are shown as readable errors and the bot keeps running;
+- command only runs when typed manually.
+
+Check manual token flow:
+
+```text
+/tokenflow solana TOKEN_ADDRESS
+```
+
+Expected:
+
+- bot acknowledges Arkham token top-flow check;
+- response includes chain, token address, endpoint name, top-flow rows or no-data text, and Arkham usage;
+- endpoint errors are shown with status code and response body instead of crashing;
+- command does not add anything to watchlist and does not create background monitoring.
+
 Add:
 
 ```text

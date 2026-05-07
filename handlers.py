@@ -27,7 +27,13 @@ from watchlist import (
     load_watchlist,
 )
 from alerts import build_watch_alerts_text
-from arkham import build_arkham_status_text, build_ark_token_text, build_wallet_text
+from arkham import (
+    build_arkham_status_text,
+    build_ark_token_text,
+    build_wallet_text,
+    build_wallet_flow_text,
+    build_token_flow_text,
+)
 from wallet_watch import (
     add_wallet_to_watchlist,
     remove_wallet_from_watchlist,
@@ -193,6 +199,43 @@ async def wallet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"Проверяю Arkham wallet/address intel: {address}")
     text = await asyncio.to_thread(build_wallet_text, address)
+    await reply_long(update, text, main_reply_keyboard())
+
+
+async def walletflow_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if await deny_if_wrong_group(update):
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text(
+            "Формат:\n/walletflow ADDRESS",
+            reply_markup=main_reply_keyboard(),
+        )
+        return
+
+    address = context.args[0].strip()
+
+    await update.message.reply_text(f"Проверяю Arkham wallet flow: {address}")
+    text = await asyncio.to_thread(build_wallet_flow_text, address)
+    await reply_long(update, text, main_reply_keyboard())
+
+
+async def tokenflow_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if await deny_if_wrong_group(update):
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Формат:\n/tokenflow chain ADDRESS",
+            reply_markup=main_reply_keyboard(),
+        )
+        return
+
+    chain = context.args[0].strip().lower()
+    address = context.args[1].strip()
+
+    await update.message.reply_text(f"Проверяю Arkham token top flow: {chain} / {address}")
+    text = await asyncio.to_thread(build_token_flow_text, chain, address)
     await reply_long(update, text, main_reply_keyboard())
 
 
@@ -660,6 +703,8 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("arkhamstatus", arkhamstatus_command))
     app.add_handler(CommandHandler("arktoken", arktoken_command))
     app.add_handler(CommandHandler("wallet", wallet_command))
+    app.add_handler(CommandHandler("walletflow", walletflow_command))
+    app.add_handler(CommandHandler("tokenflow", tokenflow_command))
     app.add_handler(CommandHandler("watchwallet", watchwallet_command))
     app.add_handler(CommandHandler("walletlist", walletlist_command))
     app.add_handler(CommandHandler("unwatchwallet", unwatchwallet_command))
