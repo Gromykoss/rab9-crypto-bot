@@ -53,6 +53,8 @@ Arkham and wallets:
 - `/arktoken ADDRESS` - check Arkham token intel on Solana by default.
 - `/arktoken solana ADDRESS` - check Arkham token intel for an explicit chain.
 - `/wallet ADDRESS` - check Arkham wallet/address intelligence.
+- `/walletflow ADDRESS` - manually check Arkham historical USD flow for a wallet/address.
+- `/tokenflow chain ADDRESS` - manually check Arkham top token flow for a token contract.
 - `/watchwallet ADDRESS note` - add or update a wallet watch item.
 - `/walletlist` - show wallet watchlist.
 - `/checkwallets` - refresh wallet snapshots through Arkham.
@@ -70,7 +72,7 @@ Arkham and wallets:
 - `token_intel.py` - token intel report and Grok/xAI request logic.
 - `watchlist.py` - token watchlist load/save, snapshots, comparisons, formatting.
 - `wallet_watch.py` - wallet watchlist load/save, Arkham wallet snapshots, formatting.
-- `arkham.py` - Arkham API helpers for status, token intel, and wallet/address intel.
+- `arkham.py` - Arkham API helpers for status, token intel, wallet/address intel, and manual flow checks.
 - `keyboards.py` - Telegram reply and inline keyboards.
 - `utils.py` - formatting, parsing, time, and message chunk utilities.
 - `requirements.txt` - Python package dependencies.

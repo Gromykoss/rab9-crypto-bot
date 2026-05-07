@@ -1,4 +1,5 @@
 import requests
+from urllib.parse import quote
 
 from config import ARKHAM_API_KEY
 
@@ -34,10 +35,15 @@ def arkham_get(path: str, timeout=20):
             "used": response.headers.get("x-intel-datapoints-usage"),
         }
 
+        try:
+            data = response.json() if response.text else None
+        except ValueError:
+            data = None
+
         return {
             "ok": response.ok,
             "status_code": response.status_code,
-            "data": response.json() if response.text else None,
+            "data": data,
             "text": response.text[:800] if response.text else "",
             "usage": usage,
         }
@@ -64,6 +70,17 @@ def get_address_intelligence_all(address: str):
     return arkham_get(f"/intelligence/address/{address}/all")
 
 
+def get_address_flow(address: str):
+    safe_address = quote(address, safe="")
+    return arkham_get(f"/flow/address/{safe_address}")
+
+
+def get_token_top_flow(chain: str, address: str):
+    safe_chain = quote(chain, safe="")
+    safe_address = quote(address, safe="")
+    return arkham_get(f"/token/top_flow/{safe_chain}/{safe_address}")
+
+
 def format_usage(usage: dict):
     if not usage:
         return "Usage: n/a"
@@ -73,6 +90,152 @@ def format_usage(usage: dict):
     used = usage.get("used") or "n/a"
 
     return f"Usage: used {used}, remaining {remaining}, limit {limit}"
+
+
+def format_arkham_error(title: str, result: dict, lines: list[str]):
+    status = result.get("status_code")
+    status_text = f"error {status}" if status is not None else "error"
+    response = result.get("text") or "No response body."
+
+    return "\n".join(
+        [
+            title,
+            "",
+            *lines,
+            f"Status: {status_text}",
+            f"Response: {response[:500]}",
+            format_usage(result.get("usage") or {}),
+        ]
+    )
+
+
+def format_compact_value(value):
+    if value is None:
+        return "n/a"
+
+    if isinstance(value, float):
+        return f"{value:,.2f}"
+
+    if isinstance(value, int):
+        return f"{value:,}"
+
+    if isinstance(value, dict):
+        for key in ["name", "label", "address", "id", "identifier", "symbol"]:
+            if value.get(key):
+                return str(value.get(key))
+
+        return str(value)[:80]
+
+    if isinstance(value, list):
+        return f"{len(value)} item(s)"
+
+    return str(value)[:80]
+
+
+def pick_first(data: dict, keys: list[str]):
+    for key in keys:
+        if key in data and data.get(key) is not None:
+            return data.get(key)
+
+    return None
+
+
+def format_flow_snapshot(snapshot: dict):
+    fields = [
+        ("Time", ["time", "timestamp", "date"]),
+        ("Inflow USD", ["inflow", "inflowUsd", "inflowUSD", "inflow_usd"]),
+        ("Outflow USD", ["outflow", "outflowUsd", "outflowUSD", "outflow_usd"]),
+        ("Total Inflow", ["totalInflow", "cumulativeInflow", "total_inflow"]),
+        ("Total Outflow", ["totalOutflow", "cumulativeOutflow", "total_outflow"]),
+        ("Net Flow", ["netFlow", "netflow", "net", "flow"]),
+    ]
+
+    lines = []
+
+    for label, keys in fields:
+        value = pick_first(snapshot, keys)
+
+        if value is not None:
+            lines.append(f"{label}: {format_compact_value(value)}")
+
+    if lines:
+        return "\n".join(lines)
+
+    preview = ", ".join(
+        f"{key}: {format_compact_value(value)}"
+        for key, value in list(snapshot.items())[:6]
+    )
+
+    return preview or "Snapshot: n/a"
+
+
+def format_generic_flow_record(record: dict):
+    preferred_keys = [
+        "name",
+        "entity",
+        "entityName",
+        "address",
+        "chain",
+        "symbol",
+        "flow",
+        "flowUsd",
+        "flowUSD",
+        "netFlow",
+        "usd",
+        "value",
+        "volume",
+    ]
+
+    lines = []
+
+    for key in preferred_keys:
+        if key in record and record.get(key) is not None:
+            lines.append(f"{key}: {format_compact_value(record.get(key))}")
+
+    if not lines:
+        lines = [
+            f"{key}: {format_compact_value(value)}"
+            for key, value in list(record.items())[:8]
+        ]
+
+    return "\n".join(lines) if lines else "Record: n/a"
+
+
+def format_flow_collection(data, item_formatter, max_sections=6, max_items=5):
+    if isinstance(data, dict):
+        sections = []
+
+        for key, value in list(data.items())[:max_sections]:
+            if isinstance(value, list):
+                sections.append(f"{key}: {len(value)} item(s)")
+
+                for idx, item in enumerate(value[:max_items], start=1):
+                    if isinstance(item, dict):
+                        sections.append(f"#{idx}\n{item_formatter(item)}")
+                    else:
+                        sections.append(f"#{idx} {format_compact_value(item)}")
+
+                sections.append("")
+            else:
+                sections.append(f"{key}: {format_compact_value(value)}")
+
+        return "\n".join(sections).strip() or "No flow data returned."
+
+    if isinstance(data, list):
+        if not data:
+            return "No flow data returned."
+
+        sections = [f"Items: {len(data)}"]
+
+        for idx, item in enumerate(data[:max_items], start=1):
+            if isinstance(item, dict):
+                sections.append(f"#{idx}\n{item_formatter(item)}")
+            else:
+                sections.append(f"#{idx} {format_compact_value(item)}")
+
+        return "\n\n".join(sections)
+
+    return f"Raw response: {format_compact_value(data)}"
 
 
 def build_arkham_status_text():
@@ -162,6 +325,66 @@ def build_ark_token_text(chain: str, address: str):
                 f"Response: {address_intel['text'][:400]}",
             ]
         )
+
+    return "\n".join(lines)
+
+
+def build_wallet_flow_text(address: str):
+    result = get_address_flow(address)
+
+    title = "🌊 Arkham Wallet Flow"
+    context = [
+        f"Address: {address}",
+        "Endpoint: /flow/address/{address}",
+        "",
+    ]
+
+    if not result["ok"]:
+        return format_arkham_error(title, result, context)
+
+    data = result["data"]
+
+    lines = [
+        title,
+        "",
+        f"Address: {address}",
+        "Endpoint: /flow/address/{address}",
+        "",
+        format_flow_collection(data, format_flow_snapshot),
+        "",
+        format_usage(result.get("usage") or {}),
+    ]
+
+    return "\n".join(lines)
+
+
+def build_token_flow_text(chain: str, address: str):
+    result = get_token_top_flow(chain, address)
+
+    title = "🌊 Arkham Token Top Flow"
+    context = [
+        f"Chain: {chain}",
+        f"Address: {address}",
+        "Endpoint: /token/top_flow/{chain}/{address}",
+        "",
+    ]
+
+    if not result["ok"]:
+        return format_arkham_error(title, result, context)
+
+    data = result["data"]
+
+    lines = [
+        title,
+        "",
+        f"Chain: {chain}",
+        f"Address: {address}",
+        "Endpoint: /token/top_flow/{chain}/{address}",
+        "",
+        format_flow_collection(data, format_generic_flow_record),
+        "",
+        format_usage(result.get("usage") or {}),
+    ]
 
     return "\n".join(lines)
 
