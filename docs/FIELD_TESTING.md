@@ -187,7 +187,7 @@ Expected:
 Check manual wallet flow:
 
 ```text
-/walletflow WALLET_ADDRESS
+/walletflow WALLET_ADDRESS 24h
 ```
 
 Expected:
@@ -200,7 +200,7 @@ Expected:
 Check manual token flow:
 
 ```text
-/tokenflow solana TOKEN_ADDRESS
+/tokenflow solana TOKEN_ADDRESS 7d
 ```
 
 Expected:

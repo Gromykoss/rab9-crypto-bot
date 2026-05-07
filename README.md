@@ -53,8 +53,8 @@ Arkham and wallets:
 - `/arktoken ADDRESS` - check Arkham token intel on Solana by default.
 - `/arktoken solana ADDRESS` - check Arkham token intel for an explicit chain.
 - `/wallet ADDRESS` - check Arkham wallet/address intelligence.
-- `/walletflow ADDRESS` - manually check Arkham historical USD flow for a wallet/address.
-- `/tokenflow chain ADDRESS` - manually check Arkham top token flow for a token contract.
+- `/walletflow ADDRESS 24h` - manually check Arkham historical USD flow for a wallet/address. Period is optional; default is `24h`.
+- `/tokenflow solana ADDRESS 7d` - manually check Arkham top token flow for a token contract. Period is optional; default is `24h`.
 - `/watchwallet ADDRESS note` - add or update a wallet watch item.
 - `/walletlist` - show wallet watchlist.
 - `/checkwallets` - refresh wallet snapshots through Arkham.

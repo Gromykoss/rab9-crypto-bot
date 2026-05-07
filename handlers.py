@@ -45,6 +45,8 @@ logger = logging.getLogger("rab9_crypto_intel_bot")
 
 SOLANA_RE = re.compile(r"\b[1-9A-HJ-NP-Za-km-z]{32,44}\b")
 EVM_RE = re.compile(r"\b0x[a-fA-F0-9]{40}\b")
+ALLOWED_FLOW_PERIODS = {"1h", "6h", "12h", "24h", "7d", "30d"}
+FLOW_PERIOD_HINT = "Допустимый период: 1h, 6h, 12h, 24h, 7d, 30d"
 
 
 def is_allowed_chat_id(chat_id) -> bool:
@@ -214,9 +216,14 @@ async def walletflow_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     address = context.args[0].strip()
+    time_last = context.args[1].strip() if len(context.args) > 1 else "24h"
 
-    await update.message.reply_text(f"Проверяю Arkham wallet flow: {address}")
-    text = await asyncio.to_thread(build_wallet_flow_text, address)
+    if time_last not in ALLOWED_FLOW_PERIODS:
+        await update.message.reply_text(FLOW_PERIOD_HINT, reply_markup=main_reply_keyboard())
+        return
+
+    await update.message.reply_text(f"Проверяю Arkham wallet flow: {address} / {time_last}")
+    text = await asyncio.to_thread(build_wallet_flow_text, address, time_last)
     await reply_long(update, text, main_reply_keyboard())
 
 
@@ -233,9 +240,14 @@ async def tokenflow_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     chain = context.args[0].strip().lower()
     address = context.args[1].strip()
+    time_last = context.args[2].strip() if len(context.args) > 2 else "24h"
 
-    await update.message.reply_text(f"Проверяю Arkham token top flow: {chain} / {address}")
-    text = await asyncio.to_thread(build_token_flow_text, chain, address)
+    if time_last not in ALLOWED_FLOW_PERIODS:
+        await update.message.reply_text(FLOW_PERIOD_HINT, reply_markup=main_reply_keyboard())
+        return
+
+    await update.message.reply_text(f"Проверяю Arkham token top flow: {chain} / {address} / {time_last}")
+    text = await asyncio.to_thread(build_token_flow_text, chain, address, time_last)
     await reply_long(update, text, main_reply_keyboard())
 
 
