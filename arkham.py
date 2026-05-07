@@ -203,6 +203,157 @@ def format_generic_flow_record(record: dict):
     return "\n".join(lines) if lines else "Record: n/a"
 
 
+TOKEN_FLOW_ADDRESS_KEYS = [
+    "address",
+    "fromAddress",
+    "toAddress",
+    "walletAddress",
+    "ownerAddress",
+    "counterpartyAddress",
+]
+
+TOKEN_FLOW_USEFUL_FIELDS = [
+    "amount",
+    "usdValue",
+    "value",
+    "inflow",
+    "outflow",
+    "balanceChange",
+    "direction",
+    "chain",
+    "tokenSymbol",
+]
+
+
+def extract_top_flow_items(data, max_items=5):
+    if isinstance(data, list):
+        return data[:max_items]
+
+    if isinstance(data, dict):
+        preferred_list_keys = [
+            "data",
+            "items",
+            "flows",
+            "topFlow",
+            "topFlows",
+            "addresses",
+            "results",
+        ]
+
+        for key in preferred_list_keys:
+            value = data.get(key)
+            if isinstance(value, list):
+                return value[:max_items]
+
+        for value in data.values():
+            if isinstance(value, list):
+                return value[:max_items]
+
+    return []
+
+
+def get_flow_record_address(record):
+    if isinstance(record, str):
+        return record
+
+    if not isinstance(record, dict):
+        return None
+
+    address = pick_first(record, TOKEN_FLOW_ADDRESS_KEYS)
+
+    if isinstance(address, dict):
+        return pick_first(address, TOKEN_FLOW_ADDRESS_KEYS + ["id"])
+
+    return address
+
+
+def get_chain_intelligence(data, chain: str):
+    if not isinstance(data, dict):
+        return {}
+
+    chain_data = data.get(chain)
+    if isinstance(chain_data, dict):
+        return chain_data
+
+    for value in data.values():
+        if isinstance(value, dict) and any(
+            key in value for key in ["arkhamLabel", "arkhamEntity", "isUserAddress", "program"]
+        ):
+            return value
+
+    return {}
+
+
+def format_token_flow_record(record, chain: str, token_address: str):
+    flow_address = get_flow_record_address(record)
+    flow_address_text = format_compact_value(flow_address) if flow_address else "n/a"
+
+    lines = [f"Address: {flow_address_text}"]
+
+    if isinstance(record, dict):
+        for key in TOKEN_FLOW_USEFUL_FIELDS:
+            if key in record and record.get(key) is not None:
+                lines.append(f"{key}: {format_compact_value(record.get(key))}")
+
+    if flow_address:
+        lookup = get_address_intelligence_all(str(flow_address))
+
+        if lookup["ok"]:
+            chain_data = get_chain_intelligence(lookup.get("data") or {}, chain)
+            label = chain_data.get("arkhamLabel") or {}
+            entity = chain_data.get("arkhamEntity") or {}
+
+            lines.extend(
+                [
+                    f"Arkham Label: {label.get('name', 'n/a')}",
+                    f"Entity: {entity.get('name', 'n/a')}",
+                    f"Is User Address: {chain_data.get('isUserAddress', 'n/a')}",
+                    f"Program: {chain_data.get('program', 'n/a')}",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    "Label: lookup failed",
+                    "Entity: lookup failed",
+                    "Is User Address: n/a",
+                    "Program: n/a",
+                ]
+            )
+    else:
+        lines.extend(
+            [
+                "Label: lookup failed",
+                "Entity: lookup failed",
+                "Is User Address: n/a",
+                "Program: n/a",
+            ]
+        )
+
+    lines.extend(
+        [
+            f"/wallet {flow_address_text}",
+            f"/watchwallet {flow_address_text} tokenflow:{token_address}",
+        ]
+    )
+
+    return "\n".join(lines)
+
+
+def format_enriched_token_flow(data, chain: str, token_address: str, max_items=5):
+    items = extract_top_flow_items(data, max_items)
+
+    if not items:
+        return "No flow data returned."
+
+    sections = [f"Items: {len(items)}"]
+
+    for idx, item in enumerate(items, start=1):
+        sections.append(f"#{idx}\n{format_token_flow_record(item, chain, token_address)}")
+
+    return "\n\n".join(sections)
+
+
 def format_flow_collection(data, item_formatter, max_sections=6, max_items=5):
     if isinstance(data, dict):
         sections = []
@@ -386,8 +537,9 @@ def build_token_flow_text(chain: str, address: str, time_last="24h"):
         f"Address: {address}",
         f"TimeLast: {time_last}",
         "Endpoint: /token/top_flow/{chain}/{address}",
+        "Enriched: first 5 addresses only",
         "",
-        format_flow_collection(data, format_generic_flow_record),
+        format_enriched_token_flow(data, chain, address),
         "",
         format_usage(result.get("usage") or {}),
     ]
