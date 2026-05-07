@@ -224,10 +224,31 @@ TOKEN_FLOW_USEFUL_FIELDS = [
     "tokenSymbol",
 ]
 
+TOKEN_FLOW_INFRASTRUCTURE_TERMS = [
+    "jupiter",
+    "raydium",
+    "meteora",
+    "pump",
+    "pumpswap",
+    "orca",
+    "phoenix",
+    "openbook",
+    "exchange",
+    "dex",
+    "router",
+    "aggregator",
+    "bridge",
+    "binance",
+    "coinbase",
+    "okx",
+    "bybit",
+    "kraken",
+]
 
-def extract_top_flow_items(data, max_items=5):
+
+def get_top_flow_list(data):
     if isinstance(data, list):
-        return data[:max_items]
+        return data
 
     if isinstance(data, dict):
         preferred_list_keys = [
@@ -243,13 +264,23 @@ def extract_top_flow_items(data, max_items=5):
         for key in preferred_list_keys:
             value = data.get(key)
             if isinstance(value, list):
-                return value[:max_items]
+                return value
 
         for value in data.values():
             if isinstance(value, list):
-                return value[:max_items]
+                return value
 
-    return []
+    return None
+
+
+def extract_top_flow_items(data, max_items=5):
+    items = get_top_flow_list(data)
+    return items[:max_items] if items is not None else []
+
+
+def get_top_flow_total(data):
+    items = get_top_flow_list(data)
+    return len(items) if items is not None else None
 
 
 def get_flow_record_address(record):
@@ -284,11 +315,52 @@ def get_chain_intelligence(data, chain: str):
     return {}
 
 
+def entity_name(value):
+    if isinstance(value, dict):
+        return value.get("name") or ""
+
+    return str(value) if value else ""
+
+
+def classify_token_flow_address(label_name: str, entity_name_value: str, program):
+    if program is True:
+        return (
+            "Program / Ignore",
+            "Do not add to smart-wallet watchlist",
+            "programs_ignored",
+        )
+
+    text = f"{label_name} {entity_name_value}".lower()
+
+    if any(term in text for term in TOKEN_FLOW_INFRASTRUCTURE_TERMS):
+        return (
+            "Infrastructure / Ignore",
+            "Do not add to smart-wallet watchlist",
+            "infrastructure_ignored",
+        )
+
+    if label_name or entity_name_value:
+        return (
+            "Known Entity / Review",
+            "Review /wallet first, then optionally /watchwallet",
+            "known_entities",
+        )
+
+    return (
+        "Unknown Candidate / Manual Check",
+        "Check /wallet first, then optionally /watchwallet",
+        "unknown_candidates",
+    )
+
+
 def format_token_flow_record(record, chain: str, token_address: str):
     flow_address = get_flow_record_address(record)
     flow_address_text = format_compact_value(flow_address) if flow_address else "n/a"
 
     lines = [f"Address: {flow_address_text}"]
+    label_text = ""
+    entity_text = ""
+    program = "n/a"
 
     if isinstance(record, dict):
         for key in TOKEN_FLOW_USEFUL_FIELDS:
@@ -302,13 +374,16 @@ def format_token_flow_record(record, chain: str, token_address: str):
             chain_data = get_chain_intelligence(lookup.get("data") or {}, chain)
             label = chain_data.get("arkhamLabel") or {}
             entity = chain_data.get("arkhamEntity") or {}
+            label_text = entity_name(label)
+            entity_text = entity_name(entity)
+            program = chain_data.get("program", "n/a")
 
             lines.extend(
                 [
-                    f"Arkham Label: {label.get('name', 'n/a')}",
-                    f"Entity: {entity.get('name', 'n/a')}",
+                    f"Arkham Label: {label_text or 'n/a'}",
+                    f"Entity: {entity_text or 'n/a'}",
                     f"Is User Address: {chain_data.get('isUserAddress', 'n/a')}",
-                    f"Program: {chain_data.get('program', 'n/a')}",
+                    f"Program: {program}",
                 ]
             )
         else:
@@ -330,26 +405,66 @@ def format_token_flow_record(record, chain: str, token_address: str):
             ]
         )
 
-    lines.extend(
-        [
-            f"/wallet {flow_address_text}",
-            f"/watchwallet {flow_address_text} tokenflow:{token_address}",
-        ]
+    flow_type, action, summary_key = classify_token_flow_address(
+        label_text,
+        entity_text,
+        program,
     )
 
-    return "\n".join(lines)
+    lines.extend([f"Type: {flow_type}", f"Action: {action}", f"/wallet {flow_address_text}"])
+
+    if flow_type in ["Known Entity / Review", "Unknown Candidate / Manual Check"]:
+        lines.append(f"/watchwallet {flow_address_text} tokenflow:{token_address}")
+
+    return "\n".join(lines), summary_key
 
 
 def format_enriched_token_flow(data, chain: str, token_address: str, max_items=5):
     items = extract_top_flow_items(data, max_items)
+    total_items = get_top_flow_total(data)
+    total_text = str(total_items) if total_items is not None else "n/a"
+    summary = {
+        "infrastructure_ignored": 0,
+        "known_entities": 0,
+        "unknown_candidates": 0,
+        "programs_ignored": 0,
+    }
 
     if not items:
-        return "No flow data returned."
+        return "\n".join(
+            [
+                f"Total items from Arkham: {total_text}",
+                "Enriched: first 5 addresses only",
+                "",
+                "No flow data returned.",
+                "",
+                "Summary:",
+                "- Infrastructure ignored: 0",
+                "- Known entities: 0",
+                "- Unknown candidates: 0",
+                "- Programs ignored: 0",
+            ]
+        )
 
-    sections = [f"Items: {len(items)}"]
+    sections = [
+        f"Total items from Arkham: {total_text}",
+        "Enriched: first 5 addresses only",
+    ]
 
     for idx, item in enumerate(items, start=1):
-        sections.append(f"#{idx}\n{format_token_flow_record(item, chain, token_address)}")
+        record_text, summary_key = format_token_flow_record(item, chain, token_address)
+        summary[summary_key] += 1
+        sections.append(f"#{idx}\n{record_text}")
+
+    sections.extend(
+        [
+            "Summary:",
+            f"- Infrastructure ignored: {summary['infrastructure_ignored']}",
+            f"- Known entities: {summary['known_entities']}",
+            f"- Unknown candidates: {summary['unknown_candidates']}",
+            f"- Programs ignored: {summary['programs_ignored']}",
+        ]
+    )
 
     return "\n\n".join(sections)
 
@@ -537,11 +652,9 @@ def build_token_flow_text(chain: str, address: str, time_last="24h"):
         f"Address: {address}",
         f"TimeLast: {time_last}",
         "Endpoint: /token/top_flow/{chain}/{address}",
-        "Enriched: first 5 addresses only",
+        format_usage(result.get("usage") or {}),
         "",
         format_enriched_token_flow(data, chain, address),
-        "",
-        format_usage(result.get("usage") or {}),
     ]
 
     return "\n".join(lines)
