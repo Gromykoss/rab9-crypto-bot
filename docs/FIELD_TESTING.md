@@ -203,10 +203,19 @@ Check manual token flow:
 /tokenflow solana TOKEN_ADDRESS 7d
 ```
 
+Specific smoke test:
+
+```text
+/tokenflow solana CGEDT9QZDvvH5GmVkWJH2BXiMJqMJySC9ihWyr7Spump 7d
+```
+
 Expected:
 
 - bot acknowledges Arkham token top-flow check;
 - response includes chain, token address, endpoint name, top-flow rows or no-data text, and Arkham usage;
+- response says `Enriched: first 5 addresses only`;
+- first 5 flow addresses are enriched with Arkham label/entity data when available;
+- enriched rows include `/wallet ADDRESS` and `/watchwallet ADDRESS tokenflow:TOKEN_ADDRESS` commands;
 - endpoint errors are shown with status code and response body instead of crashing;
 - command does not add anything to watchlist and does not create background monitoring.
 
