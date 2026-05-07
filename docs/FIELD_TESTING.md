@@ -225,6 +225,22 @@ Expected:
 - endpoint errors are shown with status code and response body instead of crashing;
 - command does not add anything to watchlist and does not create background monitoring.
 
+Check manual wallet/token transfer diagnostics:
+
+```text
+/wallettx WALLET_ADDRESS TOKEN_ADDRESS
+```
+
+Expected:
+
+- bot acknowledges Arkham transfers diagnostics;
+- response includes `/transfers` endpoint, status, Arkham usage, and item count;
+- response shows first 5 raw/normalized events when available;
+- event rows include timestamp, direction, from, to, token, amount, usdValue, and txHash when Arkham returns those fields;
+- if Arkham returns no data or needs different parameters, response shows a readable no-data or error message;
+- command does not recommend entry/exit decisions;
+- command does not add anything to watchlist and does not create background monitoring.
+
 Add:
 
 ```text

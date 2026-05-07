@@ -1,5 +1,5 @@
 import requests
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from config import ARKHAM_API_KEY
 
@@ -83,6 +83,23 @@ def get_token_top_flow(chain: str, address: str, time_last="24h"):
     return arkham_get(f"/token/top_flow/{safe_chain}/{safe_address}?timeLast={safe_time_last}")
 
 
+def get_wallet_token_transfers(wallet: str, token: str, chain="solana", limit=5):
+    params = {
+        "base": wallet,
+        "chains": chain,
+        "flow": "all",
+        "tokens": token,
+        "sortKey": "time",
+        "sortDir": "desc",
+        "limit": str(limit),
+        "offset": "0",
+    }
+    endpoint = f"/transfers?{urlencode(params)}"
+    result = arkham_get(endpoint)
+    result["endpoint"] = endpoint
+    return result
+
+
 def format_usage(usage: dict):
     if not usage:
         return "Usage: n/a"
@@ -134,12 +151,96 @@ def format_compact_value(value):
     return str(value)[:80]
 
 
+def pick_nested(data: dict, keys: list[str]):
+    for key in keys:
+        value = data.get(key)
+
+        if isinstance(value, dict):
+            for nested_key in ["address", "id", "hash", "symbol", "name"]:
+                if value.get(nested_key):
+                    return value.get(nested_key)
+
+        if value is not None:
+            return value
+
+    return None
+
+
 def pick_first(data: dict, keys: list[str]):
     for key in keys:
         if key in data and data.get(key) is not None:
             return data.get(key)
 
     return None
+
+
+def extract_transfer_items(data):
+    if isinstance(data, list):
+        return data
+
+    if isinstance(data, dict):
+        for key in ["transfers", "items", "data", "results"]:
+            value = data.get(key)
+            if isinstance(value, list):
+                return value
+
+    return []
+
+
+def transfer_direction(item: dict, wallet: str):
+    direction = pick_first(item, ["direction", "flow", "type"])
+
+    if direction:
+        return direction
+
+    from_address = str(pick_nested(item, ["from", "fromAddress", "from_address"]) or "").lower()
+    to_address = str(pick_nested(item, ["to", "toAddress", "to_address"]) or "").lower()
+    wallet_lower = wallet.lower()
+
+    if from_address == wallet_lower and to_address == wallet_lower:
+        return "self"
+
+    if from_address == wallet_lower:
+        return "out"
+
+    if to_address == wallet_lower:
+        return "in"
+
+    return "n/a"
+
+
+def format_wallet_transfer_item(item, wallet: str):
+    if not isinstance(item, dict):
+        return f"Raw: {format_compact_value(item)}"
+
+    fields = [
+        ("timestamp", pick_first(item, ["timestamp", "time", "blockTimestamp", "block_time", "datetime"])),
+        ("direction", transfer_direction(item, wallet)),
+        ("from", pick_nested(item, ["from", "fromAddress", "from_address", "fromLabel"])),
+        ("to", pick_nested(item, ["to", "toAddress", "to_address", "toLabel"])),
+        ("token", pick_nested(item, ["token", "tokenAddress", "token_address", "tokenId", "asset"])),
+        ("amount", pick_first(item, ["amount", "value", "tokenAmount", "quantity"])),
+        ("usdValue", pick_first(item, ["usdValue", "usd", "historicalUsd", "usd_value"])),
+        ("txHash", pick_first(item, ["txHash", "transactionHash", "hash", "txid", "txId"])),
+    ]
+
+    lines = [
+        f"{label}: {format_compact_value(value)}"
+        for label, value in fields
+        if value is not None
+    ]
+
+    if not lines:
+        lines = [
+            f"{key}: {format_compact_value(value)}"
+            for key, value in list(item.items())[:8]
+        ]
+    else:
+        raw_keys = ", ".join(list(item.keys())[:10])
+        if raw_keys:
+            lines.append(f"rawKeys: {raw_keys}")
+
+    return "\n".join(lines) if lines else "Event: n/a"
 
 
 def format_flow_snapshot(snapshot: dict):
@@ -656,6 +757,52 @@ def build_token_flow_text(chain: str, address: str, time_last="24h"):
         "",
         format_enriched_token_flow(data, chain, address),
     ]
+
+    return "\n".join(lines)
+
+
+def build_wallet_tx_text(wallet: str, token: str):
+    result = get_wallet_token_transfers(wallet, token)
+    endpoint = result.get("endpoint") or "/transfers"
+    title = "🧪 Arkham Wallet Token Transfers Diagnostic"
+
+    context = [
+        f"Wallet: {wallet}",
+        f"Token: {token}",
+        f"Endpoint: {endpoint}",
+    ]
+
+    if not result["ok"]:
+        return format_arkham_error(title, result, context)
+
+    data = result.get("data")
+    items = extract_transfer_items(data)
+
+    lines = [
+        title,
+        "",
+        f"Wallet: {wallet}",
+        f"Token: {token}",
+        f"Endpoint: {endpoint}",
+        f"Status: ok ({result.get('status_code')})",
+        format_usage(result.get("usage") or {}),
+        f"Items found: {len(items)}",
+        "",
+    ]
+
+    if not items:
+        lines.extend(
+            [
+                "No transfer items returned.",
+                "This may mean Arkham has no matching wallet/token transfers, or /transfers needs different filters for this asset.",
+            ]
+        )
+        return "\n".join(lines)
+
+    lines.append("First 5 events:")
+
+    for idx, item in enumerate(items[:5], start=1):
+        lines.extend(["", f"#{idx}", format_wallet_transfer_item(item, wallet)])
 
     return "\n".join(lines)
 
