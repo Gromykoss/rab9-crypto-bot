@@ -36,6 +36,7 @@ from arkham import (
     build_wallet_tx_text,
     build_wallet_trade_text,
 )
+from price_sources import build_price_source_text
 from wallet_watch import (
     add_wallet_to_watchlist,
     remove_wallet_from_watchlist,
@@ -297,6 +298,25 @@ async def wallettrade_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await update.message.reply_text(f"Анализирую wallet trade pattern: {wallet} / {token}")
     text = await asyncio.to_thread(build_wallet_trade_text, wallet, token)
+    await reply_long(update, text, main_reply_keyboard())
+
+
+async def pricesource_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if await deny_if_wrong_group(update):
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Формат:\n/pricesource TOKEN 2026-05-07T18:45:29Z",
+            reply_markup=main_reply_keyboard(),
+        )
+        return
+
+    token = context.args[0].strip()
+    timestamp = context.args[1].strip()
+
+    await update.message.reply_text(f"Проверяю Birdeye historical price: {token} / {timestamp}")
+    text = await asyncio.to_thread(build_price_source_text, token, timestamp)
     await reply_long(update, text, main_reply_keyboard())
 
 
@@ -768,6 +788,7 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("tokenflow", tokenflow_command))
     app.add_handler(CommandHandler("wallettx", wallettx_command))
     app.add_handler(CommandHandler("wallettrade", wallettrade_command))
+    app.add_handler(CommandHandler("pricesource", pricesource_command))
     app.add_handler(CommandHandler("watchwallet", watchwallet_command))
     app.add_handler(CommandHandler("walletlist", walletlist_command))
     app.add_handler(CommandHandler("unwatchwallet", unwatchwallet_command))

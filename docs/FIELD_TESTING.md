@@ -270,6 +270,20 @@ Expected:
 - command does not recommend entry/exit decisions;
 - command does not add anything to watchlist and does not create background monitoring.
 
+Check manual Birdeye price-source diagnostic:
+
+```text
+/pricesource TOKEN_ADDRESS 2026-05-07T18:45:29Z
+```
+
+Expected:
+
+- if `BIRDEYE_API_KEY` is missing, response says `BIRDEYE_API_KEY missing.`;
+- bot acknowledges Birdeye historical price check;
+- response includes compact token, requested timestamp, source, endpoint, status, price near timestamp when found, candle time/open/high/low/close when available, raw fields count, and available keys;
+- command does not calculate PnL, entry quality, or exit quality;
+- command does not add anything to watchlist and does not create background monitoring.
+
 Add:
 
 ```text
