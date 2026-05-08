@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime, timezone
 from urllib.parse import quote, urlencode
 
 from config import ARKHAM_API_KEY
@@ -300,6 +301,7 @@ def summarize_wallet_transfer_items(items: list, wallet: str):
         "last_time": sorted_times[-1] if sorted_times else "n/a",
         "unique_counterparties": unique_counterparties,
         "main_counterparty": main_counterparty,
+        "main_counterparty_count": max(counterparty_counts.values()) if counterparty_counts else 0,
     }
 
 
@@ -364,6 +366,138 @@ def build_potential_trade_cycles(events_chrono: list, wallet: str):
             cycles.append(current)
 
     return cycles
+
+
+def parse_transfer_time(value):
+    if value is None:
+        return None
+
+    if isinstance(value, (int, float)):
+        timestamp = value / 1000 if value > 10_000_000_000 else value
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+
+    text = str(value)
+
+    if text.isdigit():
+        timestamp = int(text)
+        timestamp = timestamp / 1000 if timestamp > 10_000_000_000 else timestamp
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def format_duration(start, end):
+    start_dt = parse_transfer_time(start)
+    end_dt = parse_transfer_time(end)
+
+    if not start_dt or not end_dt or end_dt < start_dt:
+        return "n/a"
+
+    seconds = int((end_dt - start_dt).total_seconds())
+    days, seconds = divmod(seconds, 86400)
+    hours, seconds = divmod(seconds, 3600)
+    minutes, _ = divmod(seconds, 60)
+
+    if days:
+        return f"{days}d {hours}h"
+
+    if hours:
+        return f"{hours}h {minutes}m"
+
+    return f"{minutes}m"
+
+
+def summarize_cycles(cycles: list):
+    completed = [
+        cycle
+        for cycle in cycles
+        if cycle.get("in_count", 0) > 0 and cycle.get("out_count", 0) > 0
+    ]
+    durations = []
+
+    for cycle in completed:
+        start_dt = parse_transfer_time(cycle.get("in_first"))
+        end_dt = parse_transfer_time(cycle.get("out_first"))
+
+        if start_dt and end_dt and end_dt >= start_dt:
+            durations.append((end_dt - start_dt).total_seconds())
+
+    if durations:
+        avg_seconds = sum(durations) / len(durations)
+        shortest_seconds = min(durations)
+        longest_seconds = max(durations)
+        base = datetime.fromtimestamp(0, tz=timezone.utc)
+
+        avg_duration = format_duration(base, datetime.fromtimestamp(avg_seconds, tz=timezone.utc))
+        shortest_duration = format_duration(base, datetime.fromtimestamp(shortest_seconds, tz=timezone.utc))
+        longest_duration = format_duration(base, datetime.fromtimestamp(longest_seconds, tz=timezone.utc))
+    else:
+        avg_duration = "n/a"
+        shortest_duration = "n/a"
+        longest_duration = "n/a"
+
+    return {
+        "total": len(cycles),
+        "completed": len(completed),
+        "avg_duration": avg_duration,
+        "shortest": shortest_duration,
+        "longest": longest_duration,
+    }
+
+
+def classify_wallet_trade_behavior(summary: dict, cycle_summary: dict):
+    total = summary["total"]
+    token_in = summary["token_in"]
+    token_out = summary["token_out"]
+    main_count = summary.get("main_counterparty_count", 0)
+
+    if total and main_count / total > 0.7:
+        return "Pool-centric trading pattern"
+
+    if total < 3:
+        return "Insufficient Data"
+
+    if token_in >= 3 and token_out >= 3 and cycle_summary["total"] >= 3:
+        return "Active Trading Wallet"
+
+    if token_in > 0 and token_out == 0:
+        return "Accumulation / Holder"
+
+    if token_out > 0 and token_in == 0:
+        return "Distribution Only"
+
+    return "Mixed / Needs Review"
+
+
+def interpret_wallet_trade_behavior(classification: str, summary: dict, cycle_summary: dict):
+    cycle_text = (
+        "Repeated IN/OUT cycles are visible."
+        if cycle_summary["completed"] > 1
+        else "Repeated IN/OUT cycles are not clearly visible."
+    )
+
+    if classification == "Active Trading Wallet":
+        activity = "The wallet shows active token movement with multiple IN and OUT events."
+    elif classification == "Accumulation / Holder":
+        activity = "The wallet mostly accumulated or received tokens without observed OUT events."
+    elif classification == "Distribution Only":
+        activity = "The wallet only shows outgoing token movement in the returned data."
+    elif classification == "Pool-centric trading pattern":
+        activity = "Most events involve one dominant counterparty, suggesting a pool-centric transfer pattern."
+    elif classification == "Insufficient Data":
+        activity = "There are too few returned events to describe behavior confidently."
+    else:
+        activity = "The wallet has mixed token movement that needs deeper price-action context."
+
+    if summary["token_in"] and summary["token_out"]:
+        next_step = "It is suitable for future price-action analysis once a historical price source is connected."
+    else:
+        next_step = "It has limited value for price-action analysis until more matching transfers are found."
+
+    return "\n".join([activity, cycle_text, next_step])
 
 
 def format_flow_snapshot(snapshot: dict):
@@ -923,10 +1057,8 @@ def build_wallet_tx_text(wallet: str, token: str, limit=25):
         f"- First event time: {summary['first_time']}",
         f"- Last event time: {summary['last_time']}",
         f"- Unique counterparties count: {summary['unique_counterparties']}",
+        f"- Main counterparty: {summary['main_counterparty'] or 'n/a'}",
     ]
-
-    if summary["main_counterparty"]:
-        summary_lines.append(f"- Main counterparty: {summary['main_counterparty']}")
 
     lines.extend(summary_lines)
 
@@ -968,6 +1100,70 @@ def build_wallet_tx_text(wallet: str, token: str, limit=25):
 
     for idx, item in enumerate(visible_items, start=1):
         lines.append(f"#{idx} {format_wallet_transfer_item(item, wallet)}")
+
+    return "\n".join(lines)
+
+
+def build_wallet_trade_text(wallet: str, token: str):
+    result = get_wallet_token_transfers(wallet, token, limit=50)
+    title = "🧠 Wallet Trade Pattern"
+
+    context = [
+        f"Wallet: {wallet}",
+        f"Token: {token}",
+        "Endpoint: Arkham /transfers",
+    ]
+
+    if not result["ok"]:
+        return format_arkham_error(title, result, context)
+
+    items = extract_transfer_items(result.get("data"))
+    events_chrono = get_events_chrono(items)
+    summary = summarize_wallet_transfer_items(items, wallet)
+    cycles = build_potential_trade_cycles(events_chrono, wallet)
+    cycle_summary = summarize_cycles(cycles)
+    classification = classify_wallet_trade_behavior(summary, cycle_summary)
+
+    active_period = (
+        f"{summary['first_time']} -> {summary['last_time']}"
+        if summary["first_time"] != "n/a" or summary["last_time"] != "n/a"
+        else "n/a"
+    )
+    main_counterparty = summary["main_counterparty"] or "n/a"
+
+    lines = [
+        title,
+        f"Wallet: {compact_identifier(wallet)}",
+        f"Token: {compact_identifier(token)}",
+        f"Status: ok ({result.get('status_code')})",
+        format_usage(result.get("usage") or {}),
+        "",
+        "Activity Summary:",
+        f"- Events analyzed: {summary['total']}",
+        f"- Token IN count: {summary['token_in']}",
+        f"- Token OUT count: {summary['token_out']}",
+        f"- Active period: {active_period}",
+        f"- Unique counterparties: {summary['unique_counterparties']}",
+        f"- Main counterparty: {main_counterparty}",
+        "",
+        "Cycle Summary:",
+        f"- Potential cycles count: {cycle_summary['total']}",
+        f"- Completed cycles count: {cycle_summary['completed']}",
+        f"- Avg cycle duration: {cycle_summary['avg_duration']}",
+        f"- Shortest cycle: {cycle_summary['shortest']}",
+        f"- Longest cycle: {cycle_summary['longest']}",
+        "",
+        "Behavior Classification:",
+        classification,
+        "",
+        "Interpretation:",
+        interpret_wallet_trade_behavior(classification, summary, cycle_summary),
+        "",
+        "Limitations:",
+        "- No amount/usdValue/price in Arkham transfer response.",
+        "- PnL and exit quality not calculated.",
+        "- Need price source for next version.",
+    ]
 
     return "\n".join(lines)
 
