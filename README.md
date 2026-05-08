@@ -55,6 +55,8 @@ Arkham and wallets:
 - `/wallet ADDRESS` - check Arkham wallet/address intelligence.
 - `/walletflow ADDRESS 24h` - manually check Arkham historical USD flow for a wallet/address. Period is optional; default is `24h`.
 - `/tokenflow solana ADDRESS 7d` - manually check Arkham top token flow for a token contract, enrich the first 10 flow addresses with Arkham wallet intelligence, and classify them as infrastructure, known entities, unknown candidates, or programs. Jupiter/DEX/router/exchange-style infrastructure is not treated as smart-money wallets. Period is optional; default is `24h`. Enrichment makes up to 10 additional Arkham address lookups per `/tokenflow` call, so this command stays manual.
+- `/wallettx WALLET TOKEN 25` - manually inspect Arkham `/transfers` diagnostics for one wallet/token pair.
+- `/wallettrade WALLET TOKEN` - manually summarize wallet/token transfer behavior and potential IN/OUT cycles from Arkham `/transfers`; no PnL, entry quality, or exit quality is calculated.
 - `/watchwallet ADDRESS note` - add or update a wallet watch item.
 - `/walletlist` - show wallet watchlist.
 - `/checkwallets` - refresh wallet snapshots through Arkham.

@@ -251,6 +251,25 @@ Expected:
 - command does not calculate profit or exit quality;
 - command does not add anything to watchlist and does not create background monitoring.
 
+Check manual wallet/token trade pattern MVP:
+
+```text
+/wallettrade WALLET_ADDRESS TOKEN_ADDRESS
+```
+
+Expected:
+
+- bot acknowledges wallet trade pattern analysis;
+- response header says `Wallet Trade Pattern` and includes compact wallet, compact token, status, and Arkham usage;
+- activity summary includes events analyzed, token IN count, token OUT count, active period, unique counterparties, and main counterparty;
+- cycle summary includes potential cycles count, completed cycles count, average cycle duration when possible, shortest cycle, and longest cycle;
+- behavior classification uses simple transfer-pattern labels such as `Active Trading Wallet`, `Accumulation / Holder`, `Distribution Only`, `Insufficient Data`, or `Pool-centric trading pattern`;
+- interpretation is short and does not duplicate the summary fields;
+- limitations explicitly say no amount/usdValue/price is available, PnL and exit quality are not calculated, and a price source is needed for the next version;
+- response does not show all raw events;
+- command does not recommend entry/exit decisions;
+- command does not add anything to watchlist and does not create background monitoring.
+
 Add:
 
 ```text
