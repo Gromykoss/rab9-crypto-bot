@@ -57,6 +57,7 @@ Arkham and wallets:
 - `/tokenflow solana ADDRESS 7d` - manually check Arkham top token flow for a token contract, enrich the first 10 flow addresses with Arkham wallet intelligence, and classify them as infrastructure, known entities, unknown candidates, or programs. Jupiter/DEX/router/exchange-style infrastructure is not treated as smart-money wallets. Period is optional; default is `24h`. Enrichment makes up to 10 additional Arkham address lookups per `/tokenflow` call, so this command stays manual.
 - `/wallettx WALLET TOKEN 25` - manually inspect Arkham `/transfers` diagnostics for one wallet/token pair.
 - `/wallettrade WALLET TOKEN` - manually summarize wallet/token transfer behavior and potential IN/OUT cycles from Arkham `/transfers`; no PnL, entry quality, or exit quality is calculated.
+- `/pricesource TOKEN 2026-05-07T18:45:29Z` - manually test Birdeye Solana historical price/OHLCV near an ISO timestamp. Requires `BIRDEYE_API_KEY`; no PnL is calculated.
 - `/watchwallet ADDRESS note` - add or update a wallet watch item.
 - `/walletlist` - show wallet watchlist.
 - `/checkwallets` - refresh wallet snapshots through Arkham.
@@ -75,6 +76,7 @@ Arkham and wallets:
 - `watchlist.py` - token watchlist load/save, snapshots, comparisons, formatting.
 - `wallet_watch.py` - wallet watchlist load/save, Arkham wallet snapshots, formatting.
 - `arkham.py` - Arkham API helpers for status, token intel, wallet/address intel, and manual flow checks.
+- `price_sources.py` - manual Birdeye historical price/OHLCV diagnostics for future wallet-trade research.
 - `keyboards.py` - Telegram reply and inline keyboards.
 - `utils.py` - formatting, parsing, time, and message chunk utilities.
 - `requirements.txt` - Python package dependencies.
@@ -98,6 +100,7 @@ Edit `.env` locally and set:
 - `TELEGRAM_GROUP_ID`
 - `XAI_API_KEY`
 - `ARKHAM_API_KEY`
+- optional `BIRDEYE_API_KEY` for `/pricesource`
 - optional `DEXSCREENER_BASE_URL`
 - optional `XAI_BASE_URL`
 - optional `ALERT_INTERVAL_SECONDS`
@@ -183,6 +186,7 @@ Keep these local-only:
 - `/status` shows Dexscreener error: check VPS networking and Dexscreener availability.
 - Grok commands say API key is missing: set `XAI_API_KEY` and restart the bot.
 - Arkham commands say API key is missing or return errors: set `ARKHAM_API_KEY`, check quota, then retry `/arkhamstatus`.
+- `/pricesource` says `BIRDEYE_API_KEY missing`: set `BIRDEYE_API_KEY` and restart the bot.
 - Watchlist or alert data is missing after moving the project: copy `watchlist.json`, `alert_state.json`, and `wallet_watchlist.json` into the project directory.
 - Alerts do not appear immediately after startup: the background alert loop waits briefly, then runs every `ALERT_INTERVAL_SECONDS`; use `/alertsnow` for a manual check.
 - `ModuleNotFoundError`: activate the venv and run `pip install -r requirements.txt`.

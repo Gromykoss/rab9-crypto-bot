@@ -10,6 +10,7 @@ TELEGRAM_GROUP_ID = os.getenv("TELEGRAM_GROUP_ID")
 
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 ARKHAM_API_KEY = os.getenv("ARKHAM_API_KEY")
+BIRDEYE_API_KEY = os.getenv("BIRDEYE_API_KEY")
 
 DEXSCREENER_BASE_URL = os.getenv("DEXSCREENER_BASE_URL", "https://api.dexscreener.com")
 XAI_BASE_URL = os.getenv("XAI_BASE_URL", "https://api.x.ai")
