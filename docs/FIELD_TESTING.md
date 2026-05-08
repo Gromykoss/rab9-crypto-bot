@@ -237,11 +237,13 @@ Expected:
 
 - bot acknowledges Arkham transfers diagnostics;
 - default limit is 25, requested limits above 50 are capped at 50;
-- response includes `/transfers` endpoint, status, Arkham usage, item count, and limit;
-- response includes summary lines for total events returned, token IN count, token OUT count, first event time, last event time, and unique counterparties count;
-- event rows classify direction as `Token IN / possible buy`, `Token OUT / possible sell`, or `Other transfer`;
-- event rows include counterparty, fromAddressOwner, and toAddressOwner when Arkham returns those fields;
-- event rows include timestamp, direction, from, to, token, amount, usdValue, and txHash when Arkham returns those fields;
+- response top block includes wallet, token, status, Arkham usage, limit, and summary;
+- summary lines include total events returned, token IN count, token OUT count, first event time, last event time, unique counterparties count, and main counterparty when one clearly dominates;
+- event list says `Showing first 20 events only`, even when requested limit is 50;
+- event rows are compact one-line rows with timestamp, short IN/OUT/OTHER direction, compact counterparty, compact tx hash, and amount/usdValue when available;
+- event rows do not repeat token, raw keys, or full from/to addresses;
+- event rows include fromOwner/toOwner when Arkham returns owner fields;
+- response includes `Potential cycles` using IN-led groups with first IN time, first OUT time, IN count, and OUT count;
 - if Arkham returns no data or needs different parameters, response shows a readable no-data or error message;
 - command does not recommend entry/exit decisions;
 - command does not calculate profit or exit quality;
