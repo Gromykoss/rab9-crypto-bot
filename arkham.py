@@ -214,55 +214,82 @@ def transfer_counterparty(item: dict, wallet: str):
     return None
 
 
+def transfer_owner(item: dict, wallet: str):
+    direction = transfer_direction(item, wallet)
+
+    if direction == "Token IN / possible buy":
+        return pick_first(item, ["fromAddressOwner", "fromOwner", "from_address_owner"])
+
+    if direction == "Token OUT / possible sell":
+        return pick_first(item, ["toAddressOwner", "toOwner", "to_address_owner"])
+
+    return None
+
+
 def transfer_timestamp(item: dict):
     return pick_first(item, ["timestamp", "time", "blockTimestamp", "block_time", "datetime"])
 
 
+def compact_identifier(value, head=6, tail=4):
+    if value is None:
+        return "n/a"
+
+    text = str(value)
+
+    if len(text) <= head + tail + 3:
+        return text
+
+    return f"{text[:head]}...{text[-tail:]}"
+
+
+def transfer_direction_short(item: dict, wallet: str):
+    direction = transfer_direction(item, wallet)
+
+    if direction == "Token IN / possible buy":
+        return "IN"
+
+    if direction == "Token OUT / possible sell":
+        return "OUT"
+
+    return "OTHER"
+
+
 def format_wallet_transfer_item(item, wallet: str):
     if not isinstance(item, dict):
-        return f"Raw: {format_compact_value(item)}"
+        return f"Raw: {compact_identifier(item)}"
 
     from_owner = pick_first(item, ["fromAddressOwner", "fromOwner", "from_address_owner"])
     to_owner = pick_first(item, ["toAddressOwner", "toOwner", "to_address_owner"])
-
-    fields = [
-        ("timestamp", transfer_timestamp(item)),
-        ("direction", transfer_direction(item, wallet)),
-        ("counterparty", transfer_counterparty(item, wallet)),
-        ("from", pick_nested(item, ["from", "fromAddress", "from_address", "fromLabel"])),
-        ("fromAddressOwner", from_owner),
-        ("to", pick_nested(item, ["to", "toAddress", "to_address", "toLabel"])),
-        ("toAddressOwner", to_owner),
-        ("token", pick_nested(item, ["token", "tokenAddress", "token_address", "tokenId", "asset"])),
-        ("amount", pick_first(item, ["amount", "value", "tokenAmount", "quantity"])),
-        ("usdValue", pick_first(item, ["usdValue", "usd", "historicalUsd", "usd_value"])),
-        ("txHash", pick_first(item, ["txHash", "transactionHash", "hash", "txid", "txId"])),
+    parts = [
+        str(transfer_timestamp(item) or "n/a"),
+        transfer_direction_short(item, wallet),
+        f"CP: {compact_identifier(transfer_counterparty(item, wallet))}",
+        f"tx: {compact_identifier(pick_first(item, ['txHash', 'transactionHash', 'hash', 'txid', 'txId']))}",
     ]
 
-    lines = [
-        f"{label}: {format_compact_value(value)}"
-        for label, value in fields
-        if value is not None
-    ]
+    amount = pick_first(item, ["amount", "value", "tokenAmount", "quantity"])
+    usd_value = pick_first(item, ["usdValue", "usd", "historicalUsd", "usd_value"])
 
-    if not lines:
-        lines = [
-            f"{key}: {format_compact_value(value)}"
-            for key, value in list(item.items())[:8]
-        ]
-    else:
-        raw_keys = ", ".join(list(item.keys())[:10])
-        if raw_keys:
-            lines.append(f"rawKeys: {raw_keys}")
+    if amount is not None:
+        parts.append(f"amount: {format_compact_value(amount)}")
 
-    return "\n".join(lines) if lines else "Event: n/a"
+    if usd_value is not None:
+        parts.append(f"usdValue: {format_compact_value(usd_value)}")
+
+    if from_owner is not None:
+        parts.append(f"fromOwner: {format_compact_value(from_owner)}")
+
+    if to_owner is not None:
+        parts.append(f"toOwner: {format_compact_value(to_owner)}")
+
+    return " | ".join(parts)
 
 
 def summarize_wallet_transfer_items(items: list, wallet: str):
     token_in_count = 0
     token_out_count = 0
     timestamps = []
-    counterparties = set()
+    counterparty_counts = {}
 
     for item in items:
         if not isinstance(item, dict):
@@ -281,9 +308,18 @@ def summarize_wallet_transfer_items(items: list, wallet: str):
 
         counterparty = transfer_counterparty(item, wallet)
         if counterparty:
-            counterparties.add(str(counterparty))
+            counterparty_text = str(counterparty)
+            counterparty_counts[counterparty_text] = counterparty_counts.get(counterparty_text, 0) + 1
 
     sorted_times = sorted(timestamps)
+    unique_counterparties = len(counterparty_counts)
+    main_counterparty = None
+
+    if counterparty_counts:
+        candidate, count = max(counterparty_counts.items(), key=lambda entry: entry[1])
+
+        if count >= 2 and count > len(items) / 2:
+            main_counterparty = f"{compact_identifier(candidate)} ({count}/{len(items)})"
 
     return {
         "total": len(items),
@@ -291,8 +327,53 @@ def summarize_wallet_transfer_items(items: list, wallet: str):
         "token_out": token_out_count,
         "first_time": sorted_times[0] if sorted_times else "n/a",
         "last_time": sorted_times[-1] if sorted_times else "n/a",
-        "unique_counterparties": len(counterparties),
+        "unique_counterparties": unique_counterparties,
+        "main_counterparty": main_counterparty,
     }
+
+
+def sort_transfer_items_chronological(items: list):
+    if all(isinstance(item, dict) and transfer_timestamp(item) is not None for item in items):
+        return sorted(items, key=lambda item: str(transfer_timestamp(item)))
+
+    return list(reversed(items))
+
+
+def build_potential_trade_cycles(items: list, wallet: str):
+    cycles = []
+    current = None
+
+    for item in sort_transfer_items_chronological(items):
+        if not isinstance(item, dict):
+            continue
+
+        direction = transfer_direction_short(item, wallet)
+        timestamp = transfer_timestamp(item) or "n/a"
+
+        if direction == "IN":
+            if current and current["out_count"] > 0:
+                cycles.append(current)
+                current = None
+
+            if not current:
+                current = {
+                    "in_first": timestamp,
+                    "out_first": "n/a",
+                    "in_count": 0,
+                    "out_count": 0,
+                }
+
+            current["in_count"] += 1
+        elif direction == "OUT" and current:
+            if current["out_count"] == 0:
+                current["out_first"] = timestamp
+
+            current["out_count"] += 1
+
+    if current:
+        cycles.append(current)
+
+    return cycles
 
 
 def format_flow_snapshot(snapshot: dict):
@@ -836,41 +917,61 @@ def build_wallet_tx_text(wallet: str, token: str, limit=25):
         "",
         f"Wallet: {wallet}",
         f"Token: {token}",
-        f"Endpoint: {endpoint}",
         f"Status: ok ({result.get('status_code')})",
         format_usage(result.get("usage") or {}),
-        f"Items found: {len(items)}",
         f"Limit: {safe_limit}",
         "",
     ]
 
+    summary = summarize_wallet_transfer_items(items, wallet)
+    summary_lines = [
+        "Summary:",
+        f"- Total events returned: {summary['total']}",
+        f"- Token IN count: {summary['token_in']}",
+        f"- Token OUT count: {summary['token_out']}",
+        f"- First event time: {summary['first_time']}",
+        f"- Last event time: {summary['last_time']}",
+        f"- Unique counterparties count: {summary['unique_counterparties']}",
+    ]
+
+    if summary["main_counterparty"]:
+        summary_lines.append(f"- Main counterparty: {summary['main_counterparty']}")
+
+    lines.extend(summary_lines)
+
     if not items:
         lines.extend(
             [
+                "",
                 "No transfer items returned.",
                 "This may mean Arkham has no matching wallet/token transfers, or /transfers needs different filters for this asset.",
             ]
         )
         return "\n".join(lines)
 
-    summary = summarize_wallet_transfer_items(items, wallet)
+    visible_items = items[:20]
+    cycles = build_potential_trade_cycles(items, wallet)
 
     lines.extend(
         [
-            "Summary:",
-            f"- Total events returned: {summary['total']}",
-            f"- Token IN count: {summary['token_in']}",
-            f"- Token OUT count: {summary['token_out']}",
-            f"- First event time: {summary['first_time']}",
-            f"- Last event time: {summary['last_time']}",
-            f"- Unique counterparties count: {summary['unique_counterparties']}",
             "",
-            f"First {len(items)} events:",
+            "Potential cycles:",
         ]
     )
 
-    for idx, item in enumerate(items, start=1):
-        lines.extend(["", f"#{idx}", format_wallet_transfer_item(item, wallet)])
+    if cycles:
+        for idx, cycle in enumerate(cycles, start=1):
+            lines.append(
+                f"#{idx} IN first: {cycle['in_first']}, OUT first: {cycle['out_first']}, "
+                f"IN count: {cycle['in_count']}, OUT count: {cycle['out_count']}"
+            )
+    else:
+        lines.append("No IN-led cycles detected in returned events.")
+
+    lines.extend(["", "Showing first 20 events only", "Events:"])
+
+    for idx, item in enumerate(visible_items, start=1):
+        lines.append(f"#{idx} {format_wallet_transfer_item(item, wallet)}")
 
     return "\n".join(lines)
 
