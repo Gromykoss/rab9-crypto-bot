@@ -214,18 +214,6 @@ def transfer_counterparty(item: dict, wallet: str):
     return None
 
 
-def transfer_owner(item: dict, wallet: str):
-    direction = transfer_direction(item, wallet)
-
-    if direction == "Token IN / possible buy":
-        return pick_first(item, ["fromAddressOwner", "fromOwner", "from_address_owner"])
-
-    if direction == "Token OUT / possible sell":
-        return pick_first(item, ["toAddressOwner", "toOwner", "to_address_owner"])
-
-    return None
-
-
 def transfer_timestamp(item: dict):
     return pick_first(item, ["timestamp", "time", "blockTimestamp", "block_time", "datetime"])
 
@@ -258,29 +246,12 @@ def format_wallet_transfer_item(item, wallet: str):
     if not isinstance(item, dict):
         return f"Raw: {compact_identifier(item)}"
 
-    from_owner = pick_first(item, ["fromAddressOwner", "fromOwner", "from_address_owner"])
-    to_owner = pick_first(item, ["toAddressOwner", "toOwner", "to_address_owner"])
     parts = [
         str(transfer_timestamp(item) or "n/a"),
         transfer_direction_short(item, wallet),
         f"CP: {compact_identifier(transfer_counterparty(item, wallet))}",
         f"tx: {compact_identifier(pick_first(item, ['txHash', 'transactionHash', 'hash', 'txid', 'txId']))}",
     ]
-
-    amount = pick_first(item, ["amount", "value", "tokenAmount", "quantity"])
-    usd_value = pick_first(item, ["usdValue", "usd", "historicalUsd", "usd_value"])
-
-    if amount is not None:
-        parts.append(f"amount: {format_compact_value(amount)}")
-
-    if usd_value is not None:
-        parts.append(f"usdValue: {format_compact_value(usd_value)}")
-
-    if from_owner is not None:
-        parts.append(f"fromOwner: {format_compact_value(from_owner)}")
-
-    if to_owner is not None:
-        parts.append(f"toOwner: {format_compact_value(to_owner)}")
 
     return " | ".join(parts)
 
@@ -332,18 +303,19 @@ def summarize_wallet_transfer_items(items: list, wallet: str):
     }
 
 
-def sort_transfer_items_chronological(items: list):
+def get_events_chrono(items: list):
     if all(isinstance(item, dict) and transfer_timestamp(item) is not None for item in items):
         return sorted(items, key=lambda item: str(transfer_timestamp(item)))
 
     return list(reversed(items))
 
 
-def build_potential_trade_cycles(items: list, wallet: str):
+def build_potential_trade_cycles(events_chrono: list, wallet: str):
     cycles = []
     current = None
+    seen = set()
 
-    for item in sort_transfer_items_chronological(items):
+    for item in events_chrono:
         if not isinstance(item, dict):
             continue
 
@@ -352,7 +324,17 @@ def build_potential_trade_cycles(items: list, wallet: str):
 
         if direction == "IN":
             if current and current["out_count"] > 0:
-                cycles.append(current)
+                key = (
+                    current["in_first"],
+                    current["out_first"],
+                    current["in_count"],
+                    current["out_count"],
+                )
+
+                if key not in seen:
+                    cycles.append(current)
+                    seen.add(key)
+
                 current = None
 
             if not current:
@@ -371,7 +353,15 @@ def build_potential_trade_cycles(items: list, wallet: str):
             current["out_count"] += 1
 
     if current:
-        cycles.append(current)
+        key = (
+            current["in_first"],
+            current["out_first"],
+            current["in_count"],
+            current["out_count"],
+        )
+
+        if key not in seen:
+            cycles.append(current)
 
     return cycles
 
@@ -903,7 +893,7 @@ def build_wallet_tx_text(wallet: str, token: str, limit=25):
     context = [
         f"Wallet: {wallet}",
         f"Token: {token}",
-        f"Endpoint: {endpoint}",
+        "Endpoint: Arkham /transfers",
     ]
 
     if not result["ok"]:
@@ -917,6 +907,7 @@ def build_wallet_tx_text(wallet: str, token: str, limit=25):
         "",
         f"Wallet: {wallet}",
         f"Token: {token}",
+        "Endpoint: Arkham /transfers",
         f"Status: ok ({result.get('status_code')})",
         format_usage(result.get("usage") or {}),
         f"Limit: {safe_limit}",
@@ -950,7 +941,9 @@ def build_wallet_tx_text(wallet: str, token: str, limit=25):
         return "\n".join(lines)
 
     visible_items = items[:20]
-    cycles = build_potential_trade_cycles(items, wallet)
+    events_chrono = get_events_chrono(items)
+    cycles = build_potential_trade_cycles(events_chrono, wallet)
+    visible_cycles = cycles[:10]
 
     lines.extend(
         [
@@ -960,11 +953,14 @@ def build_wallet_tx_text(wallet: str, token: str, limit=25):
     )
 
     if cycles:
-        for idx, cycle in enumerate(cycles, start=1):
+        for idx, cycle in enumerate(visible_cycles, start=1):
             lines.append(
-                f"#{idx} IN first: {cycle['in_first']}, OUT first: {cycle['out_first']}, "
-                f"IN count: {cycle['in_count']}, OUT count: {cycle['out_count']}"
+                f"#{idx} IN first: {cycle['in_first']} | OUT first: {cycle['out_first']} | "
+                f"IN: {cycle['in_count']} | OUT: {cycle['out_count']}"
             )
+
+        if len(cycles) > 10:
+            lines.append("Showing first 10 cycles only")
     else:
         lines.append("No IN-led cycles detected in returned events.")
 

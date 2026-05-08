@@ -237,13 +237,15 @@ Expected:
 
 - bot acknowledges Arkham transfers diagnostics;
 - default limit is 25, requested limits above 50 are capped at 50;
-- response top block includes wallet, token, status, Arkham usage, limit, and summary;
+- response top block includes wallet, token, `Endpoint: Arkham /transfers`, status, Arkham usage, limit, and summary;
 - summary lines include total events returned, token IN count, token OUT count, first event time, last event time, unique counterparties count, and main counterparty when one clearly dominates;
 - event list says `Showing first 20 events only`, even when requested limit is 50;
-- event rows are compact one-line rows with timestamp, short IN/OUT/OTHER direction, compact counterparty, compact tx hash, and amount/usdValue when available;
-- event rows do not repeat token, raw keys, or full from/to addresses;
-- event rows include fromOwner/toOwner when Arkham returns owner fields;
-- response includes `Potential cycles` using IN-led groups with first IN time, first OUT time, IN count, and OUT count;
+- event rows are strictly compact one-line rows like `#1 2026-05-07T18:45:29Z | IN | CP: J9LUSq...Y1v1 | tx: 5CJEF...RPpD`;
+- event rows do not repeat token, raw keys, owner fields, or full from/to addresses;
+- event list remains newest-first as returned by Arkham;
+- response includes `Potential cycles` built from a separate timestamp-ascending copy of returned events;
+- cycle rows are compact, for example `#1 IN first: 2026-04-26T12:39:51Z | OUT first: 2026-04-26T12:44:07Z | IN: 1 | OUT: 2`;
+- if more than 10 cycles are detected, response says `Showing first 10 cycles only`;
 - if Arkham returns no data or needs different parameters, response shows a readable no-data or error message;
 - command does not recommend entry/exit decisions;
 - command does not calculate profit or exit quality;
