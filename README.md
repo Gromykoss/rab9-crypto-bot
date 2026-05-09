@@ -56,8 +56,8 @@ Arkham and wallets:
 - `/walletflow ADDRESS 24h` - manually check Arkham historical USD flow for a wallet/address. Period is optional; default is `24h`.
 - `/tokenflow solana ADDRESS 7d` - manually check Arkham top token flow for a token contract, enrich the first 10 flow addresses with Arkham wallet intelligence, and classify them as infrastructure, known entities, unknown candidates, or programs. Jupiter/DEX/router/exchange-style infrastructure is not treated as smart-money wallets. Period is optional; default is `24h`. Enrichment makes up to 10 additional Arkham address lookups per `/tokenflow` call, so this command stays manual.
 - `/wallettx WALLET TOKEN 25` - manually inspect Arkham `/transfers` diagnostics for one wallet/token pair.
-- `/wallettrade WALLET TOKEN` - manually summarize wallet/token transfer behavior and potential IN/OUT cycles from Arkham `/transfers`; no PnL, entry quality, or exit quality is calculated.
-- `/pricesource TOKEN 2026-05-07T18:45:29Z` - manually test Birdeye Solana historical price/OHLCV near an ISO timestamp. Requires `BIRDEYE_API_KEY`; no PnL is calculated.
+- `/wallettrade WALLET TOKEN` - manually summarize wallet/token transfer behavior and potential IN/OUT cycles from Arkham `/transfers`, then use Birdeye close prices near first IN/OUT timestamps to estimate approximate cycle price movement for up to the first 5 completed cycles. No amount-based returns, entry quality, or exit quality are calculated.
+- `/pricesource TOKEN 2026-05-07T18:45:29Z` - manually test Birdeye Solana historical price/OHLCV near an ISO timestamp. Requires `BIRDEYE_API_KEY`; no amount-based return is calculated.
 - `/watchwallet ADDRESS note` - add or update a wallet watch item.
 - `/walletlist` - show wallet watchlist.
 - `/checkwallets` - refresh wallet snapshots through Arkham.

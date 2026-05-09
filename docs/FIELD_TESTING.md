@@ -265,7 +265,13 @@ Expected:
 - cycle summary includes potential cycles count, completed cycles count, average cycle duration when possible, shortest cycle, and longest cycle;
 - behavior classification uses simple transfer-pattern labels such as `Active Trading Wallet`, `Accumulation / Holder`, `Distribution Only`, `Insufficient Data`, or `Pool-centric trading pattern`;
 - interpretation is short and does not duplicate the summary fields;
-- limitations explicitly say no amount/usdValue/price is available, PnL and exit quality are not calculated, and a price source is needed for the next version;
+- if `BIRDEYE_API_KEY` is missing, response keeps the behavior-only report and says `Price analysis skipped: BIRDEYE_API_KEY missing.`;
+- when Birdeye candles are available, response includes `Price Movement by Cycle` with up to the first 5 completed cycles;
+- price movement rows look like `#1 IN: time / price | OUT: time / price | Move: +X%`;
+- if more than 5 completed cycles are available, response says `Analyzed first 5 completed cycles only`;
+- price movement summary includes cycles priced, positive moves, negative moves, average move, best move, and worst move;
+- if a candle is missing for a cycle, that row says `price unavailable` and the bot keeps running;
+- limitations explicitly say no amount/usdValue is available, cycle price movement is approximate, and amount-based returns and exit quality are not calculated;
 - response does not show all raw events;
 - command does not recommend entry/exit decisions;
 - command does not add anything to watchlist and does not create background monitoring.
@@ -281,7 +287,7 @@ Expected:
 - if `BIRDEYE_API_KEY` is missing, response says `BIRDEYE_API_KEY missing.`;
 - bot acknowledges Birdeye historical price check;
 - response includes compact token, requested timestamp, source, endpoint, status, price near timestamp when found, candle time/open/high/low/close when available, raw fields count, and available keys;
-- command does not calculate PnL, entry quality, or exit quality;
+- command does not calculate amount-based return, entry quality, or exit quality;
 - command does not add anything to watchlist and does not create background monitoring.
 
 Add:

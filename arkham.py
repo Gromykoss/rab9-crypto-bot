@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote, urlencode
 
 from config import ARKHAM_API_KEY
+from price_sources import get_birdeye_price_near
 
 
 ARKHAM_BASE_URL = "https://api.arkm.com"
@@ -498,6 +499,101 @@ def interpret_wallet_trade_behavior(classification: str, summary: dict, cycle_su
         next_step = "It has limited value for price-action analysis until more matching transfers are found."
 
     return "\n".join([activity, cycle_text, next_step])
+
+
+def format_percent(value):
+    if value is None:
+        return "n/a"
+
+    sign = "+" if value > 0 else ""
+    return f"{sign}{value:.2f}%"
+
+
+def format_price(value):
+    if value is None:
+        return "n/a"
+
+    if value >= 1:
+        return f"{value:.6f}".rstrip("0").rstrip(".")
+
+    return f"{value:.12f}".rstrip("0").rstrip(".")
+
+
+def build_cycle_price_movement_section(cycles: list, token: str, max_cycles=5):
+    completed = [
+        cycle
+        for cycle in cycles
+        if cycle.get("in_count", 0) > 0
+        and cycle.get("out_count", 0) > 0
+        and cycle.get("in_first") != "n/a"
+        and cycle.get("out_first") != "n/a"
+    ]
+
+    lines = ["Price Movement by Cycle:"]
+
+    if not completed:
+        lines.append("No completed cycles available for price movement.")
+        return lines
+
+    priced_moves = []
+    first_price = get_birdeye_price_near(token, completed[0]["in_first"])
+
+    if first_price.get("skipped"):
+        lines.append("Price analysis skipped: BIRDEYE_API_KEY missing.")
+        return lines
+
+    analysis_cycles = completed[:max_cycles]
+    in_price_cache = {completed[0]["in_first"]: first_price}
+    price_cache = {}
+
+    for idx, cycle in enumerate(analysis_cycles, start=1):
+        in_time = cycle["in_first"]
+        out_time = cycle["out_first"]
+
+        if in_time in in_price_cache:
+            in_price = in_price_cache[in_time]
+        else:
+            in_price = price_cache.get(in_time)
+            if in_price is None:
+                in_price = get_birdeye_price_near(token, in_time)
+                price_cache[in_time] = in_price
+
+        out_price = price_cache.get(out_time)
+        if out_price is None:
+            out_price = get_birdeye_price_near(token, out_time)
+            price_cache[out_time] = out_price
+
+        if not in_price.get("ok") or not out_price.get("ok") or not in_price.get("price"):
+            lines.append(f"#{idx} IN: {in_time} / price unavailable | OUT: {out_time} / price unavailable | Move: n/a")
+            continue
+
+        move = ((out_price["price"] - in_price["price"]) / in_price["price"]) * 100
+        priced_moves.append(move)
+        lines.append(
+            f"#{idx} IN: {in_time} / {format_price(in_price['price'])} | "
+            f"OUT: {out_time} / {format_price(out_price['price'])} | "
+            f"Move: {format_percent(move)}"
+        )
+
+    if len(completed) > max_cycles:
+        lines.append("Analyzed first 5 completed cycles only")
+
+    lines.extend(["", "Cycle Price Movement Summary:"])
+    lines.append(f"- Cycles priced: {len(priced_moves)}")
+    lines.append(f"- Positive moves: {sum(1 for move in priced_moves if move > 0)}")
+    lines.append(f"- Negative moves: {sum(1 for move in priced_moves if move < 0)}")
+
+    if priced_moves:
+        avg_move = sum(priced_moves) / len(priced_moves)
+        lines.append(f"- Avg move: {format_percent(avg_move)}")
+        lines.append(f"- Best move: {format_percent(max(priced_moves))}")
+        lines.append(f"- Worst move: {format_percent(min(priced_moves))}")
+    else:
+        lines.append("- Avg move: n/a")
+        lines.append("- Best move: n/a")
+        lines.append("- Worst move: n/a")
+
+    return lines
 
 
 def format_flow_snapshot(snapshot: dict):
@@ -1153,6 +1249,8 @@ def build_wallet_trade_text(wallet: str, token: str):
         f"- Shortest cycle: {cycle_summary['shortest']}",
         f"- Longest cycle: {cycle_summary['longest']}",
         "",
+        *build_cycle_price_movement_section(cycles, token),
+        "",
         "Behavior Classification:",
         classification,
         "",
@@ -1160,9 +1258,9 @@ def build_wallet_trade_text(wallet: str, token: str):
         interpret_wallet_trade_behavior(classification, summary, cycle_summary),
         "",
         "Limitations:",
-        "- No amount/usdValue/price in Arkham transfer response.",
-        "- PnL and exit quality not calculated.",
-        "- Need price source for next version.",
+        "- No amount/usdValue in Arkham transfer response.",
+        "- Cycle price movement is approximate and uses Birdeye close near first IN/OUT timestamps.",
+        "- Amount-based returns and exit quality are not calculated.",
     ]
 
     return "\n".join(lines)
