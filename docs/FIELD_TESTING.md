@@ -287,7 +287,7 @@ Expected:
 
 - if `BIRDEYE_API_KEY` is missing, response says `BIRDEYE_API_KEY missing.`;
 - bot acknowledges Birdeye historical price check;
-- response includes compact token, requested timestamp, source, endpoint, status, price near timestamp when found, candle time/open/high/low/close when available, raw fields count, and available keys;
+- response uses the same Birdeye price result contract as `/wallettrade` and includes compact token, requested timestamp, source, endpoint, status, price near timestamp when found, candle time/open/high/low/close when available, raw fields count, and available keys;
 - command does not calculate amount-based return, entry quality, or exit quality;
 - command does not add anything to watchlist and does not create background monitoring.
 

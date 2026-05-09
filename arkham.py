@@ -528,6 +528,17 @@ def format_price(value):
     return f"{value:.12f}".rstrip("0").rstrip(".")
 
 
+def has_price(result: dict):
+    return bool(result.get("ok")) and result.get("price") is not None
+
+
+def format_cycle_price(result: dict):
+    if has_price(result):
+        return format_price(result["price"])
+
+    return "price unavailable"
+
+
 def build_cycle_price_movement_section(cycles: list, token: str, max_cycles=5):
     completed = [
         cycle
@@ -572,8 +583,11 @@ def build_cycle_price_movement_section(cycles: list, token: str, max_cycles=5):
             out_price = get_birdeye_price_near(token, out_time)
             price_cache[out_time] = out_price
 
-        if not in_price.get("ok") or not out_price.get("ok") or not in_price.get("price"):
-            lines.append(f"#{idx} IN: {in_time} / price unavailable | OUT: {out_time} / price unavailable | Move: n/a")
+        if not has_price(in_price) or not has_price(out_price):
+            lines.append(
+                f"#{idx} IN: {in_time} / {format_cycle_price(in_price)} | "
+                f"OUT: {out_time} / {format_cycle_price(out_price)} | Move: n/a"
+            )
             continue
 
         move = ((out_price["price"] - in_price["price"]) / in_price["price"]) * 100
