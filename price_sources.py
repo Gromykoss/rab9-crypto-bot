@@ -171,7 +171,9 @@ def _build_report(token: str, requested_iso: str, result: dict):
             "Result:",
             f"Price near timestamp: {result.get('price') if result.get('price') is not None else 'n/a'}",
             f"Candle time: {result.get('time') or 'n/a'}",
-            f"Distance from requested: {result.get('distance') if result.get('distance') is not None else 'n/a'} sec",
+            f"Distance from requested: {result.get('distance_seconds') if result.get('distance_seconds') is not None else 'n/a'} sec",
+            f"Lookup window: {result.get('lookup_window') or 'n/a'}",
+            f"Fallback used: {result.get('fallback_used')}",
             f"Open: {result.get('open') if result.get('open') is not None else 'n/a'}",
             f"High: {result.get('high') if result.get('high') is not None else 'n/a'}",
             f"Low: {result.get('low') if result.get('low') is not None else 'n/a'}",
@@ -200,6 +202,9 @@ def get_birdeye_price_near(token: str, timestamp: str) -> dict:
             "source": "Birdeye",
             "endpoint": "n/a",
             "status_code": None,
+            "distance_seconds": None,
+            "lookup_window": "n/a",
+            "fallback_used": False,
         }
 
     requested = _parse_iso_timestamp(timestamp)
@@ -213,31 +218,62 @@ def get_birdeye_price_near(token: str, timestamp: str) -> dict:
             "source": "Birdeye",
             "endpoint": "n/a",
             "status_code": None,
+            "distance_seconds": None,
+            "lookup_window": "n/a",
+            "fallback_used": False,
         }
 
     requested_ts = int(requested.timestamp())
-    params = {
-        "address": token,
-        "address_type": "token",
-        "type": "1m",
-        "time_from": requested_ts - 3600,
-        "time_to": requested_ts + 3600,
-    }
-
-    ohlcv = _request_birdeye("/defi/ohlcv", params)
-    items = _extract_items(ohlcv.get("data"))
-    nearest, distance = _nearest_item(items, requested_ts)
+    attempts = [
+        (60, "±1 minute", False),
+        (300, "±5 minutes", True),
+        (900, "±15 minutes", True),
+    ]
+    nearest = None
+    distance = None
     source = "Birdeye /defi/ohlcv"
-    result = ohlcv
+    result = {"endpoint": "/defi/ohlcv", "status_code": None, "error": "price unavailable"}
+    lookup_window = "n/a"
+    fallback_used = False
+    price = None
 
-    if nearest is None:
+    for window_seconds, window_label, is_fallback in attempts:
+        params = {
+            "address": token,
+            "address_type": "token",
+            "type": "1m",
+            "time_from": requested_ts - window_seconds,
+            "time_to": requested_ts + window_seconds,
+        }
+
+        ohlcv = _request_birdeye("/defi/ohlcv", params)
+        items = _extract_items(ohlcv.get("data"))
+        candidate, candidate_distance = _nearest_item(items, requested_ts)
+        candidate_price = _to_float(_field(candidate, "c", "close", "value", "price"))
+        source = "Birdeye /defi/ohlcv"
+        result = ohlcv
+        lookup_window = window_label
+        fallback_used = is_fallback
+
+        if candidate is not None and candidate_price is not None:
+            nearest = candidate
+            distance = candidate_distance
+            price = candidate_price
+            break
+
         history = _request_birdeye("/defi/history_price", params)
         items = _extract_items(history.get("data"))
-        nearest, distance = _nearest_item(items, requested_ts)
+        candidate, candidate_distance = _nearest_item(items, requested_ts)
+        candidate_price = _to_float(_field(candidate, "c", "close", "value", "price"))
         source = "Birdeye /defi/history_price"
         result = history
 
-    price = _to_float(_field(nearest, "c", "close", "value", "price"))
+        if candidate is not None and candidate_price is not None:
+            nearest = candidate
+            distance = candidate_distance
+            price = candidate_price
+            break
+
     available_keys = sorted(nearest.keys()) if isinstance(nearest, dict) else []
 
     if nearest is None or price is None:
@@ -251,6 +287,9 @@ def get_birdeye_price_near(token: str, timestamp: str) -> dict:
             "endpoint": result.get("endpoint"),
             "status_code": result.get("status_code"),
             "distance": distance,
+            "distance_seconds": distance,
+            "lookup_window": lookup_window,
+            "fallback_used": fallback_used,
             "open": None,
             "high": None,
             "low": None,
@@ -268,6 +307,9 @@ def get_birdeye_price_near(token: str, timestamp: str) -> dict:
         "price": price,
         "time": _iso_from_unix(candle_time),
         "distance": distance,
+        "distance_seconds": distance,
+        "lookup_window": lookup_window,
+        "fallback_used": fallback_used,
         "source": source,
         "endpoint": result.get("endpoint"),
         "status_code": result.get("status_code"),
