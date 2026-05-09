@@ -300,6 +300,7 @@ Check manual parsed wallet swaps diagnostic:
 /walletswaps WALLET_ADDRESS TOKEN_ADDRESS
 /walletswaps WALLET_ADDRESS TOKEN_ADDRESS 50
 /walletswaps WALLET_ADDRESS TOKEN_ADDRESS 50 deep
+/walletswaps WALLET_ADDRESS TOKEN_ADDRESS 50 deep10
 ```
 
 Expected:
@@ -309,6 +310,7 @@ Expected:
 - report header includes wallet, optional token filter, mode, pages scanned, raw swaps scanned, source used, status, and items after filter;
 - normal mode keeps the existing single-page behavior;
 - deep mode scans Birdeye `/defi/v3/txs` with `max_pages = 5`, `page_size = 50`, `max raw events = 250`, and a 1.2 second delay between page requests;
+- deep10 scans Birdeye `/defi/v3/txs` with `max_pages = 10`, `page_size = 50`, `max raw events = 500`, and a 1.2 second delay between page requests;
 - if Birdeye returns 429 in deep mode, scanning stops, already found swaps are kept, header says `Rate limited: yes`, and status is readable such as `partial (rate limited 429)`;
 - when token is supplied, header says `Token filter applied: yes`;
 - Solscan Pro account defi activities are used when `SOLSCAN_API_KEY` is available;
@@ -323,6 +325,7 @@ Expected:
 - events show at most first 20 compact rows like `#1 time | TOKEN_IN amount -> TOKEN_OUT amount | value: $X | tx: abc...xyz`;
 - if both possible buy and sell are found, response says `Both possible buy and sell events found. Suitable for future wallettrade swap-cycle analysis.`;
 - if only one side is found, response says only possible buy or sell events were found in the scanned window;
+- if deep10 still finds no possible buy, response says `No possible buy found in scanned window. Buy may be older, routed differently, or received via transfer.`;
 - response does not duplicate wallet, token, or source in each event row;
 - command does not calculate amount-based return, entry/exit quality, or trading recommendations;
 - command does not add anything to watchlist and does not create background monitoring.

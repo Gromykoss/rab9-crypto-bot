@@ -327,7 +327,7 @@ async def walletswaps_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if len(context.args) < 1:
         await update.message.reply_text(
-            "Формат:\n/walletswaps WALLET\n/walletswaps WALLET TOKEN\n/walletswaps WALLET TOKEN 50\n/walletswaps WALLET TOKEN 50 deep",
+            "Формат:\n/walletswaps WALLET\n/walletswaps WALLET TOKEN\n/walletswaps WALLET TOKEN 50\n/walletswaps WALLET TOKEN 50 deep\n/walletswaps WALLET TOKEN 50 deep10",
             reply_markup=main_reply_keyboard(),
         )
         return
@@ -344,16 +344,16 @@ async def walletswaps_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             token = context.args[1].strip()
 
     if len(context.args) > 2:
-        if context.args[2].lower() == "deep":
-            mode = "deep"
+        if context.args[2].lower() in {"deep", "deep10"}:
+            mode = context.args[2].lower()
         else:
             try:
                 limit = int(context.args[2])
             except ValueError:
                 limit = 20
 
-    if len(context.args) > 3 and context.args[3].lower() == "deep":
-        mode = "deep"
+    if len(context.args) > 3 and context.args[3].lower() in {"deep", "deep10"}:
+        mode = context.args[3].lower()
 
     limit = min(max(limit, 1), 50)
 
