@@ -11,8 +11,10 @@ from price_sources import get_birdeye_price_near
 SOLSCAN_BASE_URL = "https://pro-api.solscan.io/v2.0"
 BIRDEYE_BASE_URL = "https://public-api.birdeye.so"
 DEEP_MAX_PAGES = 5
+DEEP10_MAX_PAGES = 10
 DEEP_PAGE_SIZE = 50
 DEEP_MAX_RAW_EVENTS = 250
+DEEP10_MAX_RAW_EVENTS = 500
 DEEP_DELAY_SECONDS = 1.2
 
 
@@ -447,11 +449,14 @@ def has_token_sol_pair(summary):
     return summary.get("token_to_sol", 0) > 0 and summary.get("sol_to_token", 0) > 0
 
 
-def request_birdeye_swaps_deep(wallet, token):
+def request_birdeye_swaps_deep(wallet, token, mode="deep"):
+    max_pages = DEEP10_MAX_PAGES if mode == "deep10" else DEEP_MAX_PAGES
+    max_raw_events = DEEP10_MAX_RAW_EVENTS if mode == "deep10" else DEEP_MAX_RAW_EVENTS
+
     if not BIRDEYE_API_KEY:
         return {
             "ok": False,
-            "source": "Birdeye /defi/v3/txs deep",
+            "source": f"Birdeye /defi/v3/txs {mode}",
             "status": "BIRDEYE_API_KEY missing",
             "items": [],
             "error": "BIRDEYE_API_KEY missing",
@@ -466,7 +471,7 @@ def request_birdeye_swaps_deep(wallet, token):
     rate_limited = False
     rate_limit_page = None
 
-    for page in range(DEEP_MAX_PAGES):
+    for page in range(max_pages):
         if page:
             time.sleep(DEEP_DELAY_SECONDS)
 
@@ -484,14 +489,14 @@ def request_birdeye_swaps_deep(wallet, token):
         page_items = result.get("items") or []
         pages_scanned += 1
         raw_items.extend(page_items)
-        raw_items = raw_items[:DEEP_MAX_RAW_EVENTS]
+        raw_items = raw_items[:max_raw_events]
 
         filtered = [item for item in raw_items if row_matches_token(item, token)]
         summary = build_summary(filtered)
         if token and has_token_sol_pair(summary):
             break
 
-        if len(raw_items) >= DEEP_MAX_RAW_EVENTS or len(page_items) < DEEP_PAGE_SIZE:
+        if len(raw_items) >= max_raw_events or len(page_items) < DEEP_PAGE_SIZE:
             break
 
     status = last_status
@@ -501,7 +506,7 @@ def request_birdeye_swaps_deep(wallet, token):
     return apply_token_filter(
         {
             "ok": bool(raw_items) or last_error is None,
-            "source": "Birdeye /defi/v3/txs deep",
+            "source": f"Birdeye /defi/v3/txs {mode}",
             "status": status,
             "items": raw_items,
             "error": None if raw_items else last_error,
@@ -509,14 +514,17 @@ def request_birdeye_swaps_deep(wallet, token):
             "raw_swaps_scanned": len(raw_items),
             "rate_limited": rate_limited,
             "rate_limit_page": rate_limit_page,
+            "mode": mode,
+            "max_pages": max_pages,
+            "max_raw_events": max_raw_events,
         },
         token,
     )
 
 
 def pick_swap_source(wallet, token, limit, mode="normal"):
-    if mode == "deep":
-        birdeye = request_birdeye_swaps_deep(wallet, token)
+    if mode in {"deep", "deep10"}:
+        birdeye = request_birdeye_swaps_deep(wallet, token, mode)
         return birdeye, [birdeye]
 
     solscan = apply_token_filter(request_solscan_swaps(wallet, token, limit), token)
@@ -640,7 +648,8 @@ def build_sell_window_price_check(items, token):
 
 
 def build_wallet_swaps_text(wallet, token=None, limit=20, mode="normal"):
-    mode = "deep" if str(mode).lower() == "deep" else "normal"
+    mode = str(mode).lower()
+    mode = mode if mode in {"deep", "deep10"} else "normal"
     safe_limit = min(max(int(limit), 1), 50)
     token = (token or "").strip() or None
     result, attempts = pick_swap_source(wallet, token, safe_limit, mode)
@@ -724,6 +733,8 @@ def build_wallet_swaps_text(wallet, token=None, limit=20, mode="normal"):
             lines.append("Only possible sell events found in scanned window.")
         elif summary["sol_to_token"] > 0:
             lines.append("Only possible buy events found in scanned window.")
+        elif mode == "deep10":
+            lines.append("No possible buy found in scanned window. Buy may be older, routed differently, or received via transfer.")
 
     lines.extend(
         [
