@@ -58,7 +58,7 @@ Arkham and wallets:
 - `/wallettx WALLET TOKEN 25` - manually inspect Arkham `/transfers` diagnostics for one wallet/token pair.
 - `/wallettrade WALLET TOKEN` - manually summarize wallet/token transfer behavior and potential IN/OUT cycles from Arkham `/transfers`, then use Birdeye close prices near first IN/OUT timestamps to estimate approximate cycle price movement for up to the latest 5 completed cycles. No amount-based returns, entry quality, or exit quality are calculated.
 - `/pricesource TOKEN 2026-05-07T18:45:29Z` - manually test Birdeye Solana historical price/OHLCV near an ISO timestamp. Requires `BIRDEYE_API_KEY`; no amount-based return is calculated.
-- `/walletswaps WALLET`, `/walletswaps WALLET TOKEN`, or `/walletswaps WALLET TOKEN 50 deep` - manually inspect parsed Solana swap activities. Normal mode uses Solscan Pro account defi activities when `SOLSCAN_API_KEY` is available, with Birdeye trades V3 fallback. Deep mode scans Birdeye pages for older wallet/token swaps.
+- `/walletswaps WALLET`, `/walletswaps WALLET TOKEN`, or `/walletswaps WALLET TOKEN 50 deep` - manually inspect parsed Solana swap activities. Normal mode uses Solscan Pro account defi activities when `SOLSCAN_API_KEY` is available, with Birdeye trades V3 fallback. Deep mode scans Birdeye pages for older wallet/token swaps. Token-filtered reports include an approximate sell-window price check when token -> SOL events are found.
 - `/watchwallet ADDRESS note` - add or update a wallet watch item.
 - `/walletlist` - show wallet watchlist.
 - `/checkwallets` - refresh wallet snapshots through Arkham.

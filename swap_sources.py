@@ -5,6 +5,7 @@ import time
 import requests
 
 from config import BIRDEYE_API_KEY, SOLSCAN_API_KEY
+from price_sources import get_birdeye_price_near
 
 
 SOLSCAN_BASE_URL = "https://pro-api.solscan.io/v2.0"
@@ -68,6 +69,25 @@ def format_usd(value):
         return "n/a"
 
     return f"${number:,.2f}"
+
+
+def format_percent(value):
+    if value is None:
+        return "n/a"
+
+    sign = "+" if value > 0 else ""
+    return f"{sign}{value:.2f}%"
+
+
+def format_price(value):
+    number = to_float(value)
+    if number is None:
+        return "price unavailable"
+
+    if abs(number) >= 1:
+        return f"{number:.6f}".rstrip("0").rstrip(".")
+
+    return f"{number:.12f}".rstrip("0").rstrip(".")
 
 
 def extract_items(payload):
@@ -564,6 +584,61 @@ def build_summary(items):
     }
 
 
+def build_sell_window_price_check(items, token):
+    if not token:
+        return []
+
+    sell_events = [
+        item
+        for item in items
+        if str(item.get("token_out") or "").lower() == "sol"
+        and str(item.get("token_in") or "").lower() != "sol"
+        and item.get("time")
+        and item.get("time") != "n/a"
+    ]
+
+    if not sell_events:
+        return []
+
+    if not BIRDEYE_API_KEY:
+        return ["", "Sell window price check skipped: BIRDEYE_API_KEY missing."]
+
+    sell_events = sorted(sell_events, key=lambda item: item.get("time") or "")
+    first_sell = sell_events[0]
+    last_sell = sell_events[-1]
+    first_time = first_sell.get("time")
+    last_time = last_sell.get("time")
+
+    first_price = get_birdeye_price_near(token, first_time)
+    time.sleep(0.2)
+    last_price = get_birdeye_price_near(token, last_time)
+
+    first_value = first_price.get("price") if first_price.get("ok") else None
+    last_value = last_price.get("price") if last_price.get("ok") else None
+    price_change = None
+
+    if first_value is not None and last_value is not None and first_value != 0:
+        price_change = ((last_value - first_value) / first_value) * 100
+
+    total_sell_usd = 0.0
+    has_sell_usd = False
+    for item in sell_events:
+        usd = to_float(item.get("usd_value"))
+        if usd is not None:
+            total_sell_usd += usd
+            has_sell_usd = True
+
+    return [
+        "",
+        "Sell Window Price Check:",
+        f"- Sell events: {len(sell_events)}",
+        f"- First sell: {first_time} / {format_price(first_value)}",
+        f"- Last sell: {last_time} / {format_price(last_value)}",
+        f"- Price change during sell window: {format_percent(price_change)}",
+        f"- Total sell USD value: {format_usd(total_sell_usd if has_sell_usd else None)}",
+    ]
+
+
 def build_wallet_swaps_text(wallet, token=None, limit=20, mode="normal"):
     mode = "deep" if str(mode).lower() == "deep" else "normal"
     safe_limit = min(max(int(limit), 1), 50)
@@ -618,6 +693,8 @@ def build_wallet_swaps_text(wallet, token=None, limit=20, mode="normal"):
                 f"- Has possible sell: {'yes' if summary['token_to_sol'] > 0 else 'no'}",
             ]
         )
+
+    lines.extend(build_sell_window_price_check(items, token))
 
     lines.extend(["", "Events:"])
 
