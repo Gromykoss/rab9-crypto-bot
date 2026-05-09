@@ -143,45 +143,40 @@ def _field(item, *keys):
     return None
 
 
-def _build_report(token: str, requested_iso: str, primary: dict, fallback: dict, nearest: dict, distance):
-    source = "Birdeye /defi/ohlcv"
-    chosen = primary
+def _to_float(value):
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
-    if nearest is None and fallback:
-        source = "Birdeye /defi/history_price"
-        chosen = fallback
 
-    status = chosen.get("status_code")
-    endpoint = chosen.get("endpoint")
-
-    price = _field(nearest, "c", "close", "value", "price")
-    candle_time = _field(nearest, "unixTime", "time", "timestamp", "t")
-    available_keys = sorted(nearest.keys()) if isinstance(nearest, dict) else []
+def _build_report(token: str, requested_iso: str, result: dict):
+    available_keys = result.get("available_keys") or []
 
     lines = [
         "🧪 Price Source Diagnostic",
         f"Token: {_compact(token)}",
         f"Timestamp requested: {requested_iso}",
-        f"Source: {source}",
-        f"Endpoint: {endpoint or 'n/a'}",
-        f"Status: {status}",
+        f"Source: {result.get('source') or 'n/a'}",
+        f"Endpoint: {result.get('endpoint') or 'n/a'}",
+        f"Status: {result.get('status_code')}",
     ]
 
-    if chosen.get("error") and nearest is None:
-        lines.append(f"Error: {chosen['error']}")
+    if result.get("error") and not result.get("ok"):
+        lines.append(f"Error: {result['error']}")
 
     lines.extend(
         [
             "",
             "Result:",
-            f"Price near timestamp: {price if price is not None else 'n/a'}",
-            f"Candle time: {_iso_from_unix(candle_time)}",
-            f"Distance from requested: {distance if distance is not None else 'n/a'} sec",
-            f"Open: {_field(nearest, 'o', 'open') or 'n/a'}",
-            f"High: {_field(nearest, 'h', 'high') or 'n/a'}",
-            f"Low: {_field(nearest, 'l', 'low') or 'n/a'}",
-            f"Close: {_field(nearest, 'c', 'close') or 'n/a'}",
-            f"Raw fields count: {len(available_keys)}",
+            f"Price near timestamp: {result.get('price') if result.get('price') is not None else 'n/a'}",
+            f"Candle time: {result.get('time') or 'n/a'}",
+            f"Distance from requested: {result.get('distance') if result.get('distance') is not None else 'n/a'} sec",
+            f"Open: {result.get('open') if result.get('open') is not None else 'n/a'}",
+            f"High: {result.get('high') if result.get('high') is not None else 'n/a'}",
+            f"Low: {result.get('low') if result.get('low') is not None else 'n/a'}",
+            f"Close: {result.get('close') if result.get('close') is not None else 'n/a'}",
+            f"Raw fields count: {result.get('raw_fields_count', 0)}",
             f"Available keys: {', '.join(available_keys) if available_keys else 'n/a'}",
             "",
             "No PnL calculated.",
@@ -203,6 +198,8 @@ def get_birdeye_price_near(token: str, timestamp: str) -> dict:
             "price": None,
             "time": "n/a",
             "source": "Birdeye",
+            "endpoint": "n/a",
+            "status_code": None,
         }
 
     requested = _parse_iso_timestamp(timestamp)
@@ -214,6 +211,8 @@ def get_birdeye_price_near(token: str, timestamp: str) -> dict:
             "price": None,
             "time": "n/a",
             "source": "Birdeye",
+            "endpoint": "n/a",
+            "status_code": None,
         }
 
     requested_ts = int(requested.timestamp())
@@ -238,12 +237,8 @@ def get_birdeye_price_near(token: str, timestamp: str) -> dict:
         source = "Birdeye /defi/history_price"
         result = history
 
-    price = _field(nearest, "c", "close", "value", "price")
-
-    try:
-        price = float(price) if price is not None else None
-    except (TypeError, ValueError):
-        price = None
+    price = _to_float(_field(nearest, "c", "close", "value", "price"))
+    available_keys = sorted(nearest.keys()) if isinstance(nearest, dict) else []
 
     if nearest is None or price is None:
         return {
@@ -253,6 +248,15 @@ def get_birdeye_price_near(token: str, timestamp: str) -> dict:
             "price": None,
             "time": "n/a",
             "source": source,
+            "endpoint": result.get("endpoint"),
+            "status_code": result.get("status_code"),
+            "distance": distance,
+            "open": None,
+            "high": None,
+            "low": None,
+            "close": None,
+            "raw_fields_count": len(available_keys),
+            "available_keys": available_keys,
         }
 
     candle_time = _field(nearest, "unixTime", "time", "timestamp", "t")
@@ -265,6 +269,14 @@ def get_birdeye_price_near(token: str, timestamp: str) -> dict:
         "time": _iso_from_unix(candle_time),
         "distance": distance,
         "source": source,
+        "endpoint": result.get("endpoint"),
+        "status_code": result.get("status_code"),
+        "open": _to_float(_field(nearest, "o", "open")),
+        "high": _to_float(_field(nearest, "h", "high")),
+        "low": _to_float(_field(nearest, "l", "low")),
+        "close": _to_float(_field(nearest, "c", "close", "value", "price")),
+        "raw_fields_count": len(available_keys),
+        "available_keys": available_keys,
     }
 
 
@@ -279,26 +291,8 @@ def build_price_source_text(token: str, timestamp: str) -> str:
     if requested is None:
         return "Invalid timestamp. Use ISO format, example: 2026-05-07T18:45:29Z"
 
-    requested_ts = int(requested.timestamp())
     requested_iso = requested.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
-    window = 3600
-    common = {
-        "address": token,
-        "address_type": "token",
-        "type": "1m",
-        "time_from": requested_ts - window,
-        "time_to": requested_ts + window,
-    }
+    result = get_birdeye_price_near(token, timestamp)
 
-    ohlcv = _request_birdeye("/defi/ohlcv", common)
-    ohlcv_items = _extract_items(ohlcv.get("data"))
-    nearest, distance = _nearest_item(ohlcv_items, requested_ts)
-
-    history = None
-    if nearest is None:
-        history = _request_birdeye("/defi/history_price", common)
-        history_items = _extract_items(history.get("data"))
-        nearest, distance = _nearest_item(history_items, requested_ts)
-
-    return _build_report(token, requested_iso, ohlcv, history, nearest, distance)
+    return _build_report(token, requested_iso, result)
