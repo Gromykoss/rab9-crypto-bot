@@ -37,6 +37,7 @@ from arkham import (
     build_wallet_trade_text,
 )
 from price_sources import build_price_source_text
+from swap_sources import build_wallet_swaps_text
 from wallet_watch import (
     add_wallet_to_watchlist,
     remove_wallet_from_watchlist,
@@ -317,6 +318,41 @@ async def pricesource_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await update.message.reply_text(f"Проверяю Birdeye historical price: {token} / {timestamp}")
     text = await asyncio.to_thread(build_price_source_text, token, timestamp)
+    await reply_long(update, text, main_reply_keyboard())
+
+
+async def walletswaps_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if await deny_if_wrong_group(update):
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text(
+            "Формат:\n/walletswaps WALLET\n/walletswaps WALLET TOKEN\n/walletswaps WALLET TOKEN 50",
+            reply_markup=main_reply_keyboard(),
+        )
+        return
+
+    wallet = context.args[0].strip()
+    token = None
+    limit = 20
+
+    if len(context.args) > 1:
+        if context.args[1].isdigit():
+            limit = int(context.args[1])
+        else:
+            token = context.args[1].strip()
+
+    if len(context.args) > 2:
+        try:
+            limit = int(context.args[2])
+        except ValueError:
+            limit = 20
+
+    limit = min(max(limit, 1), 50)
+
+    target = f"{wallet} / {token}" if token else wallet
+    await update.message.reply_text(f"Проверяю parsed wallet swaps: {target} / limit {limit}")
+    text = await asyncio.to_thread(build_wallet_swaps_text, wallet, token, limit)
     await reply_long(update, text, main_reply_keyboard())
 
 
@@ -789,6 +825,7 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("wallettx", wallettx_command))
     app.add_handler(CommandHandler("wallettrade", wallettrade_command))
     app.add_handler(CommandHandler("pricesource", pricesource_command))
+    app.add_handler(CommandHandler("walletswaps", walletswaps_command))
     app.add_handler(CommandHandler("watchwallet", watchwallet_command))
     app.add_handler(CommandHandler("walletlist", walletlist_command))
     app.add_handler(CommandHandler("unwatchwallet", unwatchwallet_command))

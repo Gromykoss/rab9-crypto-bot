@@ -58,6 +58,7 @@ Arkham and wallets:
 - `/wallettx WALLET TOKEN 25` - manually inspect Arkham `/transfers` diagnostics for one wallet/token pair.
 - `/wallettrade WALLET TOKEN` - manually summarize wallet/token transfer behavior and potential IN/OUT cycles from Arkham `/transfers`, then use Birdeye close prices near first IN/OUT timestamps to estimate approximate cycle price movement for up to the latest 5 completed cycles. No amount-based returns, entry quality, or exit quality are calculated.
 - `/pricesource TOKEN 2026-05-07T18:45:29Z` - manually test Birdeye Solana historical price/OHLCV near an ISO timestamp. Requires `BIRDEYE_API_KEY`; no amount-based return is calculated.
+- `/walletswaps WALLET` or `/walletswaps WALLET TOKEN` - manually inspect parsed Solana swap activities. Uses Solscan Pro account defi activities when `SOLSCAN_API_KEY` is available, with Birdeye trades V3 fallback.
 - `/watchwallet ADDRESS note` - add or update a wallet watch item.
 - `/walletlist` - show wallet watchlist.
 - `/checkwallets` - refresh wallet snapshots through Arkham.
@@ -77,6 +78,7 @@ Arkham and wallets:
 - `wallet_watch.py` - wallet watchlist load/save, Arkham wallet snapshots, formatting.
 - `arkham.py` - Arkham API helpers for status, token intel, wallet/address intel, and manual flow checks.
 - `price_sources.py` - manual Birdeye historical price/OHLCV diagnostics for future wallet-trade research.
+- `swap_sources.py` - manual parsed swap diagnostics using Solscan Pro with Birdeye fallback.
 - `keyboards.py` - Telegram reply and inline keyboards.
 - `utils.py` - formatting, parsing, time, and message chunk utilities.
 - `requirements.txt` - Python package dependencies.
@@ -101,6 +103,7 @@ Edit `.env` locally and set:
 - `XAI_API_KEY`
 - `ARKHAM_API_KEY`
 - optional `BIRDEYE_API_KEY` for `/pricesource`
+- optional `SOLSCAN_API_KEY` for `/walletswaps`
 - optional `DEXSCREENER_BASE_URL`
 - optional `XAI_BASE_URL`
 - optional `ALERT_INTERVAL_SECONDS`
@@ -187,6 +190,7 @@ Keep these local-only:
 - Grok commands say API key is missing: set `XAI_API_KEY` and restart the bot.
 - Arkham commands say API key is missing or return errors: set `ARKHAM_API_KEY`, check quota, then retry `/arkhamstatus`.
 - `/pricesource` says `BIRDEYE_API_KEY missing`: set `BIRDEYE_API_KEY` and restart the bot.
+- `/walletswaps` says `SOLSCAN_API_KEY missing`: add `SOLSCAN_API_KEY` for Solscan Pro, or set `BIRDEYE_API_KEY` to try the fallback.
 - Watchlist or alert data is missing after moving the project: copy `watchlist.json`, `alert_state.json`, and `wallet_watchlist.json` into the project directory.
 - Alerts do not appear immediately after startup: the background alert loop waits briefly, then runs every `ALERT_INTERVAL_SECONDS`; use `/alertsnow` for a manual check.
 - `ModuleNotFoundError`: activate the venv and run `pip install -r requirements.txt`.
