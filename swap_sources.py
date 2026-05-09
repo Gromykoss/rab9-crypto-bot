@@ -1,5 +1,6 @@
 from collections import Counter
 from datetime import datetime, timezone
+import time
 
 import requests
 
@@ -8,6 +9,10 @@ from config import BIRDEYE_API_KEY, SOLSCAN_API_KEY
 
 SOLSCAN_BASE_URL = "https://pro-api.solscan.io/v2.0"
 BIRDEYE_BASE_URL = "https://public-api.birdeye.so"
+DEEP_MAX_PAGES = 5
+DEEP_PAGE_SIZE = 50
+DEEP_MAX_RAW_EVENTS = 250
+DEEP_DELAY_SECONDS = 0.2
 
 
 def compact(value, left=6, right=4):
@@ -330,7 +335,7 @@ def request_solscan_swaps(wallet, token, limit):
     }
 
 
-def request_birdeye_swaps(wallet, token, limit):
+def request_birdeye_swaps_page(wallet, token, limit, offset=0):
     if not BIRDEYE_API_KEY:
         return {
             "ok": False,
@@ -343,6 +348,7 @@ def request_birdeye_swaps(wallet, token, limit):
     params = {
         "owner": wallet,
         "limit": limit,
+        "offset": offset,
         "sort_by": "block_unix_time",
         "sort_type": "desc",
         "tx_type": "swap",
@@ -382,6 +388,10 @@ def request_birdeye_swaps(wallet, token, limit):
     }
 
 
+def request_birdeye_swaps(wallet, token, limit):
+    return request_birdeye_swaps_page(wallet, token, limit, 0)
+
+
 def row_matches_token(item, token):
     if not token:
         return True
@@ -413,7 +423,71 @@ def apply_token_filter(result, token):
     return result
 
 
-def pick_swap_source(wallet, token, limit):
+def has_token_sol_pair(summary):
+    return summary.get("token_to_sol", 0) > 0 and summary.get("sol_to_token", 0) > 0
+
+
+def request_birdeye_swaps_deep(wallet, token):
+    if not BIRDEYE_API_KEY:
+        return {
+            "ok": False,
+            "source": "Birdeye /defi/v3/txs deep",
+            "status": "BIRDEYE_API_KEY missing",
+            "items": [],
+            "error": "BIRDEYE_API_KEY missing",
+            "pages_scanned": 0,
+            "raw_swaps_scanned": 0,
+        }
+
+    raw_items = []
+    last_status = None
+    last_error = None
+    pages_scanned = 0
+
+    for page in range(DEEP_MAX_PAGES):
+        if page:
+            time.sleep(DEEP_DELAY_SECONDS)
+
+        offset = page * DEEP_PAGE_SIZE
+        result = request_birdeye_swaps_page(wallet, token, DEEP_PAGE_SIZE, offset)
+        last_status = result.get("status")
+        last_error = result.get("error")
+
+        if not result.get("ok"):
+            break
+
+        page_items = result.get("items") or []
+        pages_scanned += 1
+        raw_items.extend(page_items)
+        raw_items = raw_items[:DEEP_MAX_RAW_EVENTS]
+
+        filtered = [item for item in raw_items if row_matches_token(item, token)]
+        summary = build_summary(filtered)
+        if token and has_token_sol_pair(summary):
+            break
+
+        if len(raw_items) >= DEEP_MAX_RAW_EVENTS or len(page_items) < DEEP_PAGE_SIZE:
+            break
+
+    return apply_token_filter(
+        {
+            "ok": last_error is None,
+            "source": "Birdeye /defi/v3/txs deep",
+            "status": last_status,
+            "items": raw_items,
+            "error": last_error,
+            "pages_scanned": pages_scanned,
+            "raw_swaps_scanned": len(raw_items),
+        },
+        token,
+    )
+
+
+def pick_swap_source(wallet, token, limit, mode="normal"):
+    if mode == "deep":
+        birdeye = request_birdeye_swaps_deep(wallet, token)
+        return birdeye, [birdeye]
+
     solscan = apply_token_filter(request_solscan_swaps(wallet, token, limit), token)
     if solscan["ok"] and solscan["items"]:
         return solscan, [solscan]
@@ -479,10 +553,11 @@ def build_summary(items):
     }
 
 
-def build_wallet_swaps_text(wallet, token=None, limit=20):
+def build_wallet_swaps_text(wallet, token=None, limit=20, mode="normal"):
+    mode = "deep" if str(mode).lower() == "deep" else "normal"
     safe_limit = min(max(int(limit), 1), 50)
     token = (token or "").strip() or None
-    result, attempts = pick_swap_source(wallet, token, safe_limit)
+    result, attempts = pick_swap_source(wallet, token, safe_limit, mode)
     items = result.get("items") or []
     summary = build_summary(items)
 
@@ -490,10 +565,13 @@ def build_wallet_swaps_text(wallet, token=None, limit=20):
         "Wallet Swaps Diagnostic",
         f"Wallet: {compact(wallet)}",
         f"Token filter: {compact(token) if token else 'none'}",
+        f"Mode: {mode}",
+        f"Pages scanned: {result.get('pages_scanned', 1 if result.get('ok') else 0)}",
+        f"Raw swaps scanned: {result.get('raw_swaps_scanned', result.get('items_before_filter', len(items)))}",
         f"Token filter applied: {'yes' if token else 'no'}",
         f"Source used: {result.get('source')}",
         f"Status: {result.get('status')}",
-        f"Items returned: {len(items)}",
+        f"Items after filter: {len(items)}",
     ]
 
     if attempts and attempts[0].get("error") == "SOLSCAN_API_KEY missing":
@@ -521,6 +599,8 @@ def build_wallet_swaps_text(wallet, token=None, limit=20):
             [
                 f"- Direction token -> SOL count: {summary['token_to_sol']}",
                 f"- Direction SOL -> token count: {summary['sol_to_token']}",
+                f"- Has possible buy: {'yes' if summary['sol_to_token'] > 0 else 'no'}",
+                f"- Has possible sell: {'yes' if summary['token_to_sol'] > 0 else 'no'}",
             ]
         )
 
@@ -544,6 +624,14 @@ def build_wallet_swaps_text(wallet, token=None, limit=20):
 
     if len(items) > 20:
         lines.append("Showing first 20 rows only")
+
+    if token:
+        if summary["token_to_sol"] > 0 and summary["sol_to_token"] > 0:
+            lines.append("Both possible buy and sell events found. Suitable for future wallettrade swap-cycle analysis.")
+        elif summary["token_to_sol"] > 0:
+            lines.append("Only possible sell events found in scanned window.")
+        elif summary["sol_to_token"] > 0:
+            lines.append("Only possible buy events found in scanned window.")
 
     lines.extend(
         [
