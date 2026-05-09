@@ -473,7 +473,7 @@ def classify_wallet_trade_behavior(summary: dict, cycle_summary: dict):
     return "Mixed / Needs Review"
 
 
-def interpret_wallet_trade_behavior(classification: str, summary: dict, cycle_summary: dict):
+def interpret_wallet_trade_behavior(classification: str, summary: dict, cycle_summary: dict, price_summary=None):
     cycle_text = (
         "Repeated IN/OUT cycles are visible."
         if cycle_summary["completed"] > 1
@@ -493,8 +493,17 @@ def interpret_wallet_trade_behavior(classification: str, summary: dict, cycle_su
     else:
         activity = "The wallet has mixed token movement that needs deeper price-action context."
 
-    if summary["token_in"] and summary["token_out"]:
-        next_step = "It is suitable for future price-action analysis once a historical price source is connected."
+    cycles_priced = (price_summary or {}).get("cycles_priced")
+    price_skipped = (price_summary or {}).get("skipped")
+
+    if cycles_priced and cycles_priced > 0:
+        next_step = "Historical price was available for selected cycles, so approximate cycle price movement is included above."
+    elif price_skipped:
+        next_step = "Historical price analysis was skipped because Birdeye key is missing."
+    elif cycles_priced == 0:
+        next_step = "Historical price was attempted but unavailable for selected cycles."
+    elif summary["token_in"] and summary["token_out"]:
+        next_step = "It is suitable for future price-action analysis when matching historical candles are available."
     else:
         next_step = "It has limited value for price-action analysis until more matching transfers are found."
 
@@ -533,17 +542,17 @@ def build_cycle_price_movement_section(cycles: list, token: str, max_cycles=5):
 
     if not completed:
         lines.append("No completed cycles available for price movement.")
-        return lines
+        return {"lines": lines, "cycles_priced": 0, "skipped": False}
 
     priced_moves = []
-    first_price = get_birdeye_price_near(token, completed[0]["in_first"])
+    analysis_cycles = completed[-max_cycles:]
+    first_price = get_birdeye_price_near(token, analysis_cycles[0]["in_first"])
 
     if first_price.get("skipped"):
         lines.append("Price analysis skipped: BIRDEYE_API_KEY missing.")
-        return lines
+        return {"lines": lines, "cycles_priced": 0, "skipped": True}
 
-    analysis_cycles = completed[:max_cycles]
-    in_price_cache = {completed[0]["in_first"]: first_price}
+    in_price_cache = {analysis_cycles[0]["in_first"]: first_price}
     price_cache = {}
 
     for idx, cycle in enumerate(analysis_cycles, start=1):
@@ -576,7 +585,7 @@ def build_cycle_price_movement_section(cycles: list, token: str, max_cycles=5):
         )
 
     if len(completed) > max_cycles:
-        lines.append("Analyzed first 5 completed cycles only")
+        lines.append("Analyzed latest 5 completed cycles only")
 
     lines.extend(["", "Cycle Price Movement Summary:"])
     lines.append(f"- Cycles priced: {len(priced_moves)}")
@@ -593,7 +602,7 @@ def build_cycle_price_movement_section(cycles: list, token: str, max_cycles=5):
         lines.append("- Best move: n/a")
         lines.append("- Worst move: n/a")
 
-    return lines
+    return {"lines": lines, "cycles_priced": len(priced_moves), "skipped": False}
 
 
 def format_flow_snapshot(snapshot: dict):
@@ -1219,6 +1228,7 @@ def build_wallet_trade_text(wallet: str, token: str):
     cycles = build_potential_trade_cycles(events_chrono, wallet)
     cycle_summary = summarize_cycles(cycles)
     classification = classify_wallet_trade_behavior(summary, cycle_summary)
+    price_section = build_cycle_price_movement_section(cycles, token)
 
     active_period = (
         f"{summary['first_time']} -> {summary['last_time']}"
@@ -1249,13 +1259,13 @@ def build_wallet_trade_text(wallet: str, token: str):
         f"- Shortest cycle: {cycle_summary['shortest']}",
         f"- Longest cycle: {cycle_summary['longest']}",
         "",
-        *build_cycle_price_movement_section(cycles, token),
+        *price_section["lines"],
         "",
         "Behavior Classification:",
         classification,
         "",
         "Interpretation:",
-        interpret_wallet_trade_behavior(classification, summary, cycle_summary),
+        interpret_wallet_trade_behavior(classification, summary, cycle_summary, price_section),
         "",
         "Limitations:",
         "- No amount/usdValue in Arkham transfer response.",

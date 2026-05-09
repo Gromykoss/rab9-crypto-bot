@@ -266,11 +266,12 @@ Expected:
 - behavior classification uses simple transfer-pattern labels such as `Active Trading Wallet`, `Accumulation / Holder`, `Distribution Only`, `Insufficient Data`, or `Pool-centric trading pattern`;
 - interpretation is short and does not duplicate the summary fields;
 - if `BIRDEYE_API_KEY` is missing, response keeps the behavior-only report and says `Price analysis skipped: BIRDEYE_API_KEY missing.`;
-- when Birdeye candles are available, response includes `Price Movement by Cycle` with up to the first 5 completed cycles;
+- when Birdeye candles are available, response includes `Price Movement by Cycle` with up to the latest 5 completed cycles in chronological order;
 - price movement rows look like `#1 IN: time / price | OUT: time / price | Move: +X%`;
-- if more than 5 completed cycles are available, response says `Analyzed first 5 completed cycles only`;
+- if more than 5 completed cycles are available, response says `Analyzed latest 5 completed cycles only`;
 - price movement summary includes cycles priced, positive moves, negative moves, average move, best move, and worst move;
 - if a candle is missing for a cycle, that row says `price unavailable` and the bot keeps running;
+- interpretation says historical price was used when cycles are priced, or says historical price was attempted but unavailable when no selected cycles could be priced;
 - limitations explicitly say no amount/usdValue is available, cycle price movement is approximate, and amount-based returns and exit quality are not calculated;
 - response does not show all raw events;
 - command does not recommend entry/exit decisions;
