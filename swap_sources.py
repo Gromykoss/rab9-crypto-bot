@@ -115,40 +115,165 @@ def token_text(value):
     return value or "n/a"
 
 
+def token_address(value):
+    if isinstance(value, dict):
+        return (
+            value.get("address")
+            or value.get("mint")
+            or value.get("token_address")
+            or value.get("tokenAddress")
+            or value.get("token")
+        )
+
+    return value
+
+
+def token_symbol(value):
+    if isinstance(value, dict):
+        return value.get("symbol") or value.get("token_symbol") or value.get("tokenSymbol")
+
+    return value
+
+
+def collect_raw_token_values(value):
+    values = []
+
+    if isinstance(value, dict):
+        for key in (
+            "address",
+            "mint",
+            "token",
+            "token_address",
+            "tokenAddress",
+            "symbol",
+            "token_symbol",
+            "tokenSymbol",
+        ):
+            if value.get(key):
+                values.append(str(value[key]))
+    elif value:
+        values.append(str(value))
+
+    return values
+
+
+def collect_item_token_values(item):
+    values = []
+
+    if not isinstance(item, dict):
+        return values
+
+    token_keys = (
+        "token",
+        "token_address",
+        "tokenAddress",
+        "mint",
+        "address",
+        "base",
+        "quote",
+        "from",
+        "to",
+        "from_token",
+        "to_token",
+        "token_in",
+        "token_out",
+        "sell_token",
+        "buy_token",
+        "source_token",
+        "destination_token",
+    )
+
+    for key in token_keys:
+        if key in item:
+            values.extend(collect_raw_token_values(item.get(key)))
+
+    routers = item.get("routers")
+    if isinstance(routers, list):
+        for router in routers:
+            if isinstance(router, dict):
+                for key in ("token1", "token2", "from_token", "to_token", "input_token", "output_token"):
+                    if key in router:
+                        values.extend(collect_raw_token_values(router.get(key)))
+
+    return values
+
+
 def normalize_solscan_item(item):
     routers = item.get("routers") if isinstance(item, dict) else None
     router = routers[0] if isinstance(routers, list) and routers else {}
 
-    token_in = token_text(first_value(router, ["token1", "from_token", "input_token"]))
-    token_out = token_text(first_value(router, ["token2", "to_token", "output_token"]))
+    raw_token_in = first_value(router, ["token1", "from_token", "input_token"])
+    raw_token_out = first_value(router, ["token2", "to_token", "output_token"])
+    token_in = token_symbol(raw_token_in) or token_text(raw_token_in)
+    token_out = token_symbol(raw_token_out) or token_text(raw_token_out)
     amount_in = first_value(router, ["amount1", "from_amount", "input_amount"])
     amount_out = first_value(router, ["amount2", "to_amount", "output_amount"])
+    raw_values = collect_item_token_values(item)
+    raw_values.extend(collect_raw_token_values(raw_token_in))
+    raw_values.extend(collect_raw_token_values(raw_token_out))
 
     return {
         "time": format_time(first_value(item, ["block_time", "time", "timestamp"])),
         "token_in": token_in,
+        "token_in_address": token_address(raw_token_in),
         "amount_in": amount_in,
         "token_out": token_out,
+        "token_out_address": token_address(raw_token_out),
         "amount_out": amount_out,
         "usd_value": first_value(item, ["value", "usd_value", "usdValue", "amount_usd", "volume_usd"]),
         "tx": first_value(item, ["trans_id", "tx_hash", "txHash", "signature", "hash"]),
         "platform": first_value(item, ["platform", "source", "program", "activity_type"]) or "n/a",
+        "raw_token_values": sorted(set(str(value) for value in raw_values if value)),
     }
 
 
 def normalize_birdeye_item(item):
-    token_in = token_text(first_value(item, ["from", "from_token", "token_in", "base", "sell_token", "source_token"]))
-    token_out = token_text(first_value(item, ["to", "to_token", "token_out", "quote", "buy_token", "destination_token"]))
+    raw_token_in = first_value(item, ["from", "from_token", "token_in", "base", "sell_token", "source_token"])
+    raw_token_out = first_value(item, ["to", "to_token", "token_out", "quote", "buy_token", "destination_token"])
+    token_in = token_symbol(raw_token_in) or token_text(raw_token_in)
+    token_out = token_symbol(raw_token_out) or token_text(raw_token_out)
+    raw_values = collect_item_token_values(item)
+    raw_values.extend(collect_raw_token_values(raw_token_in))
+    raw_values.extend(collect_raw_token_values(raw_token_out))
 
     return {
         "time": format_time(first_value(item, ["block_unix_time", "blockUnixTime", "block_time", "time", "timestamp"])),
         "token_in": token_in,
-        "amount_in": first_value(item, ["from_amount", "amount_in", "sell_amount", "base_amount", "fromAmount"]),
+        "token_in_address": token_address(raw_token_in),
+        "amount_in": first_value(
+            item,
+            [
+                "from_amount",
+                "amount_in",
+                "sell_amount",
+                "base_amount",
+                "fromAmount",
+                "from_ui_amount",
+                "fromUiAmount",
+                "sellAmount",
+                "baseAmount",
+            ],
+        ),
         "token_out": token_out,
-        "amount_out": first_value(item, ["to_amount", "amount_out", "buy_amount", "quote_amount", "toAmount"]),
+        "token_out_address": token_address(raw_token_out),
+        "amount_out": first_value(
+            item,
+            [
+                "to_amount",
+                "amount_out",
+                "buy_amount",
+                "quote_amount",
+                "toAmount",
+                "to_ui_amount",
+                "toUiAmount",
+                "buyAmount",
+                "quoteAmount",
+            ],
+        ),
         "usd_value": first_value(item, ["volume_usd", "value", "value_usd", "usd_value", "amount_usd"]),
         "tx": first_value(item, ["tx_hash", "txHash", "signature", "tx_id", "hash"]),
         "platform": first_value(item, ["source", "platform", "dex", "amm"]) or "n/a",
+        "raw_token_values": sorted(set(str(value) for value in raw_values if value)),
     }
 
 
@@ -257,12 +382,43 @@ def request_birdeye_swaps(wallet, token, limit):
     }
 
 
+def row_matches_token(item, token):
+    if not token:
+        return True
+
+    wanted = str(token).strip().lower()
+    candidates = [
+        item.get("token_in"),
+        item.get("token_out"),
+        item.get("token_in_address"),
+        item.get("token_out_address"),
+    ]
+    candidates.extend(item.get("raw_token_values") or [])
+
+    return any(str(candidate).strip().lower() == wanted for candidate in candidates if candidate)
+
+
+def apply_token_filter(result, token):
+    if not token:
+        result["token_filter_applied"] = False
+        result["items_before_filter"] = len(result.get("items") or [])
+        return result
+
+    original = result.get("items") or []
+    filtered = [item for item in original if row_matches_token(item, token)]
+    result = dict(result)
+    result["items"] = filtered
+    result["items_before_filter"] = len(original)
+    result["token_filter_applied"] = True
+    return result
+
+
 def pick_swap_source(wallet, token, limit):
-    solscan = request_solscan_swaps(wallet, token, limit)
+    solscan = apply_token_filter(request_solscan_swaps(wallet, token, limit), token)
     if solscan["ok"] and solscan["items"]:
         return solscan, [solscan]
 
-    birdeye = request_birdeye_swaps(wallet, token, limit)
+    birdeye = apply_token_filter(request_birdeye_swaps(wallet, token, limit), token)
     if birdeye["ok"] and birdeye["items"]:
         return birdeye, [solscan, birdeye]
 
@@ -278,6 +434,9 @@ def build_summary(items):
     output_tokens = Counter()
     total_usd = 0.0
     has_usd = False
+    times = []
+    token_to_sol = 0
+    sol_to_token = 0
 
     for item in items:
         token_in = item.get("token_in") or "n/a"
@@ -296,12 +455,27 @@ def build_summary(items):
             total_usd += usd
             has_usd = True
 
+        time_value = item.get("time")
+        if time_value and time_value != "n/a":
+            times.append(time_value)
+
+        token_in_lower = str(token_in).lower()
+        token_out_lower = str(token_out).lower()
+        if token_in_lower == "sol" and token_out_lower != "sol":
+            sol_to_token += 1
+        elif token_out_lower == "sol" and token_in_lower != "sol":
+            token_to_sol += 1
+
     return {
         "total": len(items),
         "unique_tokens": len(unique_tokens),
         "total_usd": total_usd if has_usd else None,
         "main_input": input_tokens.most_common(1)[0][0] if input_tokens else "n/a",
         "main_output": output_tokens.most_common(1)[0][0] if output_tokens else "n/a",
+        "first_time": min(times) if times else "n/a",
+        "last_time": max(times) if times else "n/a",
+        "token_to_sol": token_to_sol,
+        "sol_to_token": sol_to_token,
     }
 
 
@@ -316,6 +490,7 @@ def build_wallet_swaps_text(wallet, token=None, limit=20):
         "Wallet Swaps Diagnostic",
         f"Wallet: {compact(wallet)}",
         f"Token filter: {compact(token) if token else 'none'}",
+        f"Token filter applied: {'yes' if token else 'no'}",
         f"Source used: {result.get('source')}",
         f"Status: {result.get('status')}",
         f"Items returned: {len(items)}",
@@ -331,19 +506,32 @@ def build_wallet_swaps_text(wallet, token=None, limit=20):
         [
             "",
             "Summary:",
-            f"- Total swaps: {summary['total']}",
+            f"- Total swaps{' after filter' if token else ''}: {summary['total']}",
             f"- Unique tokens involved: {summary['unique_tokens']}",
             f"- Total USD value: {format_usd(summary['total_usd'])}",
             f"- Most common input token: {summary['main_input']}",
             f"- Most common output token: {summary['main_output']}",
-            "",
-            "Events:",
+            f"- First swap time: {summary['first_time']}",
+            f"- Last swap time: {summary['last_time']}",
         ]
     )
 
+    if token:
+        lines.extend(
+            [
+                f"- Direction token -> SOL count: {summary['token_to_sol']}",
+                f"- Direction SOL -> token count: {summary['sol_to_token']}",
+            ]
+        )
+
+    lines.extend(["", "Events:"])
+
     visible_items = items[:20]
     if not visible_items:
-        lines.append("No parsed swap events returned.")
+        if token:
+            lines.append("No swaps found for this wallet/token in returned window.")
+        else:
+            lines.append("No parsed swap events returned.")
     else:
         for idx, item in enumerate(visible_items, start=1):
             lines.append(
