@@ -308,7 +308,8 @@ Expected:
 - default limit is 20, requested limits above 50 are capped at 50;
 - report header includes wallet, optional token filter, mode, pages scanned, raw swaps scanned, source used, status, and items after filter;
 - normal mode keeps the existing single-page behavior;
-- deep mode scans Birdeye `/defi/v3/txs` with `max_pages = 5`, `page_size = 50`, `max raw events = 250`, and a small delay between page requests;
+- deep mode scans Birdeye `/defi/v3/txs` with `max_pages = 5`, `page_size = 50`, `max raw events = 250`, and a 1.2 second delay between page requests;
+- if Birdeye returns 429 in deep mode, scanning stops, already found swaps are kept, header says `Rate limited: yes`, and status is readable such as `partial (rate limited 429)`;
 - when token is supplied, header says `Token filter applied: yes`;
 - Solscan Pro account defi activities are used when `SOLSCAN_API_KEY` is available;
 - if `SOLSCAN_API_KEY` is missing or Solscan endpoint fails, report stays readable and Birdeye trades V3 fallback is attempted when `BIRDEYE_API_KEY` is available;

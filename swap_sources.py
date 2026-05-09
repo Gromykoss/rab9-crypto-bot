@@ -12,7 +12,7 @@ BIRDEYE_BASE_URL = "https://public-api.birdeye.so"
 DEEP_MAX_PAGES = 5
 DEEP_PAGE_SIZE = 50
 DEEP_MAX_RAW_EVENTS = 250
-DEEP_DELAY_SECONDS = 0.2
+DEEP_DELAY_SECONDS = 1.2
 
 
 def compact(value, left=6, right=4):
@@ -443,6 +443,8 @@ def request_birdeye_swaps_deep(wallet, token):
     last_status = None
     last_error = None
     pages_scanned = 0
+    rate_limited = False
+    rate_limit_page = None
 
     for page in range(DEEP_MAX_PAGES):
         if page:
@@ -454,6 +456,9 @@ def request_birdeye_swaps_deep(wallet, token):
         last_error = result.get("error")
 
         if not result.get("ok"):
+            if result.get("status") == 429:
+                rate_limited = True
+                rate_limit_page = page + 1
             break
 
         page_items = result.get("items") or []
@@ -469,15 +474,21 @@ def request_birdeye_swaps_deep(wallet, token):
         if len(raw_items) >= DEEP_MAX_RAW_EVENTS or len(page_items) < DEEP_PAGE_SIZE:
             break
 
+    status = last_status
+    if rate_limited:
+        status = "partial (rate limited 429)" if raw_items else "rate limited 429"
+
     return apply_token_filter(
         {
-            "ok": last_error is None,
+            "ok": bool(raw_items) or last_error is None,
             "source": "Birdeye /defi/v3/txs deep",
-            "status": last_status,
+            "status": status,
             "items": raw_items,
-            "error": last_error,
+            "error": None if raw_items else last_error,
             "pages_scanned": pages_scanned,
             "raw_swaps_scanned": len(raw_items),
+            "rate_limited": rate_limited,
+            "rate_limit_page": rate_limit_page,
         },
         token,
     )
@@ -568,11 +579,15 @@ def build_wallet_swaps_text(wallet, token=None, limit=20, mode="normal"):
         f"Mode: {mode}",
         f"Pages scanned: {result.get('pages_scanned', 1 if result.get('ok') else 0)}",
         f"Raw swaps scanned: {result.get('raw_swaps_scanned', result.get('items_before_filter', len(items)))}",
+        f"Rate limited: {'yes' if result.get('rate_limited') else 'no'}",
         f"Token filter applied: {'yes' if token else 'no'}",
         f"Source used: {result.get('source')}",
         f"Status: {result.get('status')}",
         f"Items after filter: {len(items)}",
     ]
+
+    if result.get("rate_limited"):
+        lines.append(f"Rate limit hit after page: {result.get('rate_limit_page') or 'n/a'}")
 
     if attempts and attempts[0].get("error") == "SOLSCAN_API_KEY missing":
         lines.append("Solscan: SOLSCAN_API_KEY missing")
