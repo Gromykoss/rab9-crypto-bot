@@ -105,6 +105,65 @@ async def reply_long(update: Update, text: str, reply_markup=None):
         )
 
 
+def compact_log_value(value, left=6, right=4) -> str:
+    if not value:
+        return "n/a"
+
+    text = str(value)
+    if len(text) <= left + right + 3:
+        return text
+
+    return f"{text[:left]}...{text[-right:]}"
+
+
+def telegram_safe_plain_text(text) -> str:
+    text = "" if text is None else str(text)
+    return "".join(ch for ch in text if ch in "\n\t" or ord(ch) >= 32)
+
+
+async def reply_walletswaps_report(update: Update, text: str, reply_markup=None):
+    safe_text = telegram_safe_plain_text(text)
+    chunks = split_text(safe_text)
+
+    logger.info(
+        "walletswaps report generated: length=%s chunks=%s first120=%r",
+        len(safe_text),
+        len(chunks),
+        safe_text[:120],
+    )
+
+    try:
+        for idx, chunk in enumerate(chunks):
+            logger.info(
+                "walletswaps sending chunk: index=%s/%s length=%s first120=%r",
+                idx + 1,
+                len(chunks),
+                len(chunk),
+                chunk[:120],
+            )
+            await update.message.reply_text(
+                chunk,
+                reply_markup=reply_markup if idx == len(chunks) - 1 else None,
+                disable_web_page_preview=True,
+            )
+    except Exception:
+        logger.exception(
+            "walletswaps reply_text failed: report_len=%s chunks=%s first500=%r last500=%r",
+            len(safe_text),
+            len(chunks),
+            safe_text[:500],
+            safe_text[-500:],
+        )
+        try:
+            await update.message.reply_text(
+                "Wallet swaps report send failed. Check bot logs for details.",
+                reply_markup=reply_markup,
+                disable_web_page_preview=True,
+            )
+        except Exception:
+            logger.exception("walletswaps fallback reply failed")
+
+
 async def send_long_to_chat(context: ContextTypes.DEFAULT_TYPE, chat_id, text: str):
     for chunk in split_text(text):
         await context.bot.send_message(
@@ -357,10 +416,34 @@ async def walletswaps_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     limit = min(max(limit, 1), 50)
 
+    logger.info(
+        "walletswaps parsed args: wallet=%s token=%s limit=%s mode=%s",
+        compact_log_value(wallet),
+        compact_log_value(token),
+        limit,
+        mode,
+    )
+
     target = f"{wallet} / {token}" if token else wallet
     await update.message.reply_text(f"Проверяю parsed wallet swaps: {target} / limit {limit} / {mode}")
-    text = await asyncio.to_thread(build_wallet_swaps_text, wallet, token, limit, mode)
-    await reply_long(update, text, main_reply_keyboard())
+
+    try:
+        text = await asyncio.to_thread(build_wallet_swaps_text, wallet, token, limit, mode)
+    except Exception:
+        logger.exception(
+            "walletswaps build failed: wallet=%s token=%s limit=%s mode=%s",
+            compact_log_value(wallet),
+            compact_log_value(token),
+            limit,
+            mode,
+        )
+        await update.message.reply_text(
+            "Wallet swaps report build failed. Check bot logs for details.",
+            reply_markup=main_reply_keyboard(),
+        )
+        return
+
+    await reply_walletswaps_report(update, text, main_reply_keyboard())
 
 
 async def watchwallet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
