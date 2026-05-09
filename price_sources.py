@@ -191,6 +191,83 @@ def _build_report(token: str, requested_iso: str, primary: dict, fallback: dict,
     return "\n".join(lines)
 
 
+def get_birdeye_price_near(token: str, timestamp: str) -> dict:
+    token = (token or "").strip()
+    timestamp = (timestamp or "").strip()
+
+    if not BIRDEYE_API_KEY:
+        return {
+            "ok": False,
+            "skipped": True,
+            "error": "BIRDEYE_API_KEY missing.",
+            "price": None,
+            "time": "n/a",
+            "source": "Birdeye",
+        }
+
+    requested = _parse_iso_timestamp(timestamp)
+    if requested is None:
+        return {
+            "ok": False,
+            "skipped": False,
+            "error": "Invalid timestamp.",
+            "price": None,
+            "time": "n/a",
+            "source": "Birdeye",
+        }
+
+    requested_ts = int(requested.timestamp())
+    params = {
+        "address": token,
+        "address_type": "token",
+        "type": "1m",
+        "time_from": requested_ts - 3600,
+        "time_to": requested_ts + 3600,
+    }
+
+    ohlcv = _request_birdeye("/defi/ohlcv", params)
+    items = _extract_items(ohlcv.get("data"))
+    nearest, distance = _nearest_item(items, requested_ts)
+    source = "Birdeye /defi/ohlcv"
+    result = ohlcv
+
+    if nearest is None:
+        history = _request_birdeye("/defi/history_price", params)
+        items = _extract_items(history.get("data"))
+        nearest, distance = _nearest_item(items, requested_ts)
+        source = "Birdeye /defi/history_price"
+        result = history
+
+    price = _field(nearest, "c", "close", "value", "price")
+
+    try:
+        price = float(price) if price is not None else None
+    except (TypeError, ValueError):
+        price = None
+
+    if nearest is None or price is None:
+        return {
+            "ok": False,
+            "skipped": False,
+            "error": result.get("error") or "price unavailable",
+            "price": None,
+            "time": "n/a",
+            "source": source,
+        }
+
+    candle_time = _field(nearest, "unixTime", "time", "timestamp", "t")
+
+    return {
+        "ok": True,
+        "skipped": False,
+        "error": None,
+        "price": price,
+        "time": _iso_from_unix(candle_time),
+        "distance": distance,
+        "source": source,
+    }
+
+
 def build_price_source_text(token: str, timestamp: str) -> str:
     token = (token or "").strip()
     timestamp = (timestamp or "").strip()
