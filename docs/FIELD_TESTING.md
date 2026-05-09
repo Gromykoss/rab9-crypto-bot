@@ -306,9 +306,12 @@ Expected:
 - bot acknowledges parsed wallet swaps check;
 - default limit is 20, requested limits above 50 are capped at 50;
 - report header includes wallet, optional token filter, source used, status, and items returned;
+- when token is supplied, header says `Token filter applied: yes`;
 - Solscan Pro account defi activities are used when `SOLSCAN_API_KEY` is available;
 - if `SOLSCAN_API_KEY` is missing or Solscan endpoint fails, report stays readable and Birdeye trades V3 fallback is attempted when `BIRDEYE_API_KEY` is available;
 - summary includes total swaps, unique tokens involved, total USD value when available, most common input token, and most common output token;
+- token-filtered summary includes total swaps after filter, first/last swap time, and direction counts for `token -> SOL` and `SOL -> token` when possible;
+- if no normalized rows match the token filter, response says `Items returned: 0`, `Token filter applied: yes`, and `No swaps found for this wallet/token in returned window.`;
 - events show at most first 20 compact rows like `#1 time | TOKEN_IN amount -> TOKEN_OUT amount | value: $X | tx: abc...xyz`;
 - response does not duplicate wallet, token, or source in each event row;
 - command does not calculate amount-based return, entry/exit quality, or trading recommendations;
