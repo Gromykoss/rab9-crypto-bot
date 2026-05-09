@@ -299,20 +299,26 @@ Check manual parsed wallet swaps diagnostic:
 /walletswaps WALLET_ADDRESS
 /walletswaps WALLET_ADDRESS TOKEN_ADDRESS
 /walletswaps WALLET_ADDRESS TOKEN_ADDRESS 50
+/walletswaps WALLET_ADDRESS TOKEN_ADDRESS 50 deep
 ```
 
 Expected:
 
 - bot acknowledges parsed wallet swaps check;
 - default limit is 20, requested limits above 50 are capped at 50;
-- report header includes wallet, optional token filter, source used, status, and items returned;
+- report header includes wallet, optional token filter, mode, pages scanned, raw swaps scanned, source used, status, and items after filter;
+- normal mode keeps the existing single-page behavior;
+- deep mode scans Birdeye `/defi/v3/txs` with `max_pages = 5`, `page_size = 50`, `max raw events = 250`, and a small delay between page requests;
 - when token is supplied, header says `Token filter applied: yes`;
 - Solscan Pro account defi activities are used when `SOLSCAN_API_KEY` is available;
 - if `SOLSCAN_API_KEY` is missing or Solscan endpoint fails, report stays readable and Birdeye trades V3 fallback is attempted when `BIRDEYE_API_KEY` is available;
 - summary includes total swaps, unique tokens involved, total USD value when available, most common input token, and most common output token;
 - token-filtered summary includes total swaps after filter, first/last swap time, and direction counts for `token -> SOL` and `SOL -> token` when possible;
+- token-filtered deep summary includes `Has possible buy` and `Has possible sell`;
 - if no normalized rows match the token filter, response says `Items returned: 0`, `Token filter applied: yes`, and `No swaps found for this wallet/token in returned window.`;
 - events show at most first 20 compact rows like `#1 time | TOKEN_IN amount -> TOKEN_OUT amount | value: $X | tx: abc...xyz`;
+- if both possible buy and sell are found, response says `Both possible buy and sell events found. Suitable for future wallettrade swap-cycle analysis.`;
+- if only one side is found, response says only possible buy or sell events were found in the scanned window;
 - response does not duplicate wallet, token, or source in each event row;
 - command does not calculate amount-based return, entry/exit quality, or trading recommendations;
 - command does not add anything to watchlist and does not create background monitoring.

@@ -327,7 +327,7 @@ async def walletswaps_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if len(context.args) < 1:
         await update.message.reply_text(
-            "Формат:\n/walletswaps WALLET\n/walletswaps WALLET TOKEN\n/walletswaps WALLET TOKEN 50",
+            "Формат:\n/walletswaps WALLET\n/walletswaps WALLET TOKEN\n/walletswaps WALLET TOKEN 50\n/walletswaps WALLET TOKEN 50 deep",
             reply_markup=main_reply_keyboard(),
         )
         return
@@ -335,6 +335,7 @@ async def walletswaps_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     wallet = context.args[0].strip()
     token = None
     limit = 20
+    mode = "normal"
 
     if len(context.args) > 1:
         if context.args[1].isdigit():
@@ -343,16 +344,22 @@ async def walletswaps_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             token = context.args[1].strip()
 
     if len(context.args) > 2:
-        try:
-            limit = int(context.args[2])
-        except ValueError:
-            limit = 20
+        if context.args[2].lower() == "deep":
+            mode = "deep"
+        else:
+            try:
+                limit = int(context.args[2])
+            except ValueError:
+                limit = 20
+
+    if len(context.args) > 3 and context.args[3].lower() == "deep":
+        mode = "deep"
 
     limit = min(max(limit, 1), 50)
 
     target = f"{wallet} / {token}" if token else wallet
-    await update.message.reply_text(f"Проверяю parsed wallet swaps: {target} / limit {limit}")
-    text = await asyncio.to_thread(build_wallet_swaps_text, wallet, token, limit)
+    await update.message.reply_text(f"Проверяю parsed wallet swaps: {target} / limit {limit} / {mode}")
+    text = await asyncio.to_thread(build_wallet_swaps_text, wallet, token, limit, mode)
     await reply_long(update, text, main_reply_keyboard())
 
 
