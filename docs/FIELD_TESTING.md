@@ -271,6 +271,8 @@ Expected:
 - if more than 5 completed cycles are available, response says `Analyzed latest 5 completed cycles only`;
 - price movement summary includes cycles priced, positive moves, negative moves, average move, best move, and worst move;
 - if a candle is missing for a cycle, that row says `price unavailable` and the bot keeps running;
+- Birdeye lookup tries near timestamp first, then wider `±5 minutes` and `±15 minutes` windows if needed;
+- `/wallettrade` keeps price rows compact; fallback prices may be shown with `~` before the price;
 - interpretation says historical price was used when cycles are priced, or says historical price was attempted but unavailable when no selected cycles could be priced;
 - limitations explicitly say no amount/usdValue is available, cycle price movement is approximate, and amount-based returns and exit quality are not calculated;
 - response does not show all raw events;
@@ -287,7 +289,7 @@ Expected:
 
 - if `BIRDEYE_API_KEY` is missing, response says `BIRDEYE_API_KEY missing.`;
 - bot acknowledges Birdeye historical price check;
-- response uses the same Birdeye price result contract as `/wallettrade` and includes compact token, requested timestamp, source, endpoint, status, price near timestamp when found, candle time/open/high/low/close when available, raw fields count, and available keys;
+- response uses the same Birdeye price result contract as `/wallettrade` and includes compact token, requested timestamp, source, endpoint, status, price near timestamp when found, candle time/open/high/low/close when available, distance, lookup window, fallback flag, raw fields count, and available keys;
 - command does not calculate amount-based return, entry quality, or exit quality;
 - command does not add anything to watchlist and does not create background monitoring.
 

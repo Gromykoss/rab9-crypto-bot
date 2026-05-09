@@ -1,4 +1,5 @@
 import requests
+import time
 from datetime import datetime, timezone
 from urllib.parse import quote, urlencode
 
@@ -534,7 +535,8 @@ def has_price(result: dict):
 
 def format_cycle_price(result: dict):
     if has_price(result):
-        return format_price(result["price"])
+        prefix = "~" if result.get("fallback_used") else ""
+        return f"{prefix}{format_price(result['price'])}"
 
     return "price unavailable"
 
@@ -557,7 +559,21 @@ def build_cycle_price_movement_section(cycles: list, token: str, max_cycles=5):
 
     priced_moves = []
     analysis_cycles = completed[-max_cycles:]
-    first_price = get_birdeye_price_near(token, analysis_cycles[0]["in_first"])
+    last_price_call = 0
+
+    def lookup_price(timestamp: str):
+        nonlocal last_price_call
+
+        if last_price_call:
+            elapsed = time.monotonic() - last_price_call
+            if elapsed < 0.2:
+                time.sleep(0.2 - elapsed)
+
+        result = get_birdeye_price_near(token, timestamp)
+        last_price_call = time.monotonic()
+        return result
+
+    first_price = lookup_price(analysis_cycles[0]["in_first"])
 
     if first_price.get("skipped"):
         lines.append("Price analysis skipped: BIRDEYE_API_KEY missing.")
@@ -575,12 +591,12 @@ def build_cycle_price_movement_section(cycles: list, token: str, max_cycles=5):
         else:
             in_price = price_cache.get(in_time)
             if in_price is None:
-                in_price = get_birdeye_price_near(token, in_time)
+                in_price = lookup_price(in_time)
                 price_cache[in_time] = in_price
 
         out_price = price_cache.get(out_time)
         if out_price is None:
-            out_price = get_birdeye_price_near(token, out_time)
+            out_price = lookup_price(out_time)
             price_cache[out_time] = out_price
 
         if not has_price(in_price) or not has_price(out_price):
@@ -593,8 +609,8 @@ def build_cycle_price_movement_section(cycles: list, token: str, max_cycles=5):
         move = ((out_price["price"] - in_price["price"]) / in_price["price"]) * 100
         priced_moves.append(move)
         lines.append(
-            f"#{idx} IN: {in_time} / {format_price(in_price['price'])} | "
-            f"OUT: {out_time} / {format_price(out_price['price'])} | "
+            f"#{idx} IN: {in_time} / {format_cycle_price(in_price)} | "
+            f"OUT: {out_time} / {format_cycle_price(out_price)} | "
             f"Move: {format_percent(move)}"
         )
 
