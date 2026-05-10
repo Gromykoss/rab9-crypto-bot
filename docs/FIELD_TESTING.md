@@ -333,6 +333,26 @@ Expected:
 - command does not calculate amount-based return, entry/exit quality, or trading recommendations;
 - command does not add anything to watchlist and does not create background monitoring.
 
+Check manual pair+maker trades diagnostic:
+
+```text
+/makertrades PAIR_ADDRESS MAKER_ADDRESS
+/makertrades PAIR_ADDRESS MAKER_ADDRESS 50
+/makertrades 7nvp4qykvmpeuhobyrzcn1tqiz7k8pmk5uxqeebrzyh AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51 50
+```
+
+Expected:
+
+- bot acknowledges maker trades check;
+- default limit is 50, requested limits above 50 are capped at 50;
+- if `BIRDEYE_API_KEY` is missing, response says `BIRDEYE_API_KEY missing`;
+- report uses Birdeye `/defi/v3/txs` with `owner=MAKER`, `pool_id=PAIR`, `tx_type=swap`, `sort_by=block_unix_time`, and `sort_type=desc`;
+- report header includes compact pair, compact maker, source used, status, and items returned;
+- summary includes total trades, buy count, sell count, total buy USD, total sell USD, first trade time, last trade time, and net direction;
+- behavior classification is one of `Maker Accumulation`, `Maker Distribution`, `Two-sided Active Maker`, `Weak Sample`, or `Needs More Data`;
+- events show at most first 20 compact rows like `#1 time | BUY/SELL | amount token | value: $X | tx: abc...xyz`;
+- response does not show raw JSON, does not calculate PnL, does not provide trading advice, and does not create background monitoring.
+
 Add:
 
 ```text

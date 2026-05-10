@@ -38,6 +38,7 @@ from arkham import (
 )
 from price_sources import build_price_source_text
 from swap_sources import build_wallet_swaps_text
+from maker_sources import build_maker_trades_text
 from wallet_watch import (
     add_wallet_to_watchlist,
     remove_wallet_from_watchlist,
@@ -444,6 +445,34 @@ async def walletswaps_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     await reply_walletswaps_report(update, text, main_reply_keyboard())
+
+
+async def makertrades_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if await deny_if_wrong_group(update):
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Формат:\n/makertrades PAIR MAKER\n/makertrades PAIR MAKER 50",
+            reply_markup=main_reply_keyboard(),
+        )
+        return
+
+    pair = context.args[0].strip()
+    maker = context.args[1].strip()
+    limit = 50
+
+    if len(context.args) > 2:
+        try:
+            limit = int(context.args[2])
+        except ValueError:
+            limit = 50
+
+    limit = min(max(limit, 1), 50)
+
+    await update.message.reply_text(f"Проверяю maker trades: {pair} / {maker} / limit {limit}")
+    text = await asyncio.to_thread(build_maker_trades_text, pair, maker, limit)
+    await reply_long(update, text, main_reply_keyboard())
 
 
 async def watchwallet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -916,6 +945,7 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("wallettrade", wallettrade_command))
     app.add_handler(CommandHandler("pricesource", pricesource_command))
     app.add_handler(CommandHandler("walletswaps", walletswaps_command))
+    app.add_handler(CommandHandler("makertrades", makertrades_command))
     app.add_handler(CommandHandler("watchwallet", watchwallet_command))
     app.add_handler(CommandHandler("walletlist", walletlist_command))
     app.add_handler(CommandHandler("unwatchwallet", unwatchwallet_command))
