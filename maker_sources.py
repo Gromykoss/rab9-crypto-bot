@@ -1,10 +1,30 @@
 import requests
 
 from config import BIRDEYE_API_KEY
-from swap_sources import compact, extract_items, first_value, format_amount, format_time, format_usd, to_float
+from swap_sources import (
+    compact,
+    extract_items,
+    first_value,
+    format_amount,
+    format_time,
+    format_usd,
+    to_float,
+    token_address,
+    token_symbol,
+    token_text,
+)
 
 
 BIRDEYE_BASE_URL = "https://public-api.birdeye.so"
+SOL_MINT = "So11111111111111111111111111111111111111112"
+
+
+def is_sol_token(value):
+    if value is None:
+        return False
+
+    text = str(value).strip().lower()
+    return text in {"sol", "wsol", SOL_MINT.lower()}
 
 
 def normalize_side(value):
@@ -21,6 +41,12 @@ def normalize_side(value):
 
 
 def normalize_maker_trade(item):
+    raw_token_in = first_value(item, ["from", "from_token", "token_in", "base", "sell_token", "source_token"])
+    raw_token_out = first_value(item, ["to", "to_token", "token_out", "quote", "buy_token", "destination_token"])
+    token_in = token_symbol(raw_token_in) or token_text(raw_token_in)
+    token_out = token_symbol(raw_token_out) or token_text(raw_token_out)
+    token_in_address = token_address(raw_token_in)
+    token_out_address = token_address(raw_token_out)
     side = normalize_side(
         first_value(
             item,
@@ -36,6 +62,14 @@ def normalize_maker_trade(item):
             ],
         )
     )
+
+    if side == "UNKNOWN":
+        in_is_sol = is_sol_token(token_in) or is_sol_token(token_in_address)
+        out_is_sol = is_sol_token(token_out) or is_sol_token(token_out_address)
+        if in_is_sol and not out_is_sol:
+            side = "BUY"
+        elif out_is_sol and not in_is_sol:
+            side = "SELL"
 
     amount = None
     if side == "BUY":
@@ -62,6 +96,8 @@ def normalize_maker_trade(item):
     return {
         "time": format_time(first_value(item, ["block_unix_time", "blockUnixTime", "block_time", "time", "timestamp"])),
         "side": side,
+        "token_in": token_in,
+        "token_out": token_out,
         "amount": amount,
         "usd_value": first_value(item, ["volume_usd", "value", "value_usd", "usd_value", "amount_usd", "amountUsd"]),
         "tx": first_value(item, ["tx_hash", "txHash", "signature", "tx_id", "hash"]),
@@ -190,6 +226,15 @@ def classify_maker_behavior(summary):
     return "Needs More Data"
 
 
+def build_classification_evidence(summary):
+    return [
+        f"{summary['buy_count']} buys",
+        f"{summary['sell_count']} sells",
+        f"Total buy value: {format_usd(summary['total_buy_usd'])}",
+        f"Total sell value: {format_usd(summary['total_sell_usd'])}",
+    ]
+
+
 def build_maker_trades_text(pair, maker, limit=50):
     safe_limit = min(max(int(limit), 1), 50)
     result = get_birdeye_maker_trades(pair, maker, safe_limit)
@@ -224,10 +269,11 @@ def build_maker_trades_text(pair, maker, limit=50):
             "",
             "Behavior Classification:",
             f"- Primary: {classification}",
-            "",
-            "Events:",
+            "- Evidence:",
         ]
     )
+    lines.extend(f"  - {item}" for item in build_classification_evidence(summary))
+    lines.extend(["", "Events:"])
 
     visible_items = items[:20]
     if not visible_items:
