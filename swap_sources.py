@@ -592,9 +592,9 @@ def build_summary(items):
     }
 
 
-def build_sell_window_price_check(items, token):
+def get_sell_window_price_check(items, token):
     if not token:
-        return []
+        return {"lines": [], "price_change": None, "sell_events": 0, "total_sell_usd": None}
 
     sell_events = [
         item
@@ -606,10 +606,15 @@ def build_sell_window_price_check(items, token):
     ]
 
     if not sell_events:
-        return []
+        return {"lines": [], "price_change": None, "sell_events": 0, "total_sell_usd": None}
 
     if not BIRDEYE_API_KEY:
-        return ["", "Sell window price check skipped: BIRDEYE_API_KEY missing."]
+        return {
+            "lines": ["", "Sell window price check skipped: BIRDEYE_API_KEY missing."],
+            "price_change": None,
+            "sell_events": len(sell_events),
+            "total_sell_usd": None,
+        }
 
     sell_events = sorted(sell_events, key=lambda item: item.get("time") or "")
     first_sell = sell_events[0]
@@ -636,15 +641,92 @@ def build_sell_window_price_check(items, token):
             total_sell_usd += usd
             has_sell_usd = True
 
-    return [
-        "",
-        "Sell Window Price Check:",
-        f"- Sell events: {len(sell_events)}",
-        f"- First sell: {first_time} / {format_price(first_value)}",
-        f"- Last sell: {last_time} / {format_price(last_value)}",
-        f"- Price change during sell window: {format_percent(price_change)}",
-        f"- Total sell USD value: {format_usd(total_sell_usd if has_sell_usd else None)}",
+    sell_usd_value = total_sell_usd if has_sell_usd else None
+
+    return {
+        "lines": [
+            "",
+            "Sell Window Price Check:",
+            f"- Sell events: {len(sell_events)}",
+            f"- First sell: {first_time} / {format_price(first_value)}",
+            f"- Last sell: {last_time} / {format_price(last_value)}",
+            f"- Price change during sell window: {format_percent(price_change)}",
+            f"- Total sell USD value: {format_usd(sell_usd_value)}",
+        ],
+        "price_change": price_change,
+        "sell_events": len(sell_events),
+        "total_sell_usd": sell_usd_value,
+    }
+
+
+def build_sell_window_price_check(items, token):
+    return get_sell_window_price_check(items, token)["lines"]
+
+
+def classify_swap_behavior(summary, sell_window_result, token_filter=False):
+    token_to_sol = summary.get("token_to_sol", 0)
+    sol_to_token = summary.get("sol_to_token", 0)
+    total = summary.get("total", 0)
+    total_usd = summary.get("total_usd")
+    total_usd_value = total_usd if total_usd is not None else 0
+
+    if token_filter and token_to_sol >= 3 and sol_to_token == 0 and total_usd_value > 0:
+        primary = "Distribution Pattern"
+    elif token_filter and sol_to_token >= 3 and token_to_sol == 0 and total_usd_value > 0:
+        primary = "Accumulation Pattern"
+    elif token_filter and sol_to_token > 0 and token_to_sol > 0:
+        primary = "Round-trip Pattern"
+    elif token_filter and total == 0:
+        primary = "No Relevant Swaps"
+    else:
+        primary = "Mixed / Needs Review"
+
+    secondary = []
+    if token_to_sol > 0 and sol_to_token == 0:
+        secondary.append("Sell-side only")
+    if sol_to_token > 0 and token_to_sol == 0:
+        secondary.append("Buy-side only")
+    if token_to_sol > 0 and sol_to_token > 0:
+        secondary.append("Two-sided activity")
+    if token_to_sol >= 10 and total_usd_value >= 1000:
+        secondary.append("High sell pressure")
+    if total < 3:
+        secondary.append("Weak sample")
+
+    evidence = [
+        f"{token_to_sol} token -> SOL swaps",
+        f"{sol_to_token} SOL -> token swaps",
+        f"Total swap value: {format_usd(total_usd)}",
     ]
+
+    price_change = sell_window_result.get("price_change") if sell_window_result else None
+    if price_change is not None and token_to_sol >= 3:
+        if price_change <= -20:
+            evidence.append(f"Price declined during sell window: {format_percent(price_change)}")
+        elif price_change >= 20:
+            evidence.append(f"Price increased during sell window: {format_percent(price_change)}")
+        else:
+            evidence.append(f"Price change during sell window: {format_percent(price_change)}")
+
+    return {
+        "primary": primary,
+        "secondary": ", ".join(secondary) if secondary else "n/a",
+        "evidence": evidence,
+    }
+
+
+def build_swap_behavior_classification(summary, sell_window_result, token_filter=False):
+    classification = classify_swap_behavior(summary, sell_window_result, token_filter)
+    lines = [
+        "",
+        "Swap Behavior Classification:",
+        f"- Primary: {classification['primary']}",
+        f"- Secondary: {classification['secondary']}",
+        "- Evidence:",
+    ]
+
+    lines.extend(f"  - {item}" for item in classification["evidence"])
+    return lines
 
 
 def build_wallet_swaps_text(wallet, token=None, limit=20, mode="normal"):
@@ -655,6 +737,7 @@ def build_wallet_swaps_text(wallet, token=None, limit=20, mode="normal"):
     result, attempts = pick_swap_source(wallet, token, safe_limit, mode)
     items = result.get("items") or []
     summary = build_summary(items)
+    sell_window_result = get_sell_window_price_check(items, token)
 
     lines = [
         "Wallet Swaps Diagnostic",
@@ -703,7 +786,8 @@ def build_wallet_swaps_text(wallet, token=None, limit=20, mode="normal"):
             ]
         )
 
-    lines.extend(build_sell_window_price_check(items, token))
+    lines.extend(sell_window_result["lines"])
+    lines.extend(build_swap_behavior_classification(summary, sell_window_result, bool(token)))
 
     lines.extend(["", "Events:"])
 

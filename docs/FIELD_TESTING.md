@@ -321,6 +321,9 @@ Expected:
 - when token-filtered rows include token -> SOL sell events, response includes `Sell Window Price Check` with first sell price, last sell price, approximate price change during sell window, and total sell USD value when available;
 - sell window price change is calculated as `(last_sell_price - first_sell_price) / first_sell_price * 100` using Birdeye price near each sell timestamp;
 - if `BIRDEYE_API_KEY` is missing, response says `Sell window price check skipped: BIRDEYE_API_KEY missing.`;
+- response includes `Swap Behavior Classification` with primary labels such as `Distribution Pattern`, `Accumulation Pattern`, `Round-trip Pattern`, `No Relevant Swaps`, or `Mixed / Needs Review`;
+- classification secondary labels include `Sell-side only`, `Buy-side only`, `Two-sided activity`, `High sell pressure`, and `Weak sample`;
+- evidence stays compact and may include direction counts, total swap value, and sell-window price change; this is not trading advice;
 - if no normalized rows match the token filter, response says `Items returned: 0`, `Token filter applied: yes`, and `No swaps found for this wallet/token in returned window.`;
 - events show at most first 20 compact rows like `#1 time | TOKEN_IN amount -> TOKEN_OUT amount | value: $X | tx: abc...xyz`;
 - if both possible buy and sell are found, response says `Both possible buy and sell events found. Suitable for future wallettrade swap-cycle analysis.`;
