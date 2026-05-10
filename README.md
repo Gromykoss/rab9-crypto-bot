@@ -59,6 +59,7 @@ Arkham and wallets:
 - `/wallettrade WALLET TOKEN` - manually summarize wallet/token transfer behavior and potential IN/OUT cycles from Arkham `/transfers`, then use Birdeye close prices near first IN/OUT timestamps to estimate approximate cycle price movement for up to the latest 5 completed cycles. No amount-based returns, entry quality, or exit quality are calculated.
 - `/pricesource TOKEN 2026-05-07T18:45:29Z` - manually test Birdeye Solana historical price/OHLCV near an ISO timestamp. Requires `BIRDEYE_API_KEY`; no amount-based return is calculated.
 - `/walletswaps WALLET`, `/walletswaps WALLET TOKEN`, `/walletswaps WALLET TOKEN 50 deep`, or `/walletswaps WALLET TOKEN 50 deep10` - manually inspect parsed Solana swap activities. Normal mode uses Solscan Pro account defi activities when `SOLSCAN_API_KEY` is available, with Birdeye trades V3 fallback. Deep modes scan Birdeye pages for older wallet/token swaps. Token-filtered reports include an approximate sell-window price check when token -> SOL events are found and a short swap behavior classification such as `Distribution Pattern`, `Accumulation Pattern`, or `Round-trip Pattern`.
+- `/makertrades PAIR MAKER 50` - manually inspect Birdeye pair+maker trades through `/defi/v3/txs` with `owner=MAKER` and `pool_id=PAIR`, to compare against Dexscreener maker-table activity. No PnL or trading advice is provided.
 - `/watchwallet ADDRESS note` - add or update a wallet watch item.
 - `/walletlist` - show wallet watchlist.
 - `/checkwallets` - refresh wallet snapshots through Arkham.
@@ -79,6 +80,7 @@ Arkham and wallets:
 - `arkham.py` - Arkham API helpers for status, token intel, wallet/address intel, and manual flow checks.
 - `price_sources.py` - manual Birdeye historical price/OHLCV diagnostics for future wallet-trade research.
 - `swap_sources.py` - manual parsed swap diagnostics using Solscan Pro with Birdeye fallback.
+- `maker_sources.py` - manual Birdeye pair+maker trade diagnostics.
 - `keyboards.py` - Telegram reply and inline keyboards.
 - `utils.py` - formatting, parsing, time, and message chunk utilities.
 - `requirements.txt` - Python package dependencies.
