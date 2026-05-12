@@ -358,8 +358,8 @@ Expected:
 For `/pairresolve ADDRESS`:
 
 - report tries the input as both token address and pair/pool address;
-- Dexscreener candidates show pair address, dex, chain, base/quote, liquidity, and 24h volume;
-- Birdeye candidates show market/pool address, source endpoint, base/quote, liquidity, and 24h volume when available;
+- Dexscreener candidates show pair address, dex, chain, base/quote symbol/address, liquidity, and 24h volume;
+- Birdeye candidates show market/pool address, source endpoint, base/quote symbol/address, liquidity, and 24h volume when available;
 - recommendation says `Use this address for /makertrades: ...` when a Birdeye pool/market candidate is found;
 - if no Birdeye pair candidate is found, response says `/makertrades may need Solscan/Bitquery source`;
 - response does not show raw JSON, does not calculate PnL, does not provide trading advice, and does not create background monitoring.

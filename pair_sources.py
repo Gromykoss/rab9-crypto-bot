@@ -59,7 +59,11 @@ def as_list(payload):
 
 def token_label(value):
     if isinstance(value, dict):
-        return value.get("symbol") or value.get("name") or value.get("address") or value.get("mint") or "n/a"
+        symbol = value.get("symbol") or value.get("name") or value.get("token_symbol") or value.get("tokenSymbol")
+        address = value.get("address") or value.get("mint") or value.get("token_address") or value.get("tokenAddress")
+        if symbol and address:
+            return f"{symbol}/{compact(address)}"
+        return symbol or address or "n/a"
     return str(value) if value else "n/a"
 
 
