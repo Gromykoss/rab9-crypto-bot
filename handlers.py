@@ -454,7 +454,7 @@ async def makertrades_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "Формат:\n/makertrades PAIR MAKER\n/makertrades PAIR MAKER 50",
+            "Формат:\n/makertrades PAIR MAKER\n/makertrades PAIR MAKER 50\n/makertrades PAIR MAKER 50 deep\n/makertrades PAIR MAKER 50 deep10",
             reply_markup=main_reply_keyboard(),
         )
         return
@@ -462,17 +462,24 @@ async def makertrades_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     pair = context.args[0].strip()
     maker = context.args[1].strip()
     limit = 50
+    mode = "normal"
 
     if len(context.args) > 2:
-        try:
-            limit = int(context.args[2])
-        except ValueError:
-            limit = 50
+        if context.args[2].lower() in {"deep", "deep10"}:
+            mode = context.args[2].lower()
+        else:
+            try:
+                limit = int(context.args[2])
+            except ValueError:
+                limit = 50
+
+    if len(context.args) > 3 and context.args[3].lower() in {"deep", "deep10"}:
+        mode = context.args[3].lower()
 
     limit = min(max(limit, 1), 50)
 
-    await update.message.reply_text(f"Проверяю maker trades: {pair} / {maker} / limit {limit}")
-    text = await asyncio.to_thread(build_maker_trades_text, pair, maker, limit)
+    await update.message.reply_text(f"Проверяю maker trades: {pair} / {maker} / limit {limit} / {mode}")
+    text = await asyncio.to_thread(build_maker_trades_text, pair, maker, limit, mode)
     await reply_long(update, text, main_reply_keyboard())
 
 
