@@ -26,6 +26,12 @@ DEEP_MAX_RAW_TRADES = 250
 DEEP10_MAX_RAW_TRADES = 500
 DEEP_DELAY_SECONDS = 1.2
 MAKER_EARLY_STOP_COUNT = 20
+MAKER_FIND_DEEP_MAX_PAGES = 20
+MAKER_FIND_DEEP50_MAX_PAGES = 50
+MAKER_FIND_DEEP_MAX_RAW_TRADES = 1000
+MAKER_FIND_DEEP50_MAX_RAW_TRADES = 2500
+MAKER_FIND_DEEP_EARLY_STOP_COUNT = 20
+MAKER_FIND_DEEP50_EARLY_STOP_COUNT = 50
 MAKER_DIRECT_KEYS = {
     "owner",
     "wallet",
@@ -337,6 +343,94 @@ def get_birdeye_maker_trades(pair, maker, limit=50, mode="normal"):
     }
 
 
+def get_birdeye_maker_find(pair, maker, mode="deep"):
+    mode = str(mode).lower()
+    mode = "deep50" if mode == "deep50" else "deep"
+
+    if not BIRDEYE_API_KEY:
+        return {
+            "source": "Birdeye /defi/txs/pair",
+            "status": "BIRDEYE_API_KEY missing",
+            "items": [],
+            "error": "BIRDEYE_API_KEY missing",
+            "mode": mode,
+            "pages_scanned": 0,
+            "raw_pair_trades_scanned": 0,
+            "rate_limited": False,
+            "rate_limit_page": None,
+            "maker_like_keys_seen": [],
+            "debug_pair_rows": [],
+        }
+
+    max_pages = MAKER_FIND_DEEP50_MAX_PAGES if mode == "deep50" else MAKER_FIND_DEEP_MAX_PAGES
+    max_raw_trades = MAKER_FIND_DEEP50_MAX_RAW_TRADES if mode == "deep50" else MAKER_FIND_DEEP_MAX_RAW_TRADES
+    early_stop = MAKER_FIND_DEEP50_EARLY_STOP_COUNT if mode == "deep50" else MAKER_FIND_DEEP_EARLY_STOP_COUNT
+
+    pair_items_raw = []
+    matched_raw = []
+    pages_scanned = 0
+    last_status = None
+    last_error = None
+    rate_limited = False
+    rate_limit_page = None
+
+    for page_index in range(max_pages):
+        if page_index:
+            time.sleep(DEEP_DELAY_SECONDS)
+
+        offset = page_index * DEEP_PAGE_SIZE
+        page_result = get_birdeye_pair_trades_page(pair, DEEP_PAGE_SIZE, offset)
+        last_status = page_result.get("status")
+        last_error = page_result.get("error")
+
+        if not page_result.get("ok"):
+            if page_result.get("status") == 429:
+                rate_limited = True
+                rate_limit_page = page_index + 1
+            break
+
+        page_items = page_result.get("items") or []
+        pages_scanned += 1
+
+        for item in page_items:
+            if len(pair_items_raw) < max_raw_trades:
+                pair_items_raw.append(item)
+            if item_matches_maker(item, maker):
+                matched_raw.append({**item, "_makerfind_page": page_index + 1})
+
+        if len(matched_raw) >= early_stop:
+            break
+        if len(pair_items_raw) >= max_raw_trades or len(page_items) < DEEP_PAGE_SIZE:
+            break
+
+    items = []
+    for item in matched_raw:
+        normalized = normalize_maker_trade(item)
+        normalized["page"] = item.get("_makerfind_page")
+        items.append(normalized)
+
+    status = last_status
+    if rate_limited:
+        status = "partial (rate limited 429)" if pair_items_raw or matched_raw else "rate limited 429"
+
+    return {
+        "source": "Birdeye /defi/txs/pair",
+        "status": status,
+        "items": items,
+        "error": None if pair_items_raw or matched_raw else last_error,
+        "mode": mode,
+        "pages_scanned": pages_scanned,
+        "raw_pair_trades_scanned": len(pair_items_raw),
+        "rate_limited": rate_limited,
+        "rate_limit_page": rate_limit_page,
+        "maker_like_keys_seen": maker_like_keys_seen(pair_items_raw),
+        "debug_pair_rows": [
+            {**normalize_maker_trade(item), "maker_like": maker_like_text(item)}
+            for item in pair_items_raw[:3]
+        ],
+    }
+
+
 def summarize_maker_trades(items):
     buy_count = 0
     sell_count = 0
@@ -378,6 +472,7 @@ def summarize_maker_trades(items):
         "total": len(items),
         "buy_count": buy_count,
         "sell_count": sell_count,
+        "unknown_count": len([item for item in items if item.get("side") not in {"BUY", "SELL"}]),
         "total_buy_usd": total_buy_usd if has_buy_usd else None,
         "total_sell_usd": total_sell_usd if has_sell_usd else None,
         "first_time": min(times) if times else "n/a",
@@ -410,6 +505,111 @@ def build_classification_evidence(summary):
         f"Total buy value: {format_usd(summary['total_buy_usd'])}",
         f"Total sell value: {format_usd(summary['total_sell_usd'])}",
     ]
+
+
+def behavior_hint(summary):
+    total = summary.get("total", 0)
+    buy_count = summary.get("buy_count", 0)
+    sell_count = summary.get("sell_count", 0)
+
+    if total == 0:
+        return "Not Found"
+    if total < 3:
+        return "Weak Sample"
+    if buy_count >= 3 and sell_count == 0:
+        return "Possible Accumulation Watch"
+    if sell_count >= 3 and buy_count == 0:
+        return "Possible Distribution Watch"
+    if buy_count > 0 and sell_count > 0:
+        return "Two-sided Active Maker"
+
+    return "Weak Sample"
+
+
+def build_maker_find_text(pair, maker, mode="deep"):
+    result = get_birdeye_maker_find(pair, maker, mode)
+    items = result.get("items") or []
+    summary = summarize_maker_trades(items)
+    pages = [item.get("page") for item in items if item.get("page")]
+
+    lines = [
+        "Maker Find Diagnostic",
+        f"Pair: {compact(pair)}",
+        f"Maker: {compact(maker)}",
+        f"Mode: {result.get('mode')}",
+        f"Source used: {result.get('source')}",
+        f"Status: {result.get('status')}",
+        f"Pages scanned: {result.get('pages_scanned', 0)}",
+        f"Raw pair trades scanned: {result.get('raw_pair_trades_scanned', 0)}",
+        f"Matched maker trades: {len(items)}",
+        f"Rate limited: {'yes' if result.get('rate_limited') else 'no'}",
+    ]
+
+    if result.get("rate_limited"):
+        lines.append(f"Rate limit hit after page: {result.get('rate_limit_page') or 'n/a'}")
+    if result.get("error") and not items:
+        lines.append(f"Error: {result['error']}")
+
+    lines.extend(
+        [
+            "",
+            "Summary:",
+            f"- Buy count: {summary['buy_count']}",
+            f"- Sell count: {summary['sell_count']}",
+            f"- Unknown count: {summary['unknown_count']}",
+            f"- First seen trade: {summary['first_time']}",
+            f"- Last seen trade: {summary['last_time']}",
+            f"- First seen page: {min(pages) if pages else 'n/a'}",
+            f"- Last seen page: {max(pages) if pages else 'n/a'}",
+            f"- Net direction: {summary['net_direction']}",
+            "",
+            "Behavior Hint:",
+            f"- {behavior_hint(summary)}",
+            "",
+            "Events:",
+        ]
+    )
+
+    visible_items = items[:10]
+    if not visible_items:
+        lines.append("Maker not found in scanned pair-trade window.")
+        keys = result.get("maker_like_keys_seen") or []
+        lines.append(f"Maker-like keys seen: {', '.join(keys) if keys else 'n/a'}")
+        debug_rows = result.get("debug_pair_rows") or []
+        if debug_rows:
+            lines.extend(["", "Pair endpoint sample rows:"])
+            for idx, item in enumerate(debug_rows[:3], start=1):
+                lines.append(
+                    f"#{idx} {item.get('time') or 'n/a'} | "
+                    f"{item.get('side') or 'UNKNOWN'} | "
+                    f"value: {format_usd(item.get('usd_value'))} | "
+                    f"tx: {compact(item.get('tx'))} | "
+                    f"maker-like: {item.get('maker_like') or 'n/a'}"
+                )
+    else:
+        for idx, item in enumerate(visible_items, start=1):
+            lines.append(
+                f"#{idx} {item.get('time') or 'n/a'} | "
+                f"{item.get('side') or 'UNKNOWN'} | "
+                f"page: {item.get('page') or 'n/a'} | "
+                f"value: {format_usd(item.get('usd_value'))} | "
+                f"tx: {compact(item.get('tx'))}"
+            )
+
+    if len(items) > 10:
+        lines.append("Showing first 10 matched trades only")
+
+    lines.extend(
+        [
+            "",
+            "Notes:",
+            "- No PnL calculated.",
+            "- No trading advice.",
+            "- Manual diagnostic only.",
+        ]
+    )
+
+    return "\n".join(lines)
 
 
 def build_maker_trades_text(pair, maker, limit=50, mode="normal"):

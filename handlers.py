@@ -38,7 +38,7 @@ from arkham import (
 )
 from price_sources import build_price_source_text
 from swap_sources import build_wallet_swaps_text
-from maker_sources import build_maker_trades_text
+from maker_sources import build_maker_find_text, build_maker_trades_text
 from pair_sources import build_pair_resolve_text
 from wallet_watch import (
     add_wallet_to_watchlist,
@@ -480,6 +480,29 @@ async def makertrades_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await update.message.reply_text(f"Проверяю maker trades: {pair} / {maker} / limit {limit} / {mode}")
     text = await asyncio.to_thread(build_maker_trades_text, pair, maker, limit, mode)
+    await reply_long(update, text, main_reply_keyboard())
+
+
+async def makerfind_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if await deny_if_wrong_group(update):
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Формат:\n/makerfind PAIR MAKER\n/makerfind PAIR MAKER deep\n/makerfind PAIR MAKER deep50",
+            reply_markup=main_reply_keyboard(),
+        )
+        return
+
+    pair = context.args[0].strip()
+    maker = context.args[1].strip()
+    mode = "deep"
+
+    if len(context.args) > 2 and context.args[2].lower() in {"deep", "deep50"}:
+        mode = context.args[2].lower()
+
+    await update.message.reply_text(f"Ищу maker глубже: {pair} / {maker} / {mode}")
+    text = await asyncio.to_thread(build_maker_find_text, pair, maker, mode)
     await reply_long(update, text, main_reply_keyboard())
 
 
@@ -972,6 +995,7 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("pricesource", pricesource_command))
     app.add_handler(CommandHandler("walletswaps", walletswaps_command))
     app.add_handler(CommandHandler("makertrades", makertrades_command))
+    app.add_handler(CommandHandler("makerfind", makerfind_command))
     app.add_handler(CommandHandler("pairresolve", pairresolve_command))
     app.add_handler(CommandHandler("watchwallet", watchwallet_command))
     app.add_handler(CommandHandler("walletlist", walletlist_command))
