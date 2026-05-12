@@ -346,8 +346,9 @@ Expected:
 - bot acknowledges maker trades check;
 - default limit is 50, requested limits above 50 are capped at 50;
 - if `BIRDEYE_API_KEY` is missing, response says `BIRDEYE_API_KEY missing`;
-- report uses Birdeye `/defi/v3/txs` with `owner=MAKER`, `pool_id=PAIR`, `tx_type=swap`, `sort_by=block_unix_time`, and `sort_type=desc`;
+- report uses Birdeye `/defi/txs/pair` with `address=PAIR`, `offset=0`, `limit=1..50`, `tx_type=swap`, and `sort_type=desc`, then filters maker-like fields client-side;
 - report header includes compact pair, compact maker, source used, status, and items returned;
+- if client-side maker filtering finds no rows, report includes items from pair endpoint, items after maker filter, `Maker filter applied: yes`, maker-like keys seen, and at most 3 compact pair endpoint sample rows;
 - summary includes total trades, buy count, sell count, total buy USD, total sell USD, first trade time, last trade time, and net direction;
 - behavior classification is one of `Maker Accumulation`, `Maker Distribution`, `Two-sided Active Maker`, `Weak Sample`, or `Needs More Data`;
 - events show at most first 20 compact rows like `#1 time | BUY/SELL | amount token | value: $X | tx: abc...xyz`;

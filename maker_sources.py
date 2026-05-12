@@ -17,6 +17,23 @@ from swap_sources import (
 
 BIRDEYE_BASE_URL = "https://public-api.birdeye.so"
 SOL_MINT = "So11111111111111111111111111111111111111112"
+MAKER_DIRECT_KEYS = {
+    "owner",
+    "wallet",
+    "maker",
+    "trader",
+    "user",
+    "address",
+    "sourceOwner",
+    "source_owner",
+    "tx_from",
+    "signer",
+    "signer_address",
+    "signerAddress",
+    "authority",
+    "signerAuthority",
+}
+MAKER_KEY_HINTS = ("owner", "wallet", "maker", "trader", "user", "authority")
 
 
 def is_sol_token(value):
@@ -38,6 +55,78 @@ def normalize_side(value):
         return "SELL"
 
     return "UNKNOWN"
+
+
+def collect_maker_like_values(value, parent_key=""):
+    matches = []
+
+    if isinstance(value, dict):
+        for key, child in value.items():
+            key_text = str(key)
+            key_lower = key_text.lower()
+            is_maker_key = (
+                key_text in MAKER_DIRECT_KEYS
+                or key_lower in {item.lower() for item in MAKER_DIRECT_KEYS}
+                or any(hint in key_lower for hint in MAKER_KEY_HINTS)
+                or key_lower == "tx_from"
+                or key_lower == "signer"
+                or (key_lower == "address" and any(hint in parent_key.lower() for hint in MAKER_KEY_HINTS))
+            )
+
+            if is_maker_key and not isinstance(child, (dict, list)):
+                matches.append((key_text, str(child)))
+
+            matches.extend(collect_maker_like_values(child, key_text))
+    elif isinstance(value, list):
+        for child in value:
+            matches.extend(collect_maker_like_values(child, parent_key))
+
+    return matches
+
+
+def maker_like_values(item):
+    pairs = collect_maker_like_values(item)
+    values = []
+    seen = set()
+
+    for key, value in pairs:
+        normalized = str(value).strip()
+        if not normalized:
+            continue
+
+        marker = (key, normalized)
+        if marker not in seen:
+            values.append({"key": key, "value": normalized})
+            seen.add(marker)
+
+    return values
+
+
+def maker_like_keys_seen(items):
+    keys = []
+    seen = set()
+
+    for item in items:
+        for row in maker_like_values(item):
+            key = row["key"]
+            if key not in seen:
+                keys.append(key)
+                seen.add(key)
+
+    return keys
+
+
+def item_matches_maker(item, maker):
+    wanted = str(maker).strip().lower()
+    return any(row["value"].strip().lower() == wanted for row in maker_like_values(item))
+
+
+def maker_like_text(item):
+    values = maker_like_values(item)
+    if not values:
+        return "n/a"
+
+    return ", ".join(f"{row['key']}={compact(row['value'])}" for row in values[:3])
 
 
 def normalize_maker_trade(item):
@@ -108,27 +197,28 @@ def get_birdeye_maker_trades(pair, maker, limit=50):
     if not BIRDEYE_API_KEY:
         return {
             "ok": False,
-            "source": "Birdeye /defi/v3/txs",
+            "source": "Birdeye /defi/txs/pair",
             "status": "BIRDEYE_API_KEY missing",
             "items": [],
+            "pair_items": [],
             "error": "BIRDEYE_API_KEY missing",
-            "params": {"owner": maker, "pool_id": pair, "limit": limit},
+            "maker_filter_applied": True,
+            "maker_like_keys_seen": [],
+            "params": {"address": pair, "limit": limit},
         }
 
     safe_limit = min(max(int(limit), 1), 50)
     params = {
-        "owner": maker,
-        "pool_id": pair,
+        "address": pair,
         "limit": safe_limit,
         "offset": 0,
-        "sort_by": "block_unix_time",
-        "sort_type": "desc",
         "tx_type": "swap",
+        "sort_type": "desc",
     }
 
     try:
         response = requests.get(
-            f"{BIRDEYE_BASE_URL}/defi/v3/txs",
+            f"{BIRDEYE_BASE_URL}/defi/txs/pair",
             headers={"accept": "application/json", "X-API-KEY": BIRDEYE_API_KEY, "x-chain": "solana"},
             params=params,
             timeout=20,
@@ -136,10 +226,13 @@ def get_birdeye_maker_trades(pair, maker, limit=50):
     except requests.RequestException as exc:
         return {
             "ok": False,
-            "source": "Birdeye /defi/v3/txs",
+            "source": "Birdeye /defi/txs/pair",
             "status": "request_error",
             "items": [],
+            "pair_items": [],
             "error": str(exc),
+            "maker_filter_applied": True,
+            "maker_like_keys_seen": [],
             "params": params,
         }
 
@@ -148,13 +241,24 @@ def get_birdeye_maker_trades(pair, maker, limit=50):
     except ValueError:
         payload = {"raw_text": response.text[:500]}
 
-    items = [normalize_maker_trade(item) for item in extract_items(payload) if isinstance(item, dict)]
+    pair_items_raw = [item for item in extract_items(payload) if isinstance(item, dict)]
+    maker_items_raw = [item for item in pair_items_raw if item_matches_maker(item, maker)]
+    items = [normalize_maker_trade(item) for item in maker_items_raw]
+    pair_items = [normalize_maker_trade(item) for item in pair_items_raw]
 
     return {
         "ok": response.ok,
-        "source": "Birdeye /defi/v3/txs",
+        "source": "Birdeye /defi/txs/pair",
         "status": response.status_code,
         "items": items,
+        "pair_items": pair_items,
+        "items_from_pair_endpoint": len(pair_items_raw),
+        "maker_filter_applied": True,
+        "maker_like_keys_seen": maker_like_keys_seen(pair_items_raw),
+        "debug_pair_rows": [
+            {**normalize_maker_trade(item), "maker_like": maker_like_text(item)}
+            for item in pair_items_raw[:3]
+        ],
         "error": None if response.ok else str(payload)[:500],
         "params": params,
     }
@@ -251,6 +355,15 @@ def build_maker_trades_text(pair, maker, limit=50):
         f"Items returned: {len(items)}",
     ]
 
+    if result.get("maker_filter_applied"):
+        lines.extend(
+            [
+                f"Items from pair endpoint: {result.get('items_from_pair_endpoint', 0)}",
+                f"Items after maker filter: {len(items)}",
+                "Maker filter applied: yes",
+            ]
+        )
+
     if result.get("error") and not items:
         lines.append(f"Error: {result['error']}")
 
@@ -278,6 +391,20 @@ def build_maker_trades_text(pair, maker, limit=50):
     visible_items = items[:20]
     if not visible_items:
         lines.append("No maker trades returned for this pair/maker window.")
+        if result.get("maker_filter_applied"):
+            keys = result.get("maker_like_keys_seen") or []
+            lines.append(f"Maker-like keys seen: {', '.join(keys) if keys else 'n/a'}")
+            debug_rows = result.get("debug_pair_rows") or []
+            if debug_rows:
+                lines.extend(["", "Pair endpoint sample rows:"])
+                for idx, item in enumerate(debug_rows[:3], start=1):
+                    lines.append(
+                        f"#{idx} {item.get('time') or 'n/a'} | "
+                        f"{item.get('side') or 'UNKNOWN'} | "
+                        f"value: {format_usd(item.get('usd_value'))} | "
+                        f"tx: {compact(item.get('tx'))} | "
+                        f"maker-like: {item.get('maker_like') or 'n/a'}"
+                    )
     else:
         for idx, item in enumerate(visible_items, start=1):
             lines.append(
