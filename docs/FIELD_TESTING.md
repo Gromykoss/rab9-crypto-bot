@@ -341,6 +341,9 @@ Check manual pair+maker trades diagnostic:
 /makertrades PAIR_ADDRESS MAKER_ADDRESS 50
 /makertrades PAIR_ADDRESS MAKER_ADDRESS 50 deep
 /makertrades PAIR_ADDRESS MAKER_ADDRESS 50 deep10
+/makerfind PAIR_ADDRESS MAKER_ADDRESS
+/makerfind PAIR_ADDRESS MAKER_ADDRESS deep
+/makerfind PAIR_ADDRESS MAKER_ADDRESS deep50
 /makertrades 7nvp4qykvmpeuhobyrzcn1tqiz7k8pmk5uxqeebrzyh AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51 50
 ```
 
@@ -360,6 +363,15 @@ Expected:
 - behavior classification is one of `Maker Accumulation`, `Maker Distribution`, `Two-sided Active Maker`, `Weak Sample`, or `Needs More Data`;
 - events show at most first 20 compact rows like `#1 time | BUY/SELL | amount token | value: $X | tx: abc...xyz`;
 - response does not show raw JSON, does not calculate PnL, does not provide trading advice, and does not create background monitoring.
+
+For `/makerfind PAIR MAKER`:
+
+- default mode is `deep`; `deep` scans up to 20 pages, `page_size = 50`, `max raw trades = 1000`, and stops early after 20 matched maker trades;
+- `deep50` scans up to 50 pages, `page_size = 50`, `max raw trades = 2500`, and stops early after 50 matched maker trades;
+- both modes wait 1.2 seconds between pages and stop on 429 while preserving matched rows;
+- report includes mode, source, status, pages scanned, raw pair trades scanned, matched maker trades, rate limited yes/no, buy/sell/unknown counts, first/last seen trade, first/last seen page, net direction, behavior hint, and at most first 10 matched events;
+- if maker is not found, response says `Maker not found in scanned pair-trade window.`, shows maker-like keys seen, and shows up to 3 compact pair endpoint sample rows without raw JSON;
+- command is a manual search tool, does not calculate PnL, does not provide trading advice, and does not create background monitoring.
 
 For `/pairresolve ADDRESS`:
 
