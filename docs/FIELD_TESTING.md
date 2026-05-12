@@ -336,6 +336,7 @@ Expected:
 Check manual pair+maker trades diagnostic:
 
 ```text
+/pairresolve ADDRESS
 /makertrades PAIR_ADDRESS MAKER_ADDRESS
 /makertrades PAIR_ADDRESS MAKER_ADDRESS 50
 /makertrades 7nvp4qykvmpeuhobyrzcn1tqiz7k8pmk5uxqeebrzyh AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51 50
@@ -352,6 +353,15 @@ Expected:
 - summary includes total trades, buy count, sell count, total buy USD, total sell USD, first trade time, last trade time, and net direction;
 - behavior classification is one of `Maker Accumulation`, `Maker Distribution`, `Two-sided Active Maker`, `Weak Sample`, or `Needs More Data`;
 - events show at most first 20 compact rows like `#1 time | BUY/SELL | amount token | value: $X | tx: abc...xyz`;
+- response does not show raw JSON, does not calculate PnL, does not provide trading advice, and does not create background monitoring.
+
+For `/pairresolve ADDRESS`:
+
+- report tries the input as both token address and pair/pool address;
+- Dexscreener candidates show pair address, dex, chain, base/quote symbol/address, liquidity, and 24h volume;
+- Birdeye candidates show market/pool address, source endpoint, base/quote symbol/address, liquidity, and 24h volume when available;
+- recommendation says `Use this address for /makertrades: ...` when a Birdeye pool/market candidate is found;
+- if no Birdeye pair candidate is found, response says `/makertrades may need Solscan/Bitquery source`;
 - response does not show raw JSON, does not calculate PnL, does not provide trading advice, and does not create background monitoring.
 
 Add:
