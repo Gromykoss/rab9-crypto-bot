@@ -1,3 +1,5 @@
+import time
+
 import requests
 
 from config import BIRDEYE_API_KEY
@@ -17,6 +19,13 @@ from swap_sources import (
 
 BIRDEYE_BASE_URL = "https://public-api.birdeye.so"
 SOL_MINT = "So11111111111111111111111111111111111111112"
+DEEP_PAGE_SIZE = 50
+DEEP_MAX_PAGES = 5
+DEEP10_MAX_PAGES = 10
+DEEP_MAX_RAW_TRADES = 250
+DEEP10_MAX_RAW_TRADES = 500
+DEEP_DELAY_SECONDS = 1.2
+MAKER_EARLY_STOP_COUNT = 20
 MAKER_DIRECT_KEYS = {
     "owner",
     "wallet",
@@ -193,25 +202,11 @@ def normalize_maker_trade(item):
     }
 
 
-def get_birdeye_maker_trades(pair, maker, limit=50):
-    if not BIRDEYE_API_KEY:
-        return {
-            "ok": False,
-            "source": "Birdeye /defi/txs/pair",
-            "status": "BIRDEYE_API_KEY missing",
-            "items": [],
-            "pair_items": [],
-            "error": "BIRDEYE_API_KEY missing",
-            "maker_filter_applied": True,
-            "maker_like_keys_seen": [],
-            "params": {"address": pair, "limit": limit},
-        }
-
-    safe_limit = min(max(int(limit), 1), 50)
+def get_birdeye_pair_trades_page(pair, limit=50, offset=0):
     params = {
         "address": pair,
-        "limit": safe_limit,
-        "offset": 0,
+        "limit": min(max(int(limit), 1), 50),
+        "offset": offset,
         "tx_type": "swap",
         "sort_type": "desc",
     }
@@ -224,43 +219,121 @@ def get_birdeye_maker_trades(pair, maker, limit=50):
             timeout=20,
         )
     except requests.RequestException as exc:
-        return {
-            "ok": False,
-            "source": "Birdeye /defi/txs/pair",
-            "status": "request_error",
-            "items": [],
-            "pair_items": [],
-            "error": str(exc),
-            "maker_filter_applied": True,
-            "maker_like_keys_seen": [],
-            "params": params,
-        }
+        return {"ok": False, "status": "request_error", "error": str(exc), "items": [], "params": params}
 
     try:
         payload = response.json()
     except ValueError:
         payload = {"raw_text": response.text[:500]}
 
-    pair_items_raw = [item for item in extract_items(payload) if isinstance(item, dict)]
-    maker_items_raw = [item for item in pair_items_raw if item_matches_maker(item, maker)]
-    items = [normalize_maker_trade(item) for item in maker_items_raw]
-    pair_items = [normalize_maker_trade(item) for item in pair_items_raw]
-
     return {
         "ok": response.ok,
-        "source": "Birdeye /defi/txs/pair",
         "status": response.status_code,
+        "error": None if response.ok else str(payload)[:500],
+        "items": [item for item in extract_items(payload) if isinstance(item, dict)],
+        "params": params,
+    }
+
+
+def get_birdeye_maker_trades(pair, maker, limit=50, mode="normal"):
+    if not BIRDEYE_API_KEY:
+        return {
+            "ok": False,
+            "source": "Birdeye /defi/txs/pair",
+            "status": "BIRDEYE_API_KEY missing",
+            "items": [],
+            "pair_items": [],
+            "error": "BIRDEYE_API_KEY missing",
+            "maker_filter_applied": True,
+            "maker_like_keys_seen": [],
+            "params": {"address": pair, "limit": limit},
+            "mode": mode,
+            "pages_scanned": 0,
+            "raw_pair_trades_scanned": 0,
+            "rate_limited": False,
+        }
+
+    mode = str(mode).lower()
+    mode = mode if mode in {"deep", "deep10"} else "normal"
+    safe_limit = min(max(int(limit), 1), 50)
+    max_pages = 1
+    max_raw_trades = safe_limit
+    page_size = safe_limit
+
+    if mode == "deep":
+        max_pages = DEEP_MAX_PAGES
+        max_raw_trades = DEEP_MAX_RAW_TRADES
+        page_size = DEEP_PAGE_SIZE
+    elif mode == "deep10":
+        max_pages = DEEP10_MAX_PAGES
+        max_raw_trades = DEEP10_MAX_RAW_TRADES
+        page_size = DEEP_PAGE_SIZE
+
+    pair_items_raw = []
+    maker_items_raw = []
+    pages_scanned = 0
+    last_status = None
+    last_error = None
+    rate_limited = False
+
+    for page_index in range(max_pages):
+        if page_index:
+            time.sleep(DEEP_DELAY_SECONDS)
+
+        offset = page_index * page_size
+        page_result = get_birdeye_pair_trades_page(pair, page_size, offset)
+        last_status = page_result.get("status")
+        last_error = page_result.get("error")
+
+        if not page_result.get("ok"):
+            if page_result.get("status") == 429:
+                rate_limited = True
+            break
+
+        page_items = page_result.get("items") or []
+        pages_scanned += 1
+        pair_items_raw.extend(page_items)
+        pair_items_raw = pair_items_raw[:max_raw_trades]
+        maker_items_raw.extend(item for item in page_items if item_matches_maker(item, maker))
+
+        if len(maker_items_raw) >= MAKER_EARLY_STOP_COUNT:
+            break
+        if len(pair_items_raw) >= max_raw_trades or len(page_items) < page_size:
+            break
+
+    maker_items_raw = maker_items_raw[:max_raw_trades]
+    items = [normalize_maker_trade(item) for item in maker_items_raw]
+    pair_items = [normalize_maker_trade(item) for item in pair_items_raw]
+    status = last_status
+    if rate_limited:
+        status = "partial (rate limited 429)" if pair_items_raw or maker_items_raw else "rate limited 429"
+    ok_status = isinstance(last_status, int) and 200 <= last_status < 300
+
+    return {
+        "ok": bool(pair_items_raw or maker_items_raw) or (ok_status and not rate_limited),
+        "source": "Birdeye /defi/txs/pair",
+        "status": status,
         "items": items,
         "pair_items": pair_items,
         "items_from_pair_endpoint": len(pair_items_raw),
+        "pages_scanned": pages_scanned,
+        "raw_pair_trades_scanned": len(pair_items_raw),
+        "mode": mode,
+        "rate_limited": rate_limited,
         "maker_filter_applied": True,
         "maker_like_keys_seen": maker_like_keys_seen(pair_items_raw),
         "debug_pair_rows": [
             {**normalize_maker_trade(item), "maker_like": maker_like_text(item)}
             for item in pair_items_raw[:3]
         ],
-        "error": None if response.ok else str(payload)[:500],
-        "params": params,
+        "error": None if pair_items_raw or maker_items_raw or ok_status else last_error,
+        "params": {
+            "address": pair,
+            "offset": "page_index * page_size",
+            "limit": page_size,
+            "tx_type": "swap",
+            "sort_type": "desc",
+        },
     }
 
 
@@ -339,9 +412,11 @@ def build_classification_evidence(summary):
     ]
 
 
-def build_maker_trades_text(pair, maker, limit=50):
+def build_maker_trades_text(pair, maker, limit=50, mode="normal"):
     safe_limit = min(max(int(limit), 1), 50)
-    result = get_birdeye_maker_trades(pair, maker, safe_limit)
+    mode = str(mode).lower()
+    mode = mode if mode in {"deep", "deep10"} else "normal"
+    result = get_birdeye_maker_trades(pair, maker, safe_limit, mode)
     items = result.get("items") or []
     summary = summarize_maker_trades(items)
     classification = classify_maker_behavior(summary)
@@ -351,8 +426,12 @@ def build_maker_trades_text(pair, maker, limit=50):
         f"Pair: {compact(pair)}",
         f"Maker: {compact(maker)}",
         f"Source used: {result.get('source')}",
+        f"Mode: {result.get('mode', mode)}",
         f"Status: {result.get('status')}",
         f"Items returned: {len(items)}",
+        f"Pages scanned: {result.get('pages_scanned', 0)}",
+        f"Raw pair trades scanned: {result.get('raw_pair_trades_scanned', result.get('items_from_pair_endpoint', 0))}",
+        f"Rate limited: {'yes' if result.get('rate_limited') else 'no'}",
     ]
 
     if result.get("maker_filter_applied"):
@@ -391,6 +470,7 @@ def build_maker_trades_text(pair, maker, limit=50):
     visible_items = items[:20]
     if not visible_items:
         lines.append("No maker trades returned for this pair/maker window.")
+        lines.append("Maker not found in scanned pair-trade window.")
         if result.get("maker_filter_applied"):
             keys = result.get("maker_like_keys_seen") or []
             lines.append(f"Maker-like keys seen: {', '.join(keys) if keys else 'n/a'}")
@@ -410,7 +490,6 @@ def build_maker_trades_text(pair, maker, limit=50):
             lines.append(
                 f"#{idx} {item.get('time') or 'n/a'} | "
                 f"{item.get('side') or 'UNKNOWN'} | "
-                f"{format_amount(item.get('amount'))} token | "
                 f"value: {format_usd(item.get('usd_value'))} | "
                 f"tx: {compact(item.get('tx'))}"
             )

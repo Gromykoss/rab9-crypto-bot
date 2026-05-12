@@ -339,6 +339,8 @@ Check manual pair+maker trades diagnostic:
 /pairresolve ADDRESS
 /makertrades PAIR_ADDRESS MAKER_ADDRESS
 /makertrades PAIR_ADDRESS MAKER_ADDRESS 50
+/makertrades PAIR_ADDRESS MAKER_ADDRESS 50 deep
+/makertrades PAIR_ADDRESS MAKER_ADDRESS 50 deep10
 /makertrades 7nvp4qykvmpeuhobyrzcn1tqiz7k8pmk5uxqeebrzyh AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51 50
 ```
 
@@ -348,8 +350,12 @@ Expected:
 - default limit is 50, requested limits above 50 are capped at 50;
 - if `BIRDEYE_API_KEY` is missing, response says `BIRDEYE_API_KEY missing`;
 - report uses Birdeye `/defi/txs/pair` with `address=PAIR`, `offset=0`, `limit=1..50`, `tx_type=swap`, and `sort_type=desc`, then filters maker-like fields client-side;
+- normal mode scans offset `0` only; `deep` scans up to 5 pages, `page_size = 50`, `max raw trades = 250`; `deep10` scans up to 10 pages, `page_size = 50`, `max raw trades = 500`; both deep modes wait 1.2 seconds between pages;
+- report includes mode, pages scanned, raw pair trades scanned, rate limited yes/no, items from pair endpoint, items after maker filter, and `Maker filter applied: yes`;
+- if Birdeye returns 429, scanning stops, found rows are preserved, and status is readable such as `partial (rate limited 429)`;
 - report header includes compact pair, compact maker, source used, status, and items returned;
 - if client-side maker filtering finds no rows, report includes items from pair endpoint, items after maker filter, `Maker filter applied: yes`, maker-like keys seen, and at most 3 compact pair endpoint sample rows;
+- if maker is not found, response says `Maker not found in scanned pair-trade window.`;
 - summary includes total trades, buy count, sell count, total buy USD, total sell USD, first trade time, last trade time, and net direction;
 - behavior classification is one of `Maker Accumulation`, `Maker Distribution`, `Two-sided Active Maker`, `Weak Sample`, or `Needs More Data`;
 - events show at most first 20 compact rows like `#1 time | BUY/SELL | amount token | value: $X | tx: abc...xyz`;
