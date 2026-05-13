@@ -58,6 +58,7 @@ def analyze_wallet_case(wallet, case):
     items = result.get("items") or []
     summary = summarize_maker_trades(items)
     price_movement = calculate_price_movement(case["token"], summary["first_time"], summary["last_time"])
+    behavior = "Anchored Unavailable" if result.get("anchored_unavailable") else behavior_hint(summary)
 
     return {
         "pair": case["pair"],
@@ -70,7 +71,7 @@ def analyze_wallet_case(wallet, case):
         "first_seen": summary["first_time"],
         "last_seen": summary["last_time"],
         "price_movement": price_movement,
-        "behavior": behavior_hint(summary),
+        "behavior": behavior,
         "scan_mode": scan_mode,
         "anchor_time": case.get("anchor_time") or "n/a",
         "status": result.get("status"),
@@ -80,6 +81,9 @@ def analyze_wallet_case(wallet, case):
         "time_filter_applied": bool(result.get("time_filter_applied")),
         "anchored_scan_fallback": bool(result.get("anchored_scan_fallback")),
         "anchored_scan_message": result.get("anchored_scan_message"),
+        "anchored_strict": bool(result.get("anchored_strict")),
+        "fallback_used": bool(result.get("fallback_used")),
+        "anchored_unavailable": bool(result.get("anchored_unavailable")),
     }
 
 
@@ -161,6 +165,8 @@ def build_wallet_profile_text(wallet, raw_cases):
                 f"- Scan mode: {case['scan_mode']}",
                 f"- Anchor time: {case['anchor_time']}",
                 f"- Time filter applied: {'yes' if case['time_filter_applied'] else 'no'}",
+                f"- Anchored strict: {'yes' if case['anchored_strict'] else 'no'}",
+                f"- Fallback used: {'yes' if case['fallback_used'] else 'no'}",
                 f"- Pages scanned: {case['pages_scanned']}",
                 f"- Raw pair trades scanned: {case['raw_pair_trades_scanned']}",
                 f"- Rate limited: {'yes' if case['rate_limited'] else 'no'}",
@@ -175,6 +181,8 @@ def build_wallet_profile_text(wallet, raw_cases):
         )
         if case["anchored_scan_message"]:
             lines.append(f"- {case['anchored_scan_message']}")
+        if case["anchored_unavailable"]:
+            lines.append("- Latest-window fallback skipped for strict anchored scan.")
         if case["matched_trades"] == 0:
             if case["scan_mode"] == "around":
                 lines.append("- Not found in anchored scanned window; try another timestamp if activity may be outside +/-2h.")
