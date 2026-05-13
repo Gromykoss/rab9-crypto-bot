@@ -61,6 +61,7 @@ Arkham and wallets:
 - `/walletswaps WALLET`, `/walletswaps WALLET TOKEN`, `/walletswaps WALLET TOKEN 50 deep`, or `/walletswaps WALLET TOKEN 50 deep10` - manually inspect parsed Solana swap activities. Normal mode uses Solscan Pro account defi activities when `SOLSCAN_API_KEY` is available, with Birdeye trades V3 fallback. Deep modes scan Birdeye pages for older wallet/token swaps. Token-filtered reports include an approximate sell-window price check when token -> SOL events are found and a short swap behavior classification such as `Distribution Pattern`, `Accumulation Pattern`, or `Round-trip Pattern`.
 - `/makertrades PAIR MAKER 50 deep10` - manually inspect Birdeye pair trades through `/defi/txs/pair` with `address=PAIR`, then filter maker-like fields client-side to compare against Dexscreener maker-table activity. Normal mode checks the latest page; `deep` scans up to 5 pages and `deep10` up to 10 pages with safe delays. No PnL or trading advice is provided.
 - `/makerfind PAIR MAKER deep50` - manually search deeper through Birdeye pair trades for one maker. `deep` scans up to 20 pages; `deep50` scans up to 50 pages with safe delays. Compact search report only.
+- `/walletprofile WALLET PAIR:TOKEN PAIR:TOKEN` - manually profile one wallet across up to 5 pair/token cases using maker-find scans plus Birdeye price movement during activity windows. No PnL or trading advice is provided.
 - `/pairresolve ADDRESS` - manually resolve token/pair addresses through Dexscreener and Birdeye to find the pool/market address candidate to use with `/makertrades`.
 - `/watchwallet ADDRESS note` - add or update a wallet watch item.
 - `/walletlist` - show wallet watchlist.
@@ -84,6 +85,7 @@ Arkham and wallets:
 - `swap_sources.py` - manual parsed swap diagnostics using Solscan Pro with Birdeye fallback.
 - `maker_sources.py` - manual Birdeye pair+maker trade diagnostics.
 - `pair_sources.py` - manual Dexscreener/Birdeye pair and pool address resolver.
+- `wallet_profile.py` - manual wallet behavior profiling across multiple pair/token cases.
 - `keyboards.py` - Telegram reply and inline keyboards.
 - `utils.py` - formatting, parsing, time, and message chunk utilities.
 - `requirements.txt` - Python package dependencies.

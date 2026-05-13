@@ -344,6 +344,7 @@ Check manual pair+maker trades diagnostic:
 /makerfind PAIR_ADDRESS MAKER_ADDRESS
 /makerfind PAIR_ADDRESS MAKER_ADDRESS deep
 /makerfind PAIR_ADDRESS MAKER_ADDRESS deep50
+/walletprofile WALLET_ADDRESS PAIR_ADDRESS:TOKEN_ADDRESS PAIR_ADDRESS:TOKEN_ADDRESS
 /makertrades 7nvp4qykvmpeuhobyrzcn1tqiz7k8pmk5uxqeebrzyh AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51 50
 ```
 
@@ -372,6 +373,15 @@ For `/makerfind PAIR MAKER`:
 - report includes mode, source, status, pages scanned, raw pair trades scanned, matched maker trades, rate limited yes/no, buy/sell/unknown counts, first/last seen trade, first/last seen page, net direction, behavior hint, and at most first 10 matched events;
 - if maker is not found, response says `Maker not found in scanned pair-trade window.`, shows maker-like keys seen, and shows up to 3 compact pair endpoint sample rows without raw JSON;
 - command is a manual search tool, does not calculate PnL, does not provide trading advice, and does not create background monitoring.
+
+For `/walletprofile WALLET PAIR:TOKEN ...`:
+
+- command accepts up to 5 `PAIR:TOKEN` cases; invalid case format returns `Expected PAIR:TOKEN.`;
+- each case uses maker-find style deep50 scan for the wallet on the pair, then Birdeye price near first/last seen timestamps for the token;
+- report includes case summaries with matched trades, BUY/SELL/UNKNOWN counts, net direction, first/last seen, price movement during activity, and behavior;
+- profile summary includes active cases, total matched trades, buy-heavy cases, sell-heavy cases, two-sided cases, not found cases, average price movement, and positive/negative price-window counts;
+- primary wallet role is one of `Repeating Two-sided Active Maker`, `Repeating Distribution Wallet`, `Repeating Accumulation Wallet`, `Mixed Active Wallet`, or `Weak / Needs More Data`;
+- response does not show raw JSON, does not calculate PnL, does not use profit/realized gain wording, does not provide trading advice, and does not create background monitoring.
 
 For `/pairresolve ADDRESS`:
 
