@@ -490,7 +490,7 @@ async def makerfind_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "Формат:\n/makerfind PAIR MAKER\n/makerfind PAIR MAKER deep\n/makerfind PAIR MAKER deep50\n/makerfind PAIR MAKER around TIMESTAMP",
+            "Формат:\n/makerfind PAIR MAKER\n/makerfind PAIR MAKER deep\n/makerfind PAIR MAKER deep50\n/makerfind PAIR MAKER around TIMESTAMP\n/makerfind PAIR MAKER around TIMESTAMP fallback",
             reply_markup=main_reply_keyboard(),
         )
         return
@@ -499,6 +499,7 @@ async def makerfind_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     maker = context.args[1].strip()
     mode = "deep"
     anchor_time = None
+    allow_fallback = False
 
     if len(context.args) > 2 and context.args[2].lower() in {"deep", "deep50"}:
         mode = context.args[2].lower()
@@ -511,9 +512,10 @@ async def makerfind_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         mode = "around"
         anchor_time = context.args[3].strip()
+        allow_fallback = len(context.args) > 4 and context.args[4].lower() == "fallback"
 
     await update.message.reply_text(f"Ищу maker глубже: {pair} / {maker} / {mode}")
-    text = await asyncio.to_thread(build_maker_find_text, pair, maker, mode, anchor_time)
+    text = await asyncio.to_thread(build_maker_find_text, pair, maker, mode, anchor_time, allow_fallback)
     await reply_long(update, text, main_reply_keyboard())
 
 

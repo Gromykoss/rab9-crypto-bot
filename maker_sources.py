@@ -454,7 +454,7 @@ def scan_birdeye_maker_find(pair, maker, mode, max_pages, max_raw_trades, early_
     }
 
 
-def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
+def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None, allow_fallback=False):
     mode = str(mode).lower()
     mode = mode if mode in {"around", "deep50"} else "deep"
 
@@ -475,6 +475,9 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
             "time_params": "n/a",
             "anchored_scan_fallback": False,
             "anchored_scan_message": None,
+            "anchored_strict": mode == "around",
+            "fallback_used": False,
+            "anchored_unavailable": False,
             "maker_like_keys_seen": [],
             "debug_pair_rows": [],
         }
@@ -498,6 +501,9 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
                 "time_params": "n/a",
                 "anchored_scan_fallback": False,
                 "anchored_scan_message": None,
+                "anchored_strict": True,
+                "fallback_used": False,
+                "anchored_unavailable": True,
                 "maker_like_keys_seen": [],
                 "debug_pair_rows": [],
             }
@@ -517,6 +523,9 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
         time_result["anchor_time"] = anchor_time
         time_result["window"] = "+/-2h"
         time_result["source"] = "Birdeye /defi/txs/pair/seek_by_time"
+        time_result["anchored_strict"] = not allow_fallback
+        time_result["fallback_used"] = False
+        time_result["anchored_unavailable"] = False
 
         if time_result.get("rate_limited"):
             time_result["time_filter_applied"] = False
@@ -525,6 +534,14 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
             )
             return time_result
         if time_result.get("raw_pair_trades_scanned", 0) > 0 or time_result.get("items"):
+            return time_result
+
+        if not allow_fallback:
+            time_result["time_filter_applied"] = False
+            time_result["anchored_unavailable"] = True
+            time_result["anchored_scan_message"] = (
+                "Anchored scan unavailable: time-window query did not return usable results."
+            )
             return time_result
 
         time.sleep(DEEP_DELAY_SECONDS)
@@ -539,6 +556,9 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
         fallback["anchor_time"] = anchor_time
         fallback["window"] = "+/-2h"
         fallback["anchored_scan_fallback"] = True
+        fallback["anchored_strict"] = False
+        fallback["fallback_used"] = True
+        fallback["anchored_unavailable"] = False
         fallback["time_filter_applied"] = False
         fallback["time_params"] = f"after_time={after_time}, before_time={before_time}"
         if time_result.get("status") == 200:
@@ -553,6 +573,9 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
     result = scan_birdeye_maker_find(pair, maker, mode, max_pages, max_raw_trades, early_stop)
     result["anchor_time"] = "n/a"
     result["window"] = "n/a"
+    result["anchored_strict"] = False
+    result["fallback_used"] = False
+    result["anchored_unavailable"] = False
     return result
 
 
@@ -651,11 +674,12 @@ def behavior_hint(summary):
     return "Weak Sample"
 
 
-def build_maker_find_text(pair, maker, mode="deep", anchor_time=None):
-    result = get_birdeye_maker_find(pair, maker, mode, anchor_time)
+def build_maker_find_text(pair, maker, mode="deep", anchor_time=None, allow_fallback=False):
+    result = get_birdeye_maker_find(pair, maker, mode, anchor_time, allow_fallback)
     items = result.get("items") or []
     summary = summarize_maker_trades(items)
     pages = [item.get("page") for item in items if item.get("page")]
+    behavior = "Not Found / Anchored Unavailable" if result.get("anchored_unavailable") else behavior_hint(summary)
 
     lines = [
         "Maker Find Diagnostic",
@@ -672,12 +696,18 @@ def build_maker_find_text(pair, maker, mode="deep", anchor_time=None):
         f"Rate limited: {'yes' if result.get('rate_limited') else 'no'}",
         f"Time filter applied: {'yes' if result.get('time_filter_applied') else 'no'}",
         f"Time params: {result.get('time_params', 'n/a')}",
+        f"Anchored strict: {'yes' if result.get('anchored_strict') else 'no'}",
+        f"Fallback used: {'yes' if result.get('fallback_used') else 'no'}",
     ]
 
     if result.get("rate_limited"):
         lines.append(f"Rate limit hit after page: {result.get('rate_limit_page') or 'n/a'}")
     if result.get("anchored_scan_message"):
         lines.append(result["anchored_scan_message"])
+    if result.get("anchored_unavailable"):
+        lines.append("Latest-window fallback skipped for strict anchored scan.")
+    if result.get("fallback_used"):
+        lines.append("Warning: results are latest-window, not anchored.")
     if result.get("error") and not items:
         lines.append(f"Error: {result['error']}")
 
@@ -695,7 +725,7 @@ def build_maker_find_text(pair, maker, mode="deep", anchor_time=None):
             f"- Net direction: {summary['net_direction']}",
             "",
             "Behavior Hint:",
-            f"- {behavior_hint(summary)}",
+            f"- {behavior}",
             "",
             "Events:",
         ]
