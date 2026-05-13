@@ -372,7 +372,9 @@ For `/makerfind PAIR MAKER`:
 - default mode is `deep`; `deep` scans up to 20 pages, `page_size = 50`, `max raw trades = 1000`, and stops early after 20 matched maker trades;
 - `deep50` scans up to 50 pages, `page_size = 50`, `max raw trades = 2500`, and stops early after 50 matched maker trades;
 - `around TIMESTAMP` uses Birdeye `/defi/txs/pair/seek_by_time` with `after_time = TIMESTAMP - 2h` and `before_time = TIMESTAMP + 2h`; around mode scans up to 20 pages, `page_size = 50`, `max raw trades = 1000`, and stops early after 50 matched maker trades;
-- if the time-filtered pair endpoint returns no rows or is unavailable, report says `Anchored scan fallback: latest-window offset scan, time params unavailable.`;
+- if the time-filtered pair endpoint returns 429, around scan stops without latest-window fallback and report says `Anchored scan stopped: Birdeye rate limit hit before time-window results were available.`;
+- if the time-filtered pair endpoint returns 200 with no rows, report says `Time-window returned no rows; latest-window fallback used.`;
+- if the time-filtered pair endpoint is unsupported or unavailable, report says `Anchored scan fallback: time params unavailable.`;
 - deep, deep50, and around modes wait 1.2 seconds between pages and stop on 429 while preserving matched rows;
 - report includes mode, anchor time/window for around mode, source, status, pages scanned, raw pair trades scanned, matched maker trades, rate limited yes/no, time filter applied yes/no, time params, buy/sell/unknown counts, first/last seen trade, first/last seen page, net direction, behavior hint, and at most first 10 matched events;
 - if maker is not found, response says `Maker not found in scanned pair-trade window.`, shows maker-like keys seen, and shows up to 3 compact pair endpoint sample rows without raw JSON;

@@ -445,6 +445,7 @@ def scan_birdeye_maker_find(pair, maker, mode, max_pages, max_raw_trades, early_
             else "n/a"
         ),
         "anchored_scan_fallback": False,
+        "anchored_scan_message": None,
         "maker_like_keys_seen": maker_like_keys_seen(pair_items_raw),
         "debug_pair_rows": [
             {**normalize_maker_trade(item), "maker_like": maker_like_text(item)}
@@ -473,6 +474,7 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
             "time_filter_applied": False,
             "time_params": "n/a",
             "anchored_scan_fallback": False,
+            "anchored_scan_message": None,
             "maker_like_keys_seen": [],
             "debug_pair_rows": [],
         }
@@ -495,6 +497,7 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
                 "time_filter_applied": False,
                 "time_params": "n/a",
                 "anchored_scan_fallback": False,
+                "anchored_scan_message": None,
                 "maker_like_keys_seen": [],
                 "debug_pair_rows": [],
             }
@@ -516,10 +519,15 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
         time_result["source"] = "Birdeye /defi/txs/pair/seek_by_time"
 
         if time_result.get("rate_limited"):
+            time_result["time_filter_applied"] = False
+            time_result["anchored_scan_message"] = (
+                "Anchored scan stopped: Birdeye rate limit hit before time-window results were available."
+            )
             return time_result
         if time_result.get("raw_pair_trades_scanned", 0) > 0 or time_result.get("items"):
             return time_result
 
+        time.sleep(DEEP_DELAY_SECONDS)
         fallback = scan_birdeye_maker_find(
             pair,
             maker,
@@ -533,6 +541,10 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
         fallback["anchored_scan_fallback"] = True
         fallback["time_filter_applied"] = False
         fallback["time_params"] = f"after_time={after_time}, before_time={before_time}"
+        if time_result.get("status") == 200:
+            fallback["anchored_scan_message"] = "Time-window returned no rows; latest-window fallback used."
+        else:
+            fallback["anchored_scan_message"] = "Anchored scan fallback: time params unavailable."
         return fallback
 
     max_pages = MAKER_FIND_DEEP50_MAX_PAGES if mode == "deep50" else MAKER_FIND_DEEP_MAX_PAGES
@@ -664,8 +676,8 @@ def build_maker_find_text(pair, maker, mode="deep", anchor_time=None):
 
     if result.get("rate_limited"):
         lines.append(f"Rate limit hit after page: {result.get('rate_limit_page') or 'n/a'}")
-    if result.get("anchored_scan_fallback"):
-        lines.append("Anchored scan fallback: latest-window offset scan, time params unavailable.")
+    if result.get("anchored_scan_message"):
+        lines.append(result["anchored_scan_message"])
     if result.get("error") and not items:
         lines.append(f"Error: {result['error']}")
 
