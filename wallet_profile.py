@@ -79,6 +79,7 @@ def analyze_wallet_case(wallet, case):
         "rate_limited": bool(result.get("rate_limited")),
         "time_filter_applied": bool(result.get("time_filter_applied")),
         "anchored_scan_fallback": bool(result.get("anchored_scan_fallback")),
+        "anchored_scan_message": result.get("anchored_scan_message"),
     }
 
 
@@ -172,8 +173,8 @@ def build_wallet_profile_text(wallet, raw_cases):
                 f"- Behavior: {case['behavior']}",
             ]
         )
-        if case["anchored_scan_fallback"]:
-            lines.append("- Anchored scan fallback: latest-window offset scan, time params unavailable.")
+        if case["anchored_scan_message"]:
+            lines.append(f"- {case['anchored_scan_message']}")
         if case["matched_trades"] == 0:
             if case["scan_mode"] == "around":
                 lines.append("- Not found in anchored scanned window; try another timestamp if activity may be outside +/-2h.")
