@@ -372,14 +372,16 @@ For `/makerfind PAIR MAKER`:
 
 - default mode is `deep`; `deep` scans up to 20 pages, `page_size = 50`, `max raw trades = 1000`, and stops early after 20 matched maker trades;
 - `deep50` scans up to 50 pages, `page_size = 50`, `max raw trades = 2500`, and stops early after 50 matched maker trades;
-- `around TIMESTAMP` is strict by default and uses Birdeye `/defi/txs/pair/seek_by_time` with `after_time = TIMESTAMP - 2h` and `before_time = TIMESTAMP + 2h`; around mode scans up to 20 pages, `page_size = 50`, `max raw trades = 1000`, and stops early after 50 matched maker trades;
+- `around TIMESTAMP` is strict by default and uses Birdeye `/defi/txs/pair/seek_by_time` with only `before_time = TIMESTAMP + 2h`; around mode then filters rows client-side to `TIMESTAMP - 2h <= trade_time <= TIMESTAMP + 2h`, scans up to 20 pages, `page_size = 50`, `max raw trades = 1000`, and stops early after 50 matched maker trades;
+- if returned pair trades are older than `TIMESTAMP - 2h`, pagination can stop early because pair trades are requested newest-first before the upper bound;
+- if Birdeye rejects the time query with 422, report says `Time query rejected by Birdeye: ...` and strict mode does not use latest-window fallback;
 - strict around mode does not use latest-window fallback; if the time-window query is unusable, report says `Anchored scan unavailable: time-window query did not return usable results.` and `Latest-window fallback skipped for strict anchored scan.`;
 - `/makerfind PAIR MAKER around TIMESTAMP fallback` explicitly enables latest-window fallback and report must say `Fallback used: yes` plus `Warning: results are latest-window, not anchored.`;
 - if the time-filtered pair endpoint returns 429, around scan stops without latest-window fallback and report says `Anchored scan stopped: Birdeye rate limit hit before time-window results were available.`;
 - in explicit fallback mode, if the time-filtered pair endpoint returns 200 with no rows, report says `Time-window returned no rows; latest-window fallback used.`;
 - in explicit fallback mode, if the time-filtered pair endpoint is unsupported or unavailable, report says `Anchored scan fallback: time params unavailable.`;
 - deep, deep50, and around modes wait 1.2 seconds between pages and stop on 429 while preserving matched rows;
-- report includes mode, anchor time/window for around mode, source, status, pages scanned, raw pair trades scanned, matched maker trades, rate limited yes/no, time filter applied yes/no, time params, anchored strict yes/no, fallback used yes/no, buy/sell/unknown counts, first/last seen trade, first/last seen page, net direction, behavior hint, and at most first 10 matched events;
+- report includes mode, anchor time/window for around mode, source, status, pages scanned, raw pair trades scanned, matched maker trades, rate limited yes/no, time filter applied yes/no, time params, client window, anchored strict yes/no, fallback used yes/no, buy/sell/unknown counts, first/last seen trade, first/last seen page, net direction, behavior hint, and at most first 10 matched events;
 - if maker is not found, response says `Maker not found in scanned pair-trade window.`, shows maker-like keys seen, and shows up to 3 compact pair endpoint sample rows without raw JSON;
 - command is a manual search tool, does not calculate PnL, does not provide trading advice, and does not create background monitoring.
 
@@ -388,7 +390,7 @@ For `/walletprofile WALLET PAIR:TOKEN ...` or `/walletprofile WALLET PAIR:TOKEN:
 - command accepts up to 5 `PAIR:TOKEN` or `PAIR:TOKEN:TIMESTAMP` cases; invalid case format returns `Expected PAIR:TOKEN or PAIR:TOKEN:TIMESTAMP.`;
 - cases without timestamp use maker-find style latest deep50 scan; timestamped cases use strict makerfind around logic for the wallet on the pair, then Birdeye price near first/last seen timestamps for the token;
 - timestamped cases do not use latest-window fallback; if the time-window query is unusable, behavior is `Anchored Unavailable` and price movement is `n/a`;
-- report includes case summaries with matched trades, scan mode, anchor time, time filter applied yes/no, anchored strict yes/no, fallback used yes/no, pages scanned, raw pair trades scanned, rate limited yes/no, status, BUY/SELL/UNKNOWN counts, net direction, first/last seen, price movement during activity, and behavior;
+- report includes case summaries with matched trades, scan mode, anchor time, time filter applied yes/no, client window, anchored strict yes/no, fallback used yes/no, pages scanned, raw pair trades scanned, rate limited yes/no, status, BUY/SELL/UNKNOWN counts, net direction, first/last seen, price movement during activity, and behavior;
 - if a case has no matched trades, report says `Not found in latest scanned window; older activity may require anchored/time-based scan.`;
 - profile summary includes active cases, total matched trades, buy-heavy cases, sell-heavy cases, two-sided cases, not found cases, average price movement, and positive/negative price-window counts;
 - primary wallet role is one of `Repeating Two-sided Active Maker`, `Repeating Distribution Wallet`, `Repeating Accumulation Wallet`, `Mixed Active Wallet`, or `Weak / Needs More Data`;
