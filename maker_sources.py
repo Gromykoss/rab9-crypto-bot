@@ -232,8 +232,8 @@ def parse_anchor_timestamp(value):
     return int(parsed.timestamp())
 
 
-def get_birdeye_pair_trades_page(pair, limit=50, offset=0, before_time=None, after_time=None):
-    use_time_filter = before_time is not None and after_time is not None
+def get_birdeye_pair_trades_page(pair, limit=50, offset=0, before_time=None):
+    use_time_filter = before_time is not None
     endpoint = "/defi/txs/pair/seek_by_time" if use_time_filter else "/defi/txs/pair"
     params = {
         "address": pair,
@@ -243,7 +243,6 @@ def get_birdeye_pair_trades_page(pair, limit=50, offset=0, before_time=None, aft
     }
     if use_time_filter:
         params["before_time"] = int(before_time)
-        params["after_time"] = int(after_time)
     else:
         params["sort_type"] = "desc"
 
@@ -265,7 +264,7 @@ def get_birdeye_pair_trades_page(pair, limit=50, offset=0, before_time=None, aft
     return {
         "ok": response.ok,
         "status": response.status_code,
-        "error": None if response.ok else str(payload)[:500],
+        "error": None if response.ok else response_error_message(payload, response.text),
         "items": [item for item in extract_items(payload) if isinstance(item, dict)],
         "params": params,
         "endpoint": endpoint,
@@ -374,7 +373,47 @@ def get_birdeye_maker_trades(pair, maker, limit=50, mode="normal"):
     }
 
 
-def scan_birdeye_maker_find(pair, maker, mode, max_pages, max_raw_trades, early_stop, before_time=None, after_time=None):
+def trade_unix_time(item):
+    value = first_value(item, ["block_unix_time", "blockUnixTime", "block_time", "time", "timestamp"])
+    if value is None:
+        return None
+
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return parse_anchor_timestamp(value)
+
+    return int(numeric / 1000) if numeric > 10_000_000_000 else int(numeric)
+
+
+def response_error_message(payload, fallback_text):
+    if isinstance(payload, dict):
+        for key in ("message", "error", "msg"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+        data = payload.get("data")
+        if isinstance(data, dict):
+            for key in ("message", "error", "msg"):
+                value = data.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+
+    return str(fallback_text or "")[:200]
+
+
+def scan_birdeye_maker_find(
+    pair,
+    maker,
+    mode,
+    max_pages,
+    max_raw_trades,
+    early_stop,
+    before_time=None,
+    lower_bound=None,
+    upper_bound=None,
+):
     pair_items_raw = []
     matched_raw = []
     pages_scanned = 0
@@ -388,13 +427,7 @@ def scan_birdeye_maker_find(pair, maker, mode, max_pages, max_raw_trades, early_
             time.sleep(DEEP_DELAY_SECONDS)
 
         offset = page_index * DEEP_PAGE_SIZE
-        page_result = get_birdeye_pair_trades_page(
-            pair,
-            DEEP_PAGE_SIZE,
-            offset,
-            before_time=before_time,
-            after_time=after_time,
-        )
+        page_result = get_birdeye_pair_trades_page(pair, DEEP_PAGE_SIZE, offset, before_time=before_time)
         last_status = page_result.get("status")
         last_error = page_result.get("error")
 
@@ -406,8 +439,19 @@ def scan_birdeye_maker_find(pair, maker, mode, max_pages, max_raw_trades, early_
 
         page_items = page_result.get("items") or []
         pages_scanned += 1
+        stop_after_page = False
 
         for item in page_items:
+            item_time = trade_unix_time(item)
+            if lower_bound is not None and upper_bound is not None:
+                if item_time is None:
+                    continue
+                if item_time < lower_bound:
+                    stop_after_page = True
+                    continue
+                if item_time > upper_bound:
+                    continue
+
             if len(pair_items_raw) < max_raw_trades:
                 pair_items_raw.append(item)
             if item_matches_maker(item, maker):
@@ -415,7 +459,7 @@ def scan_birdeye_maker_find(pair, maker, mode, max_pages, max_raw_trades, early_
 
         if len(matched_raw) >= early_stop:
             break
-        if len(pair_items_raw) >= max_raw_trades or len(page_items) < DEEP_PAGE_SIZE:
+        if stop_after_page or len(pair_items_raw) >= max_raw_trades or len(page_items) < DEEP_PAGE_SIZE:
             break
 
     items = []
@@ -438,10 +482,11 @@ def scan_birdeye_maker_find(pair, maker, mode, max_pages, max_raw_trades, early_
         "raw_pair_trades_scanned": len(pair_items_raw),
         "rate_limited": rate_limited,
         "rate_limit_page": rate_limit_page,
-        "time_filter_applied": before_time is not None and after_time is not None,
-        "time_params": (
-            f"after_time={after_time}, before_time={before_time}"
-            if before_time is not None and after_time is not None
+        "time_filter_applied": before_time is not None,
+        "time_params": f"before_time={before_time}" if before_time is not None else "n/a",
+        "client_window": (
+            f"{lower_bound} -> {upper_bound}"
+            if lower_bound is not None and upper_bound is not None
             else "n/a"
         ),
         "anchored_scan_fallback": False,
@@ -473,6 +518,7 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None, allow_fal
             "rate_limit_page": None,
             "time_filter_applied": False,
             "time_params": "n/a",
+            "client_window": "n/a",
             "anchored_scan_fallback": False,
             "anchored_scan_message": None,
             "anchored_strict": mode == "around",
@@ -499,6 +545,7 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None, allow_fal
                 "rate_limit_page": None,
                 "time_filter_applied": False,
                 "time_params": "n/a",
+                "client_window": "n/a",
                 "anchored_scan_fallback": False,
                 "anchored_scan_message": None,
                 "anchored_strict": True,
@@ -518,7 +565,8 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None, allow_fal
             MAKER_FIND_AROUND_MAX_RAW_TRADES,
             MAKER_FIND_AROUND_EARLY_STOP_COUNT,
             before_time=before_time,
-            after_time=after_time,
+            lower_bound=after_time,
+            upper_bound=before_time,
         )
         time_result["anchor_time"] = anchor_time
         time_result["window"] = "+/-2h"
@@ -532,6 +580,10 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None, allow_fal
             time_result["anchored_scan_message"] = (
                 "Anchored scan stopped: Birdeye rate limit hit before time-window results were available."
             )
+            return time_result
+        if time_result.get("status") == 422:
+            time_result["anchored_unavailable"] = True
+            time_result["anchored_scan_message"] = f"Time query rejected by Birdeye: {time_result.get('error') or '422'}"
             return time_result
         if time_result.get("raw_pair_trades_scanned", 0) > 0 or time_result.get("items"):
             return time_result
@@ -560,7 +612,8 @@ def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None, allow_fal
         fallback["fallback_used"] = True
         fallback["anchored_unavailable"] = False
         fallback["time_filter_applied"] = False
-        fallback["time_params"] = f"after_time={after_time}, before_time={before_time}"
+        fallback["time_params"] = f"before_time={before_time}"
+        fallback["client_window"] = f"{after_time} -> {before_time}"
         if time_result.get("status") == 200:
             fallback["anchored_scan_message"] = "Time-window returned no rows; latest-window fallback used."
         else:
@@ -696,6 +749,7 @@ def build_maker_find_text(pair, maker, mode="deep", anchor_time=None, allow_fall
         f"Rate limited: {'yes' if result.get('rate_limited') else 'no'}",
         f"Time filter applied: {'yes' if result.get('time_filter_applied') else 'no'}",
         f"Time params: {result.get('time_params', 'n/a')}",
+        f"Client window: {result.get('client_window', 'n/a')}",
         f"Anchored strict: {'yes' if result.get('anchored_strict') else 'no'}",
         f"Fallback used: {'yes' if result.get('fallback_used') else 'no'}",
     ]
