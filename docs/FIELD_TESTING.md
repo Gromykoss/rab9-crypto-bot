@@ -378,7 +378,8 @@ For `/walletprofile WALLET PAIR:TOKEN ...`:
 
 - command accepts up to 5 `PAIR:TOKEN` cases; invalid case format returns `Expected PAIR:TOKEN.`;
 - each case uses maker-find style deep50 scan for the wallet on the pair, then Birdeye price near first/last seen timestamps for the token;
-- report includes case summaries with matched trades, BUY/SELL/UNKNOWN counts, net direction, first/last seen, price movement during activity, and behavior;
+- report includes case summaries with matched trades, pages scanned, raw pair trades scanned, rate limited yes/no, status, BUY/SELL/UNKNOWN counts, net direction, first/last seen, price movement during activity, and behavior;
+- if a case has no matched trades, report says `Not found in latest scanned window; older activity may require anchored/time-based scan.`;
 - profile summary includes active cases, total matched trades, buy-heavy cases, sell-heavy cases, two-sided cases, not found cases, average price movement, and positive/negative price-window counts;
 - primary wallet role is one of `Repeating Two-sided Active Maker`, `Repeating Distribution Wallet`, `Repeating Accumulation Wallet`, `Mixed Active Wallet`, or `Weak / Needs More Data`;
 - response does not show raw JSON, does not calculate PnL, does not use profit/realized gain wording, does not provide trading advice, and does not create background monitoring.
