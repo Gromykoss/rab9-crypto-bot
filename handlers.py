@@ -40,6 +40,7 @@ from price_sources import build_price_source_text
 from swap_sources import build_wallet_swaps_text
 from maker_sources import build_maker_find_text, build_maker_trades_text
 from pair_sources import build_pair_resolve_text
+from wallet_profile import build_wallet_profile_text
 from wallet_watch import (
     add_wallet_to_watchlist,
     remove_wallet_from_watchlist,
@@ -524,6 +525,25 @@ async def pairresolve_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     await reply_long(update, text, main_reply_keyboard())
 
 
+async def walletprofile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if await deny_if_wrong_group(update):
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Формат:\n/walletprofile WALLET PAIR:TOKEN PAIR:TOKEN",
+            reply_markup=main_reply_keyboard(),
+        )
+        return
+
+    wallet = context.args[0].strip()
+    cases = [item.strip() for item in context.args[1:] if item.strip()]
+
+    await update.message.reply_text(f"Собираю wallet profile: {wallet} / cases {len(cases)}")
+    text = await asyncio.to_thread(build_wallet_profile_text, wallet, cases)
+    await reply_long(update, text, main_reply_keyboard())
+
+
 async def watchwallet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if await deny_if_wrong_group(update):
         return
@@ -997,6 +1017,7 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("makertrades", makertrades_command))
     app.add_handler(CommandHandler("makerfind", makerfind_command))
     app.add_handler(CommandHandler("pairresolve", pairresolve_command))
+    app.add_handler(CommandHandler("walletprofile", walletprofile_command))
     app.add_handler(CommandHandler("watchwallet", watchwallet_command))
     app.add_handler(CommandHandler("walletlist", walletlist_command))
     app.add_handler(CommandHandler("unwatchwallet", unwatchwallet_command))
