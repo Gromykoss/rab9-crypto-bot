@@ -59,6 +59,9 @@ def analyze_wallet_case(wallet, case):
         "price_movement": price_movement,
         "behavior": behavior_hint(summary),
         "status": result.get("status"),
+        "pages_scanned": result.get("pages_scanned", 0),
+        "raw_pair_trades_scanned": result.get("raw_pair_trades_scanned", 0),
+        "rate_limited": bool(result.get("rate_limited")),
     }
 
 
@@ -137,6 +140,10 @@ def build_wallet_profile_text(wallet, raw_cases):
             [
                 f"#{idx} {compact(case['pair'])}:{compact(case['token'])}",
                 f"- Matched trades: {case['matched_trades']}",
+                f"- Pages scanned: {case['pages_scanned']}",
+                f"- Raw pair trades scanned: {case['raw_pair_trades_scanned']}",
+                f"- Rate limited: {'yes' if case['rate_limited'] else 'no'}",
+                f"- Status: {case['status']}",
                 f"- BUY / SELL / UNKNOWN: {case['buy_count']} / {case['sell_count']} / {case['unknown_count']}",
                 f"- Net direction: {case['net_direction']}",
                 f"- First seen: {case['first_seen']}",
@@ -145,6 +152,8 @@ def build_wallet_profile_text(wallet, raw_cases):
                 f"- Behavior: {case['behavior']}",
             ]
         )
+        if case["matched_trades"] == 0:
+            lines.append("- Not found in latest scanned window; older activity may require anchored/time-based scan.")
 
     lines.extend(
         [
