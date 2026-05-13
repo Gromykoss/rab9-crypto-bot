@@ -13,14 +13,21 @@ def parse_case(raw_case):
     if ":" not in raw_case:
         return None
 
-    pair, token = raw_case.split(":", 1)
+    parts = raw_case.split(":", 2)
+    if len(parts) not in {2, 3}:
+        return None
+
+    pair = parts[0]
+    token = parts[1]
+    anchor_time = parts[2] if len(parts) == 3 else None
     pair = pair.strip()
     token = token.strip()
+    anchor_time = anchor_time.strip() if anchor_time else None
 
     if not pair or not token:
         return None
 
-    return {"pair": pair, "token": token}
+    return {"pair": pair, "token": token, "anchor_time": anchor_time}
 
 
 def calculate_price_movement(token, first_seen, last_seen):
@@ -41,7 +48,13 @@ def calculate_price_movement(token, first_seen, last_seen):
 
 
 def analyze_wallet_case(wallet, case):
-    result = get_birdeye_maker_find(case["pair"], wallet, "deep50")
+    if case.get("anchor_time"):
+        scan_mode = "around"
+        result = get_birdeye_maker_find(case["pair"], wallet, "around", case["anchor_time"])
+    else:
+        scan_mode = "latest"
+        result = get_birdeye_maker_find(case["pair"], wallet, "deep50")
+
     items = result.get("items") or []
     summary = summarize_maker_trades(items)
     price_movement = calculate_price_movement(case["token"], summary["first_time"], summary["last_time"])
@@ -58,10 +71,14 @@ def analyze_wallet_case(wallet, case):
         "last_seen": summary["last_time"],
         "price_movement": price_movement,
         "behavior": behavior_hint(summary),
+        "scan_mode": scan_mode,
+        "anchor_time": case.get("anchor_time") or "n/a",
         "status": result.get("status"),
         "pages_scanned": result.get("pages_scanned", 0),
         "raw_pair_trades_scanned": result.get("raw_pair_trades_scanned", 0),
         "rate_limited": bool(result.get("rate_limited")),
+        "time_filter_applied": bool(result.get("time_filter_applied")),
+        "anchored_scan_fallback": bool(result.get("anchored_scan_fallback")),
     }
 
 
@@ -112,11 +129,11 @@ def build_wallet_profile_text(wallet, raw_cases):
     for raw_case in raw_cases[:MAX_CASES]:
         parsed = parse_case(raw_case)
         if parsed is None:
-            return f"Expected PAIR:TOKEN.\nBad case: {raw_case}"
+            return f"Expected PAIR:TOKEN or PAIR:TOKEN:TIMESTAMP.\nBad case: {raw_case}"
         parsed_cases.append(parsed)
 
     if not parsed_cases:
-        return "Expected PAIR:TOKEN."
+        return "Expected PAIR:TOKEN or PAIR:TOKEN:TIMESTAMP."
 
     case_results = []
     for case in parsed_cases:
@@ -140,6 +157,9 @@ def build_wallet_profile_text(wallet, raw_cases):
             [
                 f"#{idx} {compact(case['pair'])}:{compact(case['token'])}",
                 f"- Matched trades: {case['matched_trades']}",
+                f"- Scan mode: {case['scan_mode']}",
+                f"- Anchor time: {case['anchor_time']}",
+                f"- Time filter applied: {'yes' if case['time_filter_applied'] else 'no'}",
                 f"- Pages scanned: {case['pages_scanned']}",
                 f"- Raw pair trades scanned: {case['raw_pair_trades_scanned']}",
                 f"- Rate limited: {'yes' if case['rate_limited'] else 'no'}",
@@ -152,8 +172,13 @@ def build_wallet_profile_text(wallet, raw_cases):
                 f"- Behavior: {case['behavior']}",
             ]
         )
+        if case["anchored_scan_fallback"]:
+            lines.append("- Anchored scan fallback: latest-window offset scan, time params unavailable.")
         if case["matched_trades"] == 0:
-            lines.append("- Not found in latest scanned window; older activity may require anchored/time-based scan.")
+            if case["scan_mode"] == "around":
+                lines.append("- Not found in anchored scanned window; try another timestamp if activity may be outside +/-2h.")
+            else:
+                lines.append("- Not found in latest scanned window; older activity may require anchored/time-based scan.")
 
     lines.extend(
         [

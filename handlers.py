@@ -490,7 +490,7 @@ async def makerfind_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "Формат:\n/makerfind PAIR MAKER\n/makerfind PAIR MAKER deep\n/makerfind PAIR MAKER deep50",
+            "Формат:\n/makerfind PAIR MAKER\n/makerfind PAIR MAKER deep\n/makerfind PAIR MAKER deep50\n/makerfind PAIR MAKER around TIMESTAMP",
             reply_markup=main_reply_keyboard(),
         )
         return
@@ -498,12 +498,22 @@ async def makerfind_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pair = context.args[0].strip()
     maker = context.args[1].strip()
     mode = "deep"
+    anchor_time = None
 
     if len(context.args) > 2 and context.args[2].lower() in {"deep", "deep50"}:
         mode = context.args[2].lower()
+    elif len(context.args) > 2 and context.args[2].lower() == "around":
+        if len(context.args) < 4:
+            await update.message.reply_text(
+                "Формат:\n/makerfind PAIR MAKER around TIMESTAMP",
+                reply_markup=main_reply_keyboard(),
+            )
+            return
+        mode = "around"
+        anchor_time = context.args[3].strip()
 
     await update.message.reply_text(f"Ищу maker глубже: {pair} / {maker} / {mode}")
-    text = await asyncio.to_thread(build_maker_find_text, pair, maker, mode)
+    text = await asyncio.to_thread(build_maker_find_text, pair, maker, mode, anchor_time)
     await reply_long(update, text, main_reply_keyboard())
 
 
@@ -531,7 +541,7 @@ async def walletprofile_command(update: Update, context: ContextTypes.DEFAULT_TY
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "Формат:\n/walletprofile WALLET PAIR:TOKEN PAIR:TOKEN",
+            "Формат:\n/walletprofile WALLET PAIR:TOKEN PAIR:TOKEN\n/walletprofile WALLET PAIR:TOKEN:TIMESTAMP",
             reply_markup=main_reply_keyboard(),
         )
         return
