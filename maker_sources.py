@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timezone
 
 import requests
 
@@ -32,6 +33,10 @@ MAKER_FIND_DEEP_MAX_RAW_TRADES = 1000
 MAKER_FIND_DEEP50_MAX_RAW_TRADES = 2500
 MAKER_FIND_DEEP_EARLY_STOP_COUNT = 20
 MAKER_FIND_DEEP50_EARLY_STOP_COUNT = 50
+MAKER_FIND_AROUND_WINDOW_SECONDS = 2 * 60 * 60
+MAKER_FIND_AROUND_MAX_PAGES = 20
+MAKER_FIND_AROUND_MAX_RAW_TRADES = 1000
+MAKER_FIND_AROUND_EARLY_STOP_COUNT = 50
 MAKER_DIRECT_KEYS = {
     "owner",
     "wallet",
@@ -208,18 +213,43 @@ def normalize_maker_trade(item):
     }
 
 
-def get_birdeye_pair_trades_page(pair, limit=50, offset=0):
+def parse_anchor_timestamp(value):
+    text = str(value or "").strip()
+    if not text:
+        return None
+
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    return int(parsed.timestamp())
+
+
+def get_birdeye_pair_trades_page(pair, limit=50, offset=0, before_time=None, after_time=None):
+    use_time_filter = before_time is not None and after_time is not None
+    endpoint = "/defi/txs/pair/seek_by_time" if use_time_filter else "/defi/txs/pair"
     params = {
         "address": pair,
         "limit": min(max(int(limit), 1), 50),
         "offset": offset,
         "tx_type": "swap",
-        "sort_type": "desc",
     }
+    if use_time_filter:
+        params["before_time"] = int(before_time)
+        params["after_time"] = int(after_time)
+    else:
+        params["sort_type"] = "desc"
 
     try:
         response = requests.get(
-            f"{BIRDEYE_BASE_URL}/defi/txs/pair",
+            f"{BIRDEYE_BASE_URL}{endpoint}",
             headers={"accept": "application/json", "X-API-KEY": BIRDEYE_API_KEY, "x-chain": "solana"},
             params=params,
             timeout=20,
@@ -238,6 +268,7 @@ def get_birdeye_pair_trades_page(pair, limit=50, offset=0):
         "error": None if response.ok else str(payload)[:500],
         "items": [item for item in extract_items(payload) if isinstance(item, dict)],
         "params": params,
+        "endpoint": endpoint,
     }
 
 
@@ -343,29 +374,7 @@ def get_birdeye_maker_trades(pair, maker, limit=50, mode="normal"):
     }
 
 
-def get_birdeye_maker_find(pair, maker, mode="deep"):
-    mode = str(mode).lower()
-    mode = "deep50" if mode == "deep50" else "deep"
-
-    if not BIRDEYE_API_KEY:
-        return {
-            "source": "Birdeye /defi/txs/pair",
-            "status": "BIRDEYE_API_KEY missing",
-            "items": [],
-            "error": "BIRDEYE_API_KEY missing",
-            "mode": mode,
-            "pages_scanned": 0,
-            "raw_pair_trades_scanned": 0,
-            "rate_limited": False,
-            "rate_limit_page": None,
-            "maker_like_keys_seen": [],
-            "debug_pair_rows": [],
-        }
-
-    max_pages = MAKER_FIND_DEEP50_MAX_PAGES if mode == "deep50" else MAKER_FIND_DEEP_MAX_PAGES
-    max_raw_trades = MAKER_FIND_DEEP50_MAX_RAW_TRADES if mode == "deep50" else MAKER_FIND_DEEP_MAX_RAW_TRADES
-    early_stop = MAKER_FIND_DEEP50_EARLY_STOP_COUNT if mode == "deep50" else MAKER_FIND_DEEP_EARLY_STOP_COUNT
-
+def scan_birdeye_maker_find(pair, maker, mode, max_pages, max_raw_trades, early_stop, before_time=None, after_time=None):
     pair_items_raw = []
     matched_raw = []
     pages_scanned = 0
@@ -379,7 +388,13 @@ def get_birdeye_maker_find(pair, maker, mode="deep"):
             time.sleep(DEEP_DELAY_SECONDS)
 
         offset = page_index * DEEP_PAGE_SIZE
-        page_result = get_birdeye_pair_trades_page(pair, DEEP_PAGE_SIZE, offset)
+        page_result = get_birdeye_pair_trades_page(
+            pair,
+            DEEP_PAGE_SIZE,
+            offset,
+            before_time=before_time,
+            after_time=after_time,
+        )
         last_status = page_result.get("status")
         last_error = page_result.get("error")
 
@@ -423,12 +438,110 @@ def get_birdeye_maker_find(pair, maker, mode="deep"):
         "raw_pair_trades_scanned": len(pair_items_raw),
         "rate_limited": rate_limited,
         "rate_limit_page": rate_limit_page,
+        "time_filter_applied": before_time is not None and after_time is not None,
+        "time_params": (
+            f"after_time={after_time}, before_time={before_time}"
+            if before_time is not None and after_time is not None
+            else "n/a"
+        ),
+        "anchored_scan_fallback": False,
         "maker_like_keys_seen": maker_like_keys_seen(pair_items_raw),
         "debug_pair_rows": [
             {**normalize_maker_trade(item), "maker_like": maker_like_text(item)}
             for item in pair_items_raw[:3]
         ],
     }
+
+
+def get_birdeye_maker_find(pair, maker, mode="deep", anchor_time=None):
+    mode = str(mode).lower()
+    mode = mode if mode in {"around", "deep50"} else "deep"
+
+    if not BIRDEYE_API_KEY:
+        return {
+            "source": "Birdeye /defi/txs/pair",
+            "status": "BIRDEYE_API_KEY missing",
+            "items": [],
+            "error": "BIRDEYE_API_KEY missing",
+            "mode": mode,
+            "anchor_time": anchor_time or "n/a",
+            "window": "+/-2h" if mode == "around" else "n/a",
+            "pages_scanned": 0,
+            "raw_pair_trades_scanned": 0,
+            "rate_limited": False,
+            "rate_limit_page": None,
+            "time_filter_applied": False,
+            "time_params": "n/a",
+            "anchored_scan_fallback": False,
+            "maker_like_keys_seen": [],
+            "debug_pair_rows": [],
+        }
+
+    if mode == "around":
+        anchor_unix = parse_anchor_timestamp(anchor_time)
+        if anchor_unix is None:
+            return {
+                "source": "Birdeye /defi/txs/pair",
+                "status": "invalid anchor timestamp",
+                "items": [],
+                "error": "invalid anchor timestamp",
+                "mode": mode,
+                "anchor_time": anchor_time or "n/a",
+                "window": "+/-2h",
+                "pages_scanned": 0,
+                "raw_pair_trades_scanned": 0,
+                "rate_limited": False,
+                "rate_limit_page": None,
+                "time_filter_applied": False,
+                "time_params": "n/a",
+                "anchored_scan_fallback": False,
+                "maker_like_keys_seen": [],
+                "debug_pair_rows": [],
+            }
+
+        after_time = anchor_unix - MAKER_FIND_AROUND_WINDOW_SECONDS
+        before_time = anchor_unix + MAKER_FIND_AROUND_WINDOW_SECONDS
+        time_result = scan_birdeye_maker_find(
+            pair,
+            maker,
+            mode,
+            MAKER_FIND_AROUND_MAX_PAGES,
+            MAKER_FIND_AROUND_MAX_RAW_TRADES,
+            MAKER_FIND_AROUND_EARLY_STOP_COUNT,
+            before_time=before_time,
+            after_time=after_time,
+        )
+        time_result["anchor_time"] = anchor_time
+        time_result["window"] = "+/-2h"
+        time_result["source"] = "Birdeye /defi/txs/pair/seek_by_time"
+
+        if time_result.get("rate_limited"):
+            return time_result
+        if time_result.get("raw_pair_trades_scanned", 0) > 0 or time_result.get("items"):
+            return time_result
+
+        fallback = scan_birdeye_maker_find(
+            pair,
+            maker,
+            mode,
+            MAKER_FIND_AROUND_MAX_PAGES,
+            MAKER_FIND_AROUND_MAX_RAW_TRADES,
+            MAKER_FIND_AROUND_EARLY_STOP_COUNT,
+        )
+        fallback["anchor_time"] = anchor_time
+        fallback["window"] = "+/-2h"
+        fallback["anchored_scan_fallback"] = True
+        fallback["time_filter_applied"] = False
+        fallback["time_params"] = f"after_time={after_time}, before_time={before_time}"
+        return fallback
+
+    max_pages = MAKER_FIND_DEEP50_MAX_PAGES if mode == "deep50" else MAKER_FIND_DEEP_MAX_PAGES
+    max_raw_trades = MAKER_FIND_DEEP50_MAX_RAW_TRADES if mode == "deep50" else MAKER_FIND_DEEP_MAX_RAW_TRADES
+    early_stop = MAKER_FIND_DEEP50_EARLY_STOP_COUNT if mode == "deep50" else MAKER_FIND_DEEP_EARLY_STOP_COUNT
+    result = scan_birdeye_maker_find(pair, maker, mode, max_pages, max_raw_trades, early_stop)
+    result["anchor_time"] = "n/a"
+    result["window"] = "n/a"
+    return result
 
 
 def summarize_maker_trades(items):
@@ -526,8 +639,8 @@ def behavior_hint(summary):
     return "Weak Sample"
 
 
-def build_maker_find_text(pair, maker, mode="deep"):
-    result = get_birdeye_maker_find(pair, maker, mode)
+def build_maker_find_text(pair, maker, mode="deep", anchor_time=None):
+    result = get_birdeye_maker_find(pair, maker, mode, anchor_time)
     items = result.get("items") or []
     summary = summarize_maker_trades(items)
     pages = [item.get("page") for item in items if item.get("page")]
@@ -537,16 +650,22 @@ def build_maker_find_text(pair, maker, mode="deep"):
         f"Pair: {compact(pair)}",
         f"Maker: {compact(maker)}",
         f"Mode: {result.get('mode')}",
+        f"Anchor time: {result.get('anchor_time', 'n/a')}",
+        f"Window: {result.get('window', 'n/a')}",
         f"Source used: {result.get('source')}",
         f"Status: {result.get('status')}",
         f"Pages scanned: {result.get('pages_scanned', 0)}",
         f"Raw pair trades scanned: {result.get('raw_pair_trades_scanned', 0)}",
         f"Matched maker trades: {len(items)}",
         f"Rate limited: {'yes' if result.get('rate_limited') else 'no'}",
+        f"Time filter applied: {'yes' if result.get('time_filter_applied') else 'no'}",
+        f"Time params: {result.get('time_params', 'n/a')}",
     ]
 
     if result.get("rate_limited"):
         lines.append(f"Rate limit hit after page: {result.get('rate_limit_page') or 'n/a'}")
+    if result.get("anchored_scan_fallback"):
+        lines.append("Anchored scan fallback: latest-window offset scan, time params unavailable.")
     if result.get("error") and not items:
         lines.append(f"Error: {result['error']}")
 

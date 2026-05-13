@@ -344,7 +344,9 @@ Check manual pair+maker trades diagnostic:
 /makerfind PAIR_ADDRESS MAKER_ADDRESS
 /makerfind PAIR_ADDRESS MAKER_ADDRESS deep
 /makerfind PAIR_ADDRESS MAKER_ADDRESS deep50
+/makerfind PAIR_ADDRESS MAKER_ADDRESS around 2026-05-12T18:24:15Z
 /walletprofile WALLET_ADDRESS PAIR_ADDRESS:TOKEN_ADDRESS PAIR_ADDRESS:TOKEN_ADDRESS
+/walletprofile WALLET_ADDRESS PAIR_ADDRESS:TOKEN_ADDRESS:2026-05-12T18:24:15Z
 /makertrades 7nvp4qykvmpeuhobyrzcn1tqiz7k8pmk5uxqeebrzyh AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51 50
 ```
 
@@ -369,16 +371,18 @@ For `/makerfind PAIR MAKER`:
 
 - default mode is `deep`; `deep` scans up to 20 pages, `page_size = 50`, `max raw trades = 1000`, and stops early after 20 matched maker trades;
 - `deep50` scans up to 50 pages, `page_size = 50`, `max raw trades = 2500`, and stops early after 50 matched maker trades;
-- both modes wait 1.2 seconds between pages and stop on 429 while preserving matched rows;
-- report includes mode, source, status, pages scanned, raw pair trades scanned, matched maker trades, rate limited yes/no, buy/sell/unknown counts, first/last seen trade, first/last seen page, net direction, behavior hint, and at most first 10 matched events;
+- `around TIMESTAMP` uses Birdeye `/defi/txs/pair/seek_by_time` with `after_time = TIMESTAMP - 2h` and `before_time = TIMESTAMP + 2h`; around mode scans up to 20 pages, `page_size = 50`, `max raw trades = 1000`, and stops early after 50 matched maker trades;
+- if the time-filtered pair endpoint returns no rows or is unavailable, report says `Anchored scan fallback: latest-window offset scan, time params unavailable.`;
+- deep, deep50, and around modes wait 1.2 seconds between pages and stop on 429 while preserving matched rows;
+- report includes mode, anchor time/window for around mode, source, status, pages scanned, raw pair trades scanned, matched maker trades, rate limited yes/no, time filter applied yes/no, time params, buy/sell/unknown counts, first/last seen trade, first/last seen page, net direction, behavior hint, and at most first 10 matched events;
 - if maker is not found, response says `Maker not found in scanned pair-trade window.`, shows maker-like keys seen, and shows up to 3 compact pair endpoint sample rows without raw JSON;
 - command is a manual search tool, does not calculate PnL, does not provide trading advice, and does not create background monitoring.
 
-For `/walletprofile WALLET PAIR:TOKEN ...`:
+For `/walletprofile WALLET PAIR:TOKEN ...` or `/walletprofile WALLET PAIR:TOKEN:TIMESTAMP ...`:
 
-- command accepts up to 5 `PAIR:TOKEN` cases; invalid case format returns `Expected PAIR:TOKEN.`;
-- each case uses maker-find style deep50 scan for the wallet on the pair, then Birdeye price near first/last seen timestamps for the token;
-- report includes case summaries with matched trades, pages scanned, raw pair trades scanned, rate limited yes/no, status, BUY/SELL/UNKNOWN counts, net direction, first/last seen, price movement during activity, and behavior;
+- command accepts up to 5 `PAIR:TOKEN` or `PAIR:TOKEN:TIMESTAMP` cases; invalid case format returns `Expected PAIR:TOKEN or PAIR:TOKEN:TIMESTAMP.`;
+- cases without timestamp use maker-find style latest deep50 scan; timestamped cases use makerfind around logic for the wallet on the pair, then Birdeye price near first/last seen timestamps for the token;
+- report includes case summaries with matched trades, scan mode, anchor time, time filter applied yes/no, pages scanned, raw pair trades scanned, rate limited yes/no, status, BUY/SELL/UNKNOWN counts, net direction, first/last seen, price movement during activity, and behavior;
 - if a case has no matched trades, report says `Not found in latest scanned window; older activity may require anchored/time-based scan.`;
 - profile summary includes active cases, total matched trades, buy-heavy cases, sell-heavy cases, two-sided cases, not found cases, average price movement, and positive/negative price-window counts;
 - primary wallet role is one of `Repeating Two-sided Active Maker`, `Repeating Distribution Wallet`, `Repeating Accumulation Wallet`, `Mixed Active Wallet`, or `Weak / Needs More Data`;
