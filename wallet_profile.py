@@ -93,12 +93,12 @@ def classify_wallet_role(profile):
 
     if active_cases < 2:
         return "Weak / Needs More Data"
-    if profile["two_sided_cases"] >= 2:
-        return "Repeating Two-sided Active Maker"
     if profile["sell_heavy_cases"] >= 2:
         return "Repeating Distribution Wallet"
     if profile["buy_heavy_cases"] >= 2 and profile["sell_heavy_cases"] == 0:
         return "Repeating Accumulation Wallet"
+    if profile["two_sided_cases"] >= 2:
+        return "Repeating Two-sided Active Maker"
 
     return "Mixed Active Wallet"
 
@@ -214,6 +214,20 @@ def build_wallet_profile_text(wallet, raw_cases):
             f"- direction mix: buy-heavy {profile['buy_heavy_cases']} / sell-heavy {profile['sell_heavy_cases']} / two-sided {profile['two_sided_cases']}",
             f"- avg price movement during activity: {format_percent(profile['avg_movement'])}",
             f"- price-window count: negative {profile['negative_windows']} / positive {profile['positive_windows']}",
+        ]
+    )
+
+    if profile["primary_role"] == "Repeating Distribution Wallet":
+        lines.extend(
+            [
+                f"- sell-heavy cases: {profile['sell_heavy_cases']}",
+                f"- negative price-window cases: {profile['negative_windows']}",
+                f"- avg price movement during activity: {format_percent(profile['avg_movement'])}",
+            ]
+        )
+
+    lines.extend(
+        [
             "",
             "Notes:",
             "- No PnL calculated.",

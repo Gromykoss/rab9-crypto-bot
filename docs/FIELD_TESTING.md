@@ -409,7 +409,8 @@ For `/walletprofile WALLET PAIR:TOKEN ...` or `/walletprofile WALLET PAIR:TOKEN:
 - report includes case summaries with matched trades, scan mode, anchor time, time filter applied yes/no, client window, anchored strict yes/no, fallback used yes/no, pages scanned, raw pair trades scanned, rate limited yes/no, status, BUY/SELL/UNKNOWN counts, net direction, first/last seen, price movement during activity, and behavior;
 - if a case has no matched trades, report says `Not found in latest scanned window; older activity may require anchored/time-based scan.`;
 - profile summary includes active cases, total matched trades, buy-heavy cases, sell-heavy cases, two-sided cases, not found cases, average price movement, and positive/negative price-window counts;
-- primary wallet role is one of `Repeating Two-sided Active Maker`, `Repeating Distribution Wallet`, `Repeating Accumulation Wallet`, `Mixed Active Wallet`, or `Weak / Needs More Data`;
+- primary wallet role priority is `Repeating Distribution Wallet` when `active_cases >= 2 and sell_heavy_cases >= 2`, then `Repeating Accumulation Wallet`, then `Repeating Two-sided Active Maker`, then `Mixed Active Wallet`, with `Weak / Needs More Data` when `active_cases < 2`;
+- for `Repeating Distribution Wallet`, evidence includes sell-heavy cases, negative price-window cases, and average price movement during activity;
 - response does not show raw JSON, does not calculate PnL, does not use profit/realized gain wording, does not provide trading advice, and does not create background monitoring.
 
 For `/pairresolve ADDRESS`:
