@@ -341,6 +341,9 @@ Check manual pair+maker trades diagnostic:
 /makertrades PAIR_ADDRESS MAKER_ADDRESS 50
 /makertrades PAIR_ADDRESS MAKER_ADDRESS 50 deep
 /makertrades PAIR_ADDRESS MAKER_ADDRESS 50 deep10
+/pairmakers PAIR_ADDRESS
+/pairmakers PAIR_ADDRESS deep
+/pairmakers PAIR_ADDRESS deep50
 /makerfind PAIR_ADDRESS MAKER_ADDRESS
 /makerfind PAIR_ADDRESS MAKER_ADDRESS deep
 /makerfind PAIR_ADDRESS MAKER_ADDRESS deep50
@@ -367,6 +370,17 @@ Expected:
 - behavior classification is one of `Maker Accumulation`, `Maker Distribution`, `Two-sided Active Maker`, `Weak Sample`, or `Needs More Data`;
 - events show at most first 20 compact rows like `#1 time | BUY/SELL | amount token | value: $X | tx: abc...xyz`;
 - response does not show raw JSON, does not calculate PnL, does not provide trading advice, and does not create background monitoring.
+
+For `/pairmakers PAIR`:
+
+- default mode is `deep`; `deep` scans up to 20 pages, `page_size = 50`, `max raw trades = 1000`, and waits 1.2 seconds between pages;
+- `deep50` scans up to 50 pages, `page_size = 50`, `max raw trades = 2500`, and waits 1.2 seconds between pages;
+- source is Birdeye `/defi/txs/pair` with `address=PAIR`, `offset=page_index * 50`, `limit=50`, `tx_type=swap`, and `sort_type=desc`;
+- maker extraction reuses maker-like fields from maker tools, with `owner` preferred, and filters out pair/token/SOL addresses when possible;
+- report includes pair, mode, source, status, pages scanned, raw pair trades scanned, unique makers, rate limited yes/no, top 20 makers by trade count, behavior buckets, and candidate notes;
+- if Birdeye returns 429, scanning stops, scanned results are preserved, status is `partial (rate limited 429)`, and report shows rate limit hit page;
+- if no makers are extracted, report says `No maker wallets extracted from scanned pair trades.`, shows maker-like keys seen, and shows up to 3 compact sample rows without raw JSON;
+- command is a discovery tool, does not calculate PnL, does not provide trading advice, and does not create background monitoring.
 
 For `/makerfind PAIR MAKER`:
 
