@@ -37,6 +37,25 @@ MAKER_FIND_AROUND_WINDOW_SECONDS = 2 * 60 * 60
 MAKER_FIND_AROUND_MAX_PAGES = 20
 MAKER_FIND_AROUND_MAX_RAW_TRADES = 1000
 MAKER_FIND_AROUND_EARLY_STOP_COUNT = 50
+PAIR_MAKERS_DEEP_MAX_PAGES = 20
+PAIR_MAKERS_DEEP50_MAX_PAGES = 50
+PAIR_MAKERS_DEEP_MAX_RAW_TRADES = 1000
+PAIR_MAKERS_DEEP50_MAX_RAW_TRADES = 2500
+PAIR_MAKER_KEY_PRIORITY = (
+    "owner",
+    "wallet",
+    "maker",
+    "trader",
+    "user",
+    "signer",
+    "authority",
+    "sourceOwner",
+    "source_owner",
+    "tx_from",
+    "signer_address",
+    "signerAddress",
+    "signerAuthority",
+)
 MAKER_DIRECT_KEYS = {
     "owner",
     "wallet",
@@ -147,6 +166,40 @@ def maker_like_text(item):
         return "n/a"
 
     return ", ".join(f"{row['key']}={compact(row['value'])}" for row in values[:3])
+
+
+def token_addresses_from_trade(item):
+    raw_token_in = first_value(item, ["from", "from_token", "token_in", "base", "sell_token", "source_token"])
+    raw_token_out = first_value(item, ["to", "to_token", "token_out", "quote", "buy_token", "destination_token"])
+    values = []
+
+    for raw_token in (raw_token_in, raw_token_out):
+        address = token_address(raw_token)
+        if address:
+            values.append(address.lower())
+
+    return values
+
+
+def extract_pair_maker_wallet(item, pair):
+    excluded = {str(pair).strip().lower(), SOL_MINT.lower()}
+    excluded.update(token_addresses_from_trade(item))
+    rows = maker_like_values(item)
+
+    for wanted_key in PAIR_MAKER_KEY_PRIORITY:
+        for row in rows:
+            key = row["key"]
+            value = row["value"].strip()
+            if key.lower() != wanted_key.lower() or value.lower() in excluded:
+                continue
+            return value
+
+    for row in rows:
+        value = row["value"].strip()
+        if value.lower() not in excluded:
+            return value
+
+    return None
 
 
 def normalize_maker_trade(item):
@@ -821,6 +874,244 @@ def build_maker_find_text(pair, maker, mode="deep", anchor_time=None, allow_fall
             "- No PnL calculated.",
             "- No trading advice.",
             "- Manual diagnostic only.",
+        ]
+    )
+
+    return "\n".join(lines)
+
+
+def pair_makers_mode_config(mode):
+    mode = str(mode or "deep").lower()
+    mode = "deep50" if mode == "deep50" else "deep"
+    max_pages = PAIR_MAKERS_DEEP50_MAX_PAGES if mode == "deep50" else PAIR_MAKERS_DEEP_MAX_PAGES
+    max_raw_trades = PAIR_MAKERS_DEEP50_MAX_RAW_TRADES if mode == "deep50" else PAIR_MAKERS_DEEP_MAX_RAW_TRADES
+    return mode, max_pages, max_raw_trades
+
+
+def summarize_pair_makers(items):
+    makers = {}
+
+    for item in items:
+        maker = item.get("maker")
+        if not maker:
+            continue
+
+        row = makers.setdefault(
+            maker,
+            {
+                "wallet": maker,
+                "trades": 0,
+                "buy_count": 0,
+                "sell_count": 0,
+                "unknown_count": 0,
+                "first_seen": "n/a",
+                "last_seen": "n/a",
+                "first_page": None,
+                "last_page": None,
+                "total_usd": 0.0,
+                "has_usd": False,
+            },
+        )
+        row["trades"] += 1
+
+        side = item.get("side")
+        if side == "BUY":
+            row["buy_count"] += 1
+        elif side == "SELL":
+            row["sell_count"] += 1
+        else:
+            row["unknown_count"] += 1
+
+        time_value = item.get("time")
+        if time_value and time_value != "n/a":
+            row["first_seen"] = time_value if row["first_seen"] == "n/a" else min(row["first_seen"], time_value)
+            row["last_seen"] = time_value if row["last_seen"] == "n/a" else max(row["last_seen"], time_value)
+
+        page = item.get("page")
+        if page:
+            row["first_page"] = page if row["first_page"] is None else min(row["first_page"], page)
+            row["last_page"] = page if row["last_page"] is None else max(row["last_page"], page)
+
+        usd = to_float(item.get("usd_value"))
+        if usd is not None:
+            row["total_usd"] += usd
+            row["has_usd"] = True
+
+    for row in makers.values():
+        if row["buy_count"] > row["sell_count"]:
+            row["net_direction"] = "buy-heavy"
+        elif row["sell_count"] > row["buy_count"]:
+            row["net_direction"] = "sell-heavy"
+        elif row["buy_count"] or row["sell_count"]:
+            row["net_direction"] = "mixed"
+        else:
+            row["net_direction"] = "n/a"
+
+    return sorted(makers.values(), key=lambda row: (row["trades"], row["last_seen"]), reverse=True)
+
+
+def get_birdeye_pair_makers(pair, mode="deep"):
+    mode, max_pages, max_raw_trades = pair_makers_mode_config(mode)
+
+    if not BIRDEYE_API_KEY:
+        return {
+            "source": "Birdeye /defi/txs/pair",
+            "status": "BIRDEYE_API_KEY missing",
+            "mode": mode,
+            "items": [],
+            "pair_items": [],
+            "pages_scanned": 0,
+            "raw_pair_trades_scanned": 0,
+            "rate_limited": False,
+            "rate_limit_page": None,
+            "maker_like_keys_seen": [],
+            "debug_pair_rows": [],
+            "error": "BIRDEYE_API_KEY missing",
+        }
+
+    pair_items_raw = []
+    maker_items = []
+    pages_scanned = 0
+    last_status = None
+    last_error = None
+    rate_limited = False
+    rate_limit_page = None
+
+    for page_index in range(max_pages):
+        if page_index:
+            time.sleep(DEEP_DELAY_SECONDS)
+
+        offset = page_index * DEEP_PAGE_SIZE
+        page_result = get_birdeye_pair_trades_page(pair, DEEP_PAGE_SIZE, offset)
+        last_status = page_result.get("status")
+        last_error = page_result.get("error")
+
+        if not page_result.get("ok"):
+            if page_result.get("status") == 429:
+                rate_limited = True
+                rate_limit_page = page_index + 1
+            break
+
+        page_items = page_result.get("items") or []
+        pages_scanned += 1
+
+        for item in page_items:
+            if len(pair_items_raw) >= max_raw_trades:
+                break
+            pair_items_raw.append(item)
+            maker = extract_pair_maker_wallet(item, pair)
+            if not maker:
+                continue
+
+            normalized = normalize_maker_trade(item)
+            normalized["maker"] = maker
+            normalized["page"] = page_index + 1
+            maker_items.append(normalized)
+
+        if len(pair_items_raw) >= max_raw_trades or len(page_items) < DEEP_PAGE_SIZE:
+            break
+
+    status = last_status
+    if rate_limited:
+        status = "partial (rate limited 429)" if pair_items_raw else "rate limited 429"
+
+    return {
+        "source": "Birdeye /defi/txs/pair",
+        "status": status,
+        "mode": mode,
+        "items": maker_items,
+        "pair_items": pair_items_raw,
+        "pages_scanned": pages_scanned,
+        "raw_pair_trades_scanned": len(pair_items_raw),
+        "rate_limited": rate_limited,
+        "rate_limit_page": rate_limit_page,
+        "maker_like_keys_seen": maker_like_keys_seen(pair_items_raw),
+        "debug_pair_rows": [
+            {**normalize_maker_trade(item), "maker_like": maker_like_text(item)}
+            for item in pair_items_raw[:3]
+        ],
+        "error": None if pair_items_raw else last_error,
+    }
+
+
+def build_pair_makers_text(pair, mode="deep"):
+    result = get_birdeye_pair_makers(pair, mode)
+    items = result.get("items") or []
+    makers = summarize_pair_makers(items)
+    buy_heavy = len([row for row in makers if row["net_direction"] == "buy-heavy"])
+    sell_heavy = len([row for row in makers if row["net_direction"] == "sell-heavy"])
+    mixed = len([row for row in makers if row["net_direction"] == "mixed"])
+    weak = len([row for row in makers if row["trades"] < 3])
+
+    lines = [
+        "Pair Makers Diagnostic",
+        f"Pair: {compact(pair)}",
+        f"Mode: {result.get('mode')}",
+        f"Source used: {result.get('source')}",
+        f"Status: {result.get('status')}",
+        f"Pages scanned: {result.get('pages_scanned', 0)}",
+        f"Raw pair trades scanned: {result.get('raw_pair_trades_scanned', 0)}",
+        f"Unique makers: {len(makers)}",
+        f"Rate limited: {'yes' if result.get('rate_limited') else 'no'}",
+    ]
+
+    if result.get("rate_limited"):
+        lines.append(f"Rate limit hit after page: {result.get('rate_limit_page') or 'n/a'}")
+    if result.get("error") and not makers:
+        lines.append(f"Error: {result['error']}")
+
+    lines.extend(["", "Top Makers:"])
+
+    if makers:
+        for idx, row in enumerate(makers[:20], start=1):
+            page_text = (
+                f"{row['first_page']}-{row['last_page']}"
+                if row["first_page"] is not None and row["last_page"] is not None
+                else "n/a"
+            )
+            lines.append(
+                f"#{idx} wallet: {compact(row['wallet'])} | "
+                f"trades: {row['trades']} | "
+                f"BUY/SELL/UNK: {row['buy_count']}/{row['sell_count']}/{row['unknown_count']} | "
+                f"net: {row['net_direction']} | "
+                f"first: {row['first_seen']} | "
+                f"last: {row['last_seen']} | "
+                f"pages: {page_text} | "
+                f"value: {format_usd(row['total_usd'] if row['has_usd'] else None)}"
+            )
+
+        if len(makers) > 20:
+            lines.append("Showing first 20 makers only")
+    else:
+        lines.append("No maker wallets extracted from scanned pair trades.")
+        keys = result.get("maker_like_keys_seen") or []
+        lines.append(f"Maker-like keys seen: {', '.join(keys) if keys else 'n/a'}")
+        debug_rows = result.get("debug_pair_rows") or []
+        if debug_rows:
+            lines.extend(["", "Pair endpoint sample rows:"])
+            for idx, item in enumerate(debug_rows[:3], start=1):
+                lines.append(
+                    f"#{idx} {item.get('time') or 'n/a'} | "
+                    f"{item.get('side') or 'UNKNOWN'} | "
+                    f"value: {format_usd(item.get('usd_value'))} | "
+                    f"tx: {compact(item.get('tx'))} | "
+                    f"maker-like: {item.get('maker_like') or 'n/a'}"
+                )
+
+    lines.extend(
+        [
+            "",
+            "Behavior Buckets:",
+            f"- Buy-heavy makers: {buy_heavy}",
+            f"- Sell-heavy makers: {sell_heavy}",
+            f"- Mixed makers: {mixed}",
+            f"- Weak makers (<3 trades): {weak}",
+            "",
+            "Candidate Notes:",
+            "- Strong candidates: makers with trades >= 10",
+            "- Repeating candidates require /walletprofile across multiple pairs",
+            "- No PnL calculated",
+            "- Discovery tool only, not a trading signal.",
         ]
     )
 

@@ -38,7 +38,7 @@ from arkham import (
 )
 from price_sources import build_price_source_text
 from swap_sources import build_wallet_swaps_text
-from maker_sources import build_maker_find_text, build_maker_trades_text
+from maker_sources import build_maker_find_text, build_maker_trades_text, build_pair_makers_text
 from pair_sources import build_pair_resolve_text
 from wallet_profile import build_wallet_profile_text
 from wallet_watch import (
@@ -516,6 +516,27 @@ async def makerfind_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"Ищу maker глубже: {pair} / {maker} / {mode}")
     text = await asyncio.to_thread(build_maker_find_text, pair, maker, mode, anchor_time, allow_fallback)
+    await reply_long(update, text, main_reply_keyboard())
+
+
+async def pairmakers_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if await deny_if_wrong_group(update):
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text(
+            "Формат:\n/pairmakers PAIR\n/pairmakers PAIR deep\n/pairmakers PAIR deep50",
+            reply_markup=main_reply_keyboard(),
+        )
+        return
+
+    pair = context.args[0].strip()
+    mode = "deep"
+    if len(context.args) > 1 and context.args[1].lower() in {"deep", "deep50"}:
+        mode = context.args[1].lower()
+
+    await update.message.reply_text(f"Ищу top makers по pair: {pair} / {mode}")
+    text = await asyncio.to_thread(build_pair_makers_text, pair, mode)
     await reply_long(update, text, main_reply_keyboard())
 
 
@@ -1028,6 +1049,7 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("walletswaps", walletswaps_command))
     app.add_handler(CommandHandler("makertrades", makertrades_command))
     app.add_handler(CommandHandler("makerfind", makerfind_command))
+    app.add_handler(CommandHandler("pairmakers", pairmakers_command))
     app.add_handler(CommandHandler("pairresolve", pairresolve_command))
     app.add_handler(CommandHandler("walletprofile", walletprofile_command))
     app.add_handler(CommandHandler("watchwallet", watchwallet_command))
