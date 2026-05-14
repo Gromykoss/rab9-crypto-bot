@@ -525,18 +525,21 @@ async def pairmakers_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if len(context.args) < 1:
         await update.message.reply_text(
-            "Формат:\n/pairmakers PAIR\n/pairmakers PAIR deep\n/pairmakers PAIR deep50",
+            "Формат:\n/pairmakers PAIR\n/pairmakers PAIR deep\n/pairmakers PAIR deep50\n/pairmakers PAIR deep50 full",
             reply_markup=main_reply_keyboard(),
         )
         return
 
     pair = context.args[0].strip()
     mode = "deep"
+    show_full = False
     if len(context.args) > 1 and context.args[1].lower() in {"deep", "deep50"}:
         mode = context.args[1].lower()
+    if any(item.lower() == "full" for item in context.args[1:]):
+        show_full = True
 
     await update.message.reply_text(f"Ищу top makers по pair: {pair} / {mode}")
-    text = await asyncio.to_thread(build_pair_makers_text, pair, mode)
+    text = await asyncio.to_thread(build_pair_makers_text, pair, mode, show_full)
     await reply_long(update, text, main_reply_keyboard())
 
 

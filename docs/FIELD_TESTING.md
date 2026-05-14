@@ -344,6 +344,7 @@ Check manual pair+maker trades diagnostic:
 /pairmakers PAIR_ADDRESS
 /pairmakers PAIR_ADDRESS deep
 /pairmakers PAIR_ADDRESS deep50
+/pairmakers PAIR_ADDRESS deep50 full
 /makerfind PAIR_ADDRESS MAKER_ADDRESS
 /makerfind PAIR_ADDRESS MAKER_ADDRESS deep
 /makerfind PAIR_ADDRESS MAKER_ADDRESS deep50
@@ -378,6 +379,7 @@ For `/pairmakers PAIR`:
 - source is Birdeye `/defi/txs/pair` with `address=PAIR`, `offset=page_index * 50`, `limit=50`, `tx_type=swap`, and `sort_type=desc`;
 - maker extraction reuses maker-like fields from maker tools, with `owner` preferred, and filters out pair/token/SOL addresses when possible;
 - report includes pair, mode, source, status, pages scanned, raw pair trades scanned, unique makers, rate limited yes/no, top 20 makers by trade count, behavior buckets, and candidate notes;
+- default report keeps maker wallets compact; `full` mode adds `Full: FULL_WALLET_ADDRESS` under each visible maker and a `Copy-ready wallets` block for up to top 20 makers;
 - if Birdeye returns 429, scanning stops, scanned results are preserved, status is `partial (rate limited 429)`, and report shows rate limit hit page;
 - if no makers are extracted, report says `No maker wallets extracted from scanned pair trades.`, shows maker-like keys seen, and shows up to 3 compact sample rows without raw JSON;
 - command is a discovery tool, does not calculate PnL, does not provide trading advice, and does not create background monitoring.

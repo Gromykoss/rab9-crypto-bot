@@ -1034,7 +1034,7 @@ def get_birdeye_pair_makers(pair, mode="deep"):
     }
 
 
-def build_pair_makers_text(pair, mode="deep"):
+def build_pair_makers_text(pair, mode="deep", show_full=False):
     result = get_birdeye_pair_makers(pair, mode)
     items = result.get("items") or []
     makers = summarize_pair_makers(items)
@@ -1062,8 +1062,9 @@ def build_pair_makers_text(pair, mode="deep"):
 
     lines.extend(["", "Top Makers:"])
 
+    visible_makers = makers[:20]
     if makers:
-        for idx, row in enumerate(makers[:20], start=1):
+        for idx, row in enumerate(visible_makers, start=1):
             page_text = (
                 f"{row['first_page']}-{row['last_page']}"
                 if row["first_page"] is not None and row["last_page"] is not None
@@ -1079,6 +1080,8 @@ def build_pair_makers_text(pair, mode="deep"):
                 f"pages: {page_text} | "
                 f"value: {format_usd(row['total_usd'] if row['has_usd'] else None)}"
             )
+            if show_full:
+                lines.append(f"   Full: {row['wallet']}")
 
         if len(makers) > 20:
             lines.append("Showing first 20 makers only")
@@ -1097,6 +1100,11 @@ def build_pair_makers_text(pair, mode="deep"):
                     f"tx: {compact(item.get('tx'))} | "
                     f"maker-like: {item.get('maker_like') or 'n/a'}"
                 )
+
+    if show_full and visible_makers:
+        lines.extend(["", "Copy-ready wallets:"])
+        for idx, row in enumerate(visible_makers, start=1):
+            lines.append(f"#{idx} {row['wallet']}")
 
     lines.extend(
         [
