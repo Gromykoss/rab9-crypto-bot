@@ -12,7 +12,7 @@ from telegram.ext import (
     filters,
 )
 
-from config import TELEGRAM_GROUP_ID, XAI_API_KEY, ARKHAM_API_KEY
+from config import TELEGRAM_GROUP_ID, XAI_API_KEY, ARKHAM_API_KEY, LEGACY_WATCHLIST_ALERTS_ENABLED
 from utils import utc_now_text, split_text
 from dex import get_dex_latest_profiles
 from keyboards import main_reply_keyboard, main_inline_keyboard, token_chain_keyboard
@@ -52,6 +52,10 @@ logger = logging.getLogger("rab9_crypto_intel_bot")
 
 SOLANA_RE = re.compile(r"\b[1-9A-HJ-NP-Za-km-z]{32,44}\b")
 EVM_RE = re.compile(r"\b0x[a-fA-F0-9]{40}\b")
+RAB9_SIGNAL_RE = re.compile(
+    r"\bRAB9_SIGNAL\s+solana\s+(?P<address>[1-9A-HJ-NP-Za-km-z]{32,44})\b",
+    re.IGNORECASE,
+)
 ALLOWED_FLOW_PERIODS = {"1h", "6h", "12h", "24h", "7d", "30d"}
 FLOW_PERIOD_HINT = "Допустимый период: 1h, 6h, 12h, 24h, 7d, 30d"
 
@@ -773,6 +777,13 @@ async def alertsnow_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if await deny_if_wrong_group(update):
         return
 
+    if not LEGACY_WATCHLIST_ALERTS_ENABLED:
+        await update.message.reply_text(
+            "Legacy watchlist alerts are disabled. MSF signals are the active trigger source.",
+            reply_markup=main_reply_keyboard(),
+        )
+        return
+
     await update.message.reply_text("Проверяю alert triggers по watchlist...")
     text = await asyncio.to_thread(build_watch_alerts_text)
 
@@ -1013,8 +1024,16 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     text = (update.message.text or "").strip()
 
+    rab9_signal_match = RAB9_SIGNAL_RE.search(text)
     evm_match = EVM_RE.search(text)
     sol_match = SOLANA_RE.search(text)
+
+    if rab9_signal_match:
+        address = rab9_signal_match.group("address")
+        await update.message.reply_text("🔎 RAB9 начал анализ MSF-сигнала...")
+        result = await asyncio.to_thread(build_pair_resolve_text, address)
+        await reply_long(update, result, main_reply_keyboard())
+        return
 
     if evm_match:
         address = evm_match.group(0)

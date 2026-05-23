@@ -10,6 +10,7 @@ from config import (
     ALERT_STATE_PATH,
     ALERT_INTERVAL_SECONDS,
     ALERT_COOLDOWN_SECONDS,
+    LEGACY_WATCHLIST_ALERTS_ENABLED,
     TELEGRAM_GROUP_ID,
 )
 from utils import (
@@ -274,6 +275,9 @@ def build_alert_block(item: dict, snapshot: dict, severity: str, messages: list[
 
 
 def build_watch_alerts_text():
+    if not LEGACY_WATCHLIST_ALERTS_ENABLED:
+        return None
+
     items = load_watchlist()
 
     if not items:
@@ -343,4 +347,8 @@ async def alert_loop(application: Application):
 
 
 async def post_init(application: Application):
+    if not LEGACY_WATCHLIST_ALERTS_ENABLED:
+        logger.info("Legacy watchlist alert loop disabled.")
+        return
+
     application.create_task(alert_loop(application))
