@@ -14,3 +14,4 @@
 - Added a minimal shared-secret HTTP endpoint at `POST /msf-signal` for n8n-msf direct triggers. It validates Solana payloads, runs existing pairresolve analysis, and posts the result to Песочница through the RAB9 bot without using Arkham or legacy alerts.
 - Relaxed `/msf-signal` address validation for MSF/Dexscreener lowercase Solana token/pair addresses such as pump/pair ids while keeping `chain == solana` and shared-secret checks.
 - Added `/testsignal ADDRESS` for manual MSF-style pairresolve testing inside Песочница, using the same relaxed Solana address validation and pairresolve pipeline as `/msf-signal`.
+- Added first-stage MSF deep analysis for `/testsignal`, Telegram `RAB9_SIGNAL`, and `POST /msf-signal`: pairresolve, best-pair extraction, normal-mode pairmakers, and a compact no-PnL/no-advice analyst summary.

@@ -882,6 +882,9 @@ def build_maker_find_text(pair, maker, mode="deep", anchor_time=None, allow_fall
 
 def pair_makers_mode_config(mode):
     mode = str(mode or "deep").lower()
+    if mode == "normal":
+        return "normal", 1, DEEP_PAGE_SIZE
+
     mode = "deep50" if mode == "deep50" else "deep"
     max_pages = PAIR_MAKERS_DEEP50_MAX_PAGES if mode == "deep50" else PAIR_MAKERS_DEEP_MAX_PAGES
     max_raw_trades = PAIR_MAKERS_DEEP50_MAX_RAW_TRADES if mode == "deep50" else PAIR_MAKERS_DEEP_MAX_RAW_TRADES
