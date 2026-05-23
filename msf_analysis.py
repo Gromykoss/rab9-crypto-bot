@@ -2,8 +2,17 @@ import re
 
 from address_validation import is_msf_solana_address
 from maker_sources import build_pair_makers_text
+
+def compact(value, left=6, right=4):
+    if not value:
+        return "n/a"
+    text = str(value)
+    if len(text) <= left + right + 3:
+        return text
+    return f"{text[:left]}...{text[-right:]}"
+
+
 from pair_sources import build_pair_resolve_text
-from utils import compact
 
 
 PAIR_RECOMMENDATION_RE = re.compile(r"Use this address for /makertrades:\s*(?P<pair>\S+)")
