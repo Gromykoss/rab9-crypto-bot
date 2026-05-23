@@ -12,10 +12,12 @@ def first_valid(items, key):
     return None
 
 
-def token_text(candidate):
-    base = candidate.get("base") or "n/a"
-    quote = candidate.get("quote") or "n/a"
-    return f"{base} / {quote}"
+def symbol_from_label(label):
+    text = str(label or "").strip()
+    if not text or text == "n/a":
+        return "n/a"
+
+    return text.split("/", 1)[0].strip() or "n/a"
 
 
 def find_dex_match(pair, dex_candidates):
@@ -117,7 +119,8 @@ def build_msf_signal_analysis_text(address: str):
 
     lines = [
         "MSF Signal Analysis",
-        f"Token: {token_text(candidate)}",
+        f"Token: {symbol_from_label(candidate.get('base'))}",
+        f"Quote: {symbol_from_label(candidate.get('quote'))}",
         f"Input: {address}",
         f"Resolved pair: {pair}",
         f"Dex: {candidate.get('dex') or candidate.get('source') or resolved.get('source') or 'n/a'}",
