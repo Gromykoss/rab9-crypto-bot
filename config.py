@@ -22,6 +22,12 @@ WALLET_WATCHLIST_PATH = os.path.join(BASE_DIR, "wallet_watchlist.json")
 
 ALERT_INTERVAL_SECONDS = int(os.getenv("ALERT_INTERVAL_SECONDS", "3600"))
 ALERT_COOLDOWN_SECONDS = int(os.getenv("ALERT_COOLDOWN_SECONDS", "3600"))
+LEGACY_WATCHLIST_ALERTS_ENABLED = os.getenv("LEGACY_WATCHLIST_ALERTS_ENABLED", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 
 SCAN_MICRO = {
