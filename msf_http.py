@@ -1,20 +1,18 @@
 import asyncio
 import json
 import logging
-import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from telegram.ext import Application
 
+from address_validation import is_msf_solana_address
 from config import RAB9_HTTP_HOST, RAB9_HTTP_PORT, RAB9_HTTP_SECRET, TELEGRAM_GROUP_ID
 from pair_sources import build_pair_resolve_text
 from utils import split_text
 
 
 logger = logging.getLogger("rab9_crypto_intel_bot")
-
-MSF_SOLANA_ADDRESS_RE = re.compile(r"^[1-9A-HJ-NP-Za-z]{32,44}$")
 
 
 async def send_msf_pairresolve(application: Application, address: str):
@@ -69,7 +67,7 @@ def start_msf_http_server(application: Application, loop: asyncio.AbstractEventL
                 self.send_json(400, {"ok": False, "error": "unsupported_chain"})
                 return
 
-            if not MSF_SOLANA_ADDRESS_RE.match(address):
+            if not is_msf_solana_address(address):
                 self.send_json(400, {"ok": False, "error": "invalid_address"})
                 return
 
