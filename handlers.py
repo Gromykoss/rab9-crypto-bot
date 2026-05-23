@@ -12,6 +12,7 @@ from telegram.ext import (
     filters,
 )
 
+from address_validation import is_msf_solana_address
 from config import TELEGRAM_GROUP_ID, XAI_API_KEY, ARKHAM_API_KEY, LEGACY_WATCHLIST_ALERTS_ENABLED
 from utils import utc_now_text, split_text
 from dex import get_dex_latest_profiles
@@ -565,6 +566,26 @@ async def pairresolve_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     await reply_long(update, text, main_reply_keyboard())
 
 
+async def testsignal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if await deny_if_wrong_group(update):
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text("Формат:\n/testsignal ADDRESS", reply_markup=main_reply_keyboard())
+        return
+
+    address = context.args[0].strip()
+
+    if not is_msf_solana_address(address):
+        await update.message.reply_text("Invalid Solana address.", reply_markup=main_reply_keyboard())
+        return
+
+    logger.info("Manual testsignal triggered for %s", address)
+    await update.message.reply_text("🔎 RAB9 начал анализ MSF-сигнала...")
+    text = await asyncio.to_thread(build_pair_resolve_text, address)
+    await reply_long(update, text, main_reply_keyboard())
+
+
 async def walletprofile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if await deny_if_wrong_group(update):
         return
@@ -1073,6 +1094,7 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("makerfind", makerfind_command))
     app.add_handler(CommandHandler("pairmakers", pairmakers_command))
     app.add_handler(CommandHandler("pairresolve", pairresolve_command))
+    app.add_handler(CommandHandler("testsignal", testsignal_command))
     app.add_handler(CommandHandler("walletprofile", walletprofile_command))
     app.add_handler(CommandHandler("watchwallet", watchwallet_command))
     app.add_handler(CommandHandler("walletlist", walletlist_command))

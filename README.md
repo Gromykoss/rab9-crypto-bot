@@ -64,6 +64,7 @@ Arkham and wallets:
 - `/pairmakers PAIR deep50` or `/pairmakers PAIR deep50 full` - manually discover top maker wallets in Birdeye pair trades. `deep` scans up to 20 pages and `deep50` up to 50 pages with safe delays, then ranks makers by trade count. `full` adds full copy-ready wallet addresses for the visible top 20 makers. Discovery tool only; no PnL or trading advice.
 - `/walletprofile WALLET PAIR:TOKEN PAIR:TOKEN` or `/walletprofile WALLET PAIR:TOKEN:TIMESTAMP` - manually profile one wallet across up to 5 pair/token cases using maker-find scans plus Birdeye price movement during activity windows. Timestamped cases use strict anchored around scans and do not mix in latest-window trades. No PnL or trading advice is provided.
 - `/pairresolve ADDRESS` - manually resolve token/pair addresses through Dexscreener and Birdeye to find the pool/market address candidate to use with `/makertrades`.
+- `/testsignal ADDRESS` - manually trigger the same pairresolve pipeline used by MSF HTTP signals from inside the configured Telegram group.
 - `/watchwallet ADDRESS note` - add or update a wallet watch item.
 - `/walletlist` - show wallet watchlist.
 - `/checkwallets` - refresh wallet snapshots through Arkham.
