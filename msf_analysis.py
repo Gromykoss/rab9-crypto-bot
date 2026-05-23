@@ -89,6 +89,53 @@ def top_maker_concentration(makers):
     return makers[0].get("trades", 0) / total_trades
 
 
+def meaning_for_state(state):
+    meanings = {
+        "Weak/Noisy": (
+            "Activity exists on this pair, but most wallets show few trades; "
+            "there is no clear accumulation or distribution pattern in this shallow scan."
+        ),
+        "Accumulation": "Buy-heavy makers currently dominate the scanned window.",
+        "Distribution": "Sell-heavy makers currently dominate the scanned window.",
+        "Mixed/Choppy": "Both sides are active without clear directional control.",
+        "Needs more data": "The scan is too shallow for reliable interpretation.",
+    }
+    return meanings.get(state, "The first-pass scan is inconclusive.")
+
+
+def build_why_bullets(raw_trades, unique_makers, buckets, weak_ratio, concentration, top_direction):
+    bullets = []
+
+    if raw_trades < 15 or unique_makers < 2:
+        bullets.append(f"Normal scan is shallow: {raw_trades} raw trades, {unique_makers} maker(s)")
+
+    if buckets["buy_heavy"] == buckets["sell_heavy"] and (buckets["buy_heavy"] or buckets["sell_heavy"]):
+        bullets.append(f"Buy-heavy and sell-heavy are balanced: {buckets['buy_heavy']}/{buckets['sell_heavy']}")
+    elif buckets["buy_heavy"] > buckets["sell_heavy"]:
+        bullets.append(f"Buy-heavy makers lead sell-heavy: {buckets['buy_heavy']}/{buckets['sell_heavy']}")
+    elif buckets["sell_heavy"] > buckets["buy_heavy"]:
+        bullets.append(f"Sell-heavy makers lead buy-heavy: {buckets['sell_heavy']}/{buckets['buy_heavy']}")
+
+    if buckets["mixed"] <= 2:
+        bullets.append(f"Mixed makers are low: {buckets['mixed']}")
+    else:
+        bullets.append(f"Mixed makers are active: {buckets['mixed']}")
+
+    if unique_makers == 0:
+        bullets.append("No maker wallets were extracted from the normal scan")
+    elif weak_ratio > 0.5:
+        bullets.append(f"Weak makers dominate: {buckets['weak']}/{unique_makers}")
+    else:
+        bullets.append(f"Weak makers are not dominant: {buckets['weak']}/{unique_makers}")
+
+    if concentration < 0.25:
+        bullets.append(f"Top maker concentration is low: {concentration:.0%}")
+    else:
+        bullets.append(f"Top maker is {top_direction}; concentration {concentration:.0%}")
+
+    return bullets
+
+
 def build_analyst_verdict(candidate, maker_result, makers, buckets, pair):
     raw_trades = int(maker_result.get("raw_pair_trades_scanned") or 0)
     unique_makers = len(makers)
@@ -99,43 +146,37 @@ def build_analyst_verdict(candidate, maker_result, makers, buckets, pair):
 
     if raw_trades < 15 or unique_makers < 2:
         state = "Needs more data"
-        why = f"Only {raw_trades} raw trades and {unique_makers} maker(s) in normal scan."
     elif weak_ratio > 0.60:
         state = "Weak/Noisy"
-        why = f"Weak makers dominate ({buckets['weak']}/{unique_makers})."
     elif buckets["buy_heavy"] > buckets["sell_heavy"]:
         state = "Accumulation"
-        why = f"Buy-heavy makers outnumber sell-heavy ({buckets['buy_heavy']} vs {buckets['sell_heavy']})."
     elif buckets["sell_heavy"] > buckets["buy_heavy"]:
         state = "Distribution"
-        why = f"Sell-heavy makers outnumber buy-heavy ({buckets['sell_heavy']} vs {buckets['buy_heavy']})."
     elif buckets["buy_heavy"] and buckets["sell_heavy"]:
         state = "Mixed/Choppy"
-        why = "Buy-heavy and sell-heavy makers are both active without clear dominance."
     else:
         state = "Needs more data"
-        why = "Maker direction is not strong enough in the normal scan."
 
     risks = []
     if raw_trades < 30:
-        risks.append("shallow scan")
+        risks.append("Normal scan covers only the latest ~50 pair trades")
     if concentration >= 0.45:
-        risks.append("concentrated maker activity")
+        risks.append("Concentrated maker activity")
     if liquidity is not None and liquidity < 20_000:
-        risks.append("low liquidity")
+        risks.append("Low liquidity")
     if weak_ratio > 0.60:
-        risks.append("many weak makers")
+        risks.append("High share of weak makers reduces signal quality")
 
-    risk = ", ".join(risks) if risks else "normal first-pass scan risk"
-    if makers:
+    if makers and state not in {"Weak/Noisy", "Needs more data"}:
         next_check = f"/makertrades {pair} {makers[0]['wallet']}"
     else:
         next_check = f"/pairmakers {pair} deep"
 
     return {
         "state": state,
-        "why": f"{why} Top maker is {top_direction}; concentration {concentration:.0%}.",
-        "risk": risk,
+        "why": build_why_bullets(raw_trades, unique_makers, buckets, weak_ratio, concentration, top_direction),
+        "meaning": meaning_for_state(state),
+        "risk": risks or ["Normal first-pass scan risk"],
         "next_check": next_check,
     }
 
@@ -196,8 +237,11 @@ def build_msf_signal_analysis_text(address: str):
         "",
         "Analyst verdict:",
         f"- State: {verdict['state']}",
-        f"- Why: {verdict['why']}",
-        f"- Risk: {verdict['risk']}",
+        "- Why:",
+        *[f"  - {item}" for item in verdict["why"]],
+        f"- Meaning: {verdict['meaning']}",
+        "- Risk:",
+        *[f"  - {item}" for item in verdict["risk"]],
         f"- Next check: {verdict['next_check']}",
         "",
         "Pairmakers:",

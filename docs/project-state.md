@@ -17,3 +17,4 @@
 - Added first-stage MSF deep analysis for `/testsignal`, Telegram `RAB9_SIGNAL`, and `POST /msf-signal`: pairresolve, best-pair extraction, normal-mode pairmakers, and a compact no-PnL/no-advice analyst summary.
 - Reworked the MSF/testsignal analysis output into a single compact structured report: token/pair metadata, normal-mode maker scan stats, behavior buckets, and top 5 makers only, without appending full diagnostics.
 - Added a deterministic analyst verdict section to compact MSF/testsignal reports using only first-pass liquidity, volume, maker count, raw trades, behavior buckets, and maker concentration.
+- Improved compact MSF analyst verdict wording with factual why bullets, human-readable meaning, and risk bullets while preserving the deterministic state rules.
