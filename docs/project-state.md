@@ -12,3 +12,4 @@
 - The MSF ingestion path uses existing pair-source analysis only and does not call Arkham or re-enable legacy watchlist alerts.
 - Replaced the service entrypoint with neutral `rab9_bot.py`; removed the old branded startup file and updated the systemd example to launch `rab9_bot.py`.
 - Added a minimal shared-secret HTTP endpoint at `POST /msf-signal` for n8n-msf direct triggers. It validates Solana payloads, runs existing pairresolve analysis, and posts the result to Песочница through the RAB9 bot without using Arkham or legacy alerts.
+- Relaxed `/msf-signal` address validation for MSF/Dexscreener lowercase Solana token/pair addresses such as pump/pair ids while keeping `chain == solana` and shared-secret checks.

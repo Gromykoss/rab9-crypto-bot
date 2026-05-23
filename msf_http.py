@@ -14,7 +14,7 @@ from utils import split_text
 
 logger = logging.getLogger("rab9_crypto_intel_bot")
 
-SOLANA_ADDRESS_RE = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
+MSF_SOLANA_ADDRESS_RE = re.compile(r"^[1-9A-HJ-NP-Za-z]{32,44}$")
 
 
 async def send_msf_pairresolve(application: Application, address: str):
@@ -69,7 +69,7 @@ def start_msf_http_server(application: Application, loop: asyncio.AbstractEventL
                 self.send_json(400, {"ok": False, "error": "unsupported_chain"})
                 return
 
-            if not SOLANA_ADDRESS_RE.match(address):
+            if not MSF_SOLANA_ADDRESS_RE.match(address):
                 self.send_json(400, {"ok": False, "error": "invalid_address"})
                 return
 
