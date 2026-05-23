@@ -2,7 +2,7 @@
 
 RAB9 is a Telegram crypto-intel bot for a locked Telegram group. It scans fresh Dexscreener profiles, scores token pairs, builds Grok/xAI-assisted token analysis, keeps token and wallet watchlists, and sends alert messages when watched token metrics change enough to matter.
 
-The bot runs with Telegram polling from `rab9_arkham.py`. Runtime state is stored as JSON files in the project directory.
+The bot runs with Telegram polling from `rab9_bot.py`. Runtime state is stored as JSON files in the project directory.
 
 ## What The Bot Does
 
@@ -71,7 +71,7 @@ Arkham and wallets:
 
 ## Module Structure
 
-- `rab9_arkham.py` - application entry point, logging setup, Telegram polling, handler registration.
+- `rab9_bot.py` - application entry point, logging setup, Telegram polling, handler registration.
 - `config.py` - `.env` loading, API keys, base URLs, runtime JSON paths, scan thresholds.
 - `handlers.py` - Telegram command handlers, callback handlers, group lock, long-message splitting.
 - `alerts.py` - background alert loop, alert classification, cooldowns, alert state persistence.
@@ -120,7 +120,7 @@ Edit `.env` locally and set:
 Start the bot:
 
 ```powershell
-python rab9_arkham.py
+python rab9_bot.py
 ```
 
 The bot uses long polling. Keep the process running while testing.
@@ -150,7 +150,7 @@ Wants=network-online.target
 
 [Service]
 WorkingDirectory=/opt/rab9-crypto-bot
-ExecStart=/opt/rab9-crypto-bot/venv/bin/python /opt/rab9-crypto-bot/rab9_arkham.py
+ExecStart=/opt/rab9-crypto-bot/venv/bin/python /opt/rab9-crypto-bot/rab9_bot.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
