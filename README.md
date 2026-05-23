@@ -2,7 +2,7 @@
 
 RAB9 is a Telegram crypto-intel bot for a locked Telegram group. It scans fresh Dexscreener profiles, scores token pairs, builds Grok/xAI-assisted token analysis, keeps token and wallet watchlists, and sends alert messages when watched token metrics change enough to matter.
 
-The bot runs with Telegram polling from `rab9_arkham.py`. Runtime state is stored as JSON files in the project directory.
+The bot runs with Telegram polling from `rab9_bot.py`. Runtime state is stored as JSON files in the project directory.
 
 ## What The Bot Does
 
@@ -71,7 +71,7 @@ Arkham and wallets:
 
 ## Module Structure
 
-- `rab9_arkham.py` - application entry point, logging setup, Telegram polling, handler registration.
+- `rab9_bot.py` - application entry point, logging setup, Telegram polling, handler registration.
 - `config.py` - `.env` loading, API keys, base URLs, runtime JSON paths, scan thresholds.
 - `handlers.py` - Telegram command handlers, callback handlers, group lock, long-message splitting.
 - `alerts.py` - background alert loop, alert classification, cooldowns, alert state persistence.
@@ -114,16 +114,32 @@ Edit `.env` locally and set:
 - optional `SOLSCAN_API_KEY` for `/walletswaps`
 - optional `DEXSCREENER_BASE_URL`
 - optional `XAI_BASE_URL`
+- `RAB9_HTTP_SECRET` for the local MSF HTTP endpoint
+- optional `RAB9_HTTP_HOST`, default `127.0.0.1`
+- optional `RAB9_HTTP_PORT`, default `8089`
 - optional `ALERT_INTERVAL_SECONDS`
 - optional `ALERT_COOLDOWN_SECONDS`
 
 Start the bot:
 
 ```powershell
-python rab9_arkham.py
+python rab9_bot.py
 ```
 
 The bot uses long polling. Keep the process running while testing.
+
+## MSF HTTP Signal Endpoint
+
+When `RAB9_HTTP_SECRET` is set, n8n-msf can trigger pairresolve analysis directly:
+
+```bash
+curl -X POST http://127.0.0.1:8089/msf-signal \
+  -H "Content-Type: application/json" \
+  -H "X-RAB9-SECRET: $RAB9_HTTP_SECRET" \
+  -d '{"source":"msf","chain":"solana","address":"TOKEN_ADDRESS","text":"MSF signal text"}'
+```
+
+The endpoint only accepts `chain: solana` and Solana base58 addresses of 32-44 chars. Valid requests post the pairresolve report into the configured Telegram group.
 
 ## Deploy To VPS
 
@@ -140,7 +156,7 @@ cp .env.example .env
 nano .env
 ```
 
-Create a systemd service:
+Create `/etc/systemd/system/rab9-crypto.service`:
 
 ```ini
 [Unit]
@@ -150,7 +166,7 @@ Wants=network-online.target
 
 [Service]
 WorkingDirectory=/opt/rab9-crypto-bot
-ExecStart=/opt/rab9-crypto-bot/venv/bin/python /opt/rab9-crypto-bot/rab9_arkham.py
+ExecStart=/opt/rab9-crypto-bot/venv/bin/python /opt/rab9-crypto-bot/rab9_bot.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
@@ -163,15 +179,15 @@ Adjust paths if the repo is not in `/opt/rab9-crypto-bot`, then enable it:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable rab9
-sudo systemctl start rab9
-sudo systemctl status rab9
+sudo systemctl enable rab9-crypto
+sudo systemctl start rab9-crypto
+sudo systemctl status rab9-crypto
 ```
 
 View logs:
 
 ```bash
-journalctl -u rab9 -f
+journalctl -u rab9-crypto -f
 ```
 
 ## Do Not Commit
@@ -184,11 +200,10 @@ Keep these local-only:
 - `*.pyc`
 - `*.log`
 - `*.save`
-- `rab9_bot.py`
 - `watchlist.json`
 - `alert_state.json`
 - `wallet_watchlist.json`
-- backup files matching `*_backup_*.py`, `*_before_*.py`, or `rab9_arkham_monolith_backup_*.py`
+- backup files matching `*_backup_*.py` or `*_before_*.py`
 
 ## Troubleshooting
 
