@@ -15,3 +15,4 @@
 - Relaxed `/msf-signal` address validation for MSF/Dexscreener lowercase Solana token/pair addresses such as pump/pair ids while keeping `chain == solana` and shared-secret checks.
 - Added `/testsignal ADDRESS` for manual MSF-style pairresolve testing inside Песочница, using the same relaxed Solana address validation and pairresolve pipeline as `/msf-signal`.
 - Added first-stage MSF deep analysis for `/testsignal`, Telegram `RAB9_SIGNAL`, and `POST /msf-signal`: pairresolve, best-pair extraction, normal-mode pairmakers, and a compact no-PnL/no-advice analyst summary.
+- Reworked the MSF/testsignal analysis output into a single compact structured report: token/pair metadata, normal-mode maker scan stats, behavior buckets, and top 5 makers only, without appending full diagnostics.
