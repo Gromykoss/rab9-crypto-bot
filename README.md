@@ -114,6 +114,9 @@ Edit `.env` locally and set:
 - optional `SOLSCAN_API_KEY` for `/walletswaps`
 - optional `DEXSCREENER_BASE_URL`
 - optional `XAI_BASE_URL`
+- `RAB9_HTTP_SECRET` for the local MSF HTTP endpoint
+- optional `RAB9_HTTP_HOST`, default `127.0.0.1`
+- optional `RAB9_HTTP_PORT`, default `8089`
 - optional `ALERT_INTERVAL_SECONDS`
 - optional `ALERT_COOLDOWN_SECONDS`
 
@@ -124,6 +127,19 @@ python rab9_bot.py
 ```
 
 The bot uses long polling. Keep the process running while testing.
+
+## MSF HTTP Signal Endpoint
+
+When `RAB9_HTTP_SECRET` is set, n8n-msf can trigger pairresolve analysis directly:
+
+```bash
+curl -X POST http://127.0.0.1:8089/msf-signal \
+  -H "Content-Type: application/json" \
+  -H "X-RAB9-SECRET: $RAB9_HTTP_SECRET" \
+  -d '{"source":"msf","chain":"solana","address":"TOKEN_ADDRESS","text":"MSF signal text"}'
+```
+
+The endpoint only accepts `chain: solana` and Solana base58 addresses of 32-44 chars. Valid requests post the pairresolve report into the configured Telegram group.
 
 ## Deploy To VPS
 
@@ -140,7 +156,7 @@ cp .env.example .env
 nano .env
 ```
 
-Create a systemd service:
+Create `/etc/systemd/system/rab9-crypto.service`:
 
 ```ini
 [Unit]
@@ -163,15 +179,15 @@ Adjust paths if the repo is not in `/opt/rab9-crypto-bot`, then enable it:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable rab9
-sudo systemctl start rab9
-sudo systemctl status rab9
+sudo systemctl enable rab9-crypto
+sudo systemctl start rab9-crypto
+sudo systemctl status rab9-crypto
 ```
 
 View logs:
 
 ```bash
-journalctl -u rab9 -f
+journalctl -u rab9-crypto -f
 ```
 
 ## Do Not Commit
@@ -184,11 +200,10 @@ Keep these local-only:
 - `*.pyc`
 - `*.log`
 - `*.save`
-- `rab9_bot.py`
 - `watchlist.json`
 - `alert_state.json`
 - `wallet_watchlist.json`
-- backup files matching `*_backup_*.py`, `*_before_*.py`, or `rab9_arkham_monolith_backup_*.py`
+- backup files matching `*_backup_*.py` or `*_before_*.py`
 
 ## Troubleshooting
 
