@@ -74,6 +74,72 @@ def behavior_counts(makers):
     }
 
 
+def safe_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def top_maker_concentration(makers):
+    total_trades = sum(row.get("trades", 0) for row in makers)
+    if not makers or total_trades <= 0:
+        return 0.0
+
+    return makers[0].get("trades", 0) / total_trades
+
+
+def build_analyst_verdict(candidate, maker_result, makers, buckets, pair):
+    raw_trades = int(maker_result.get("raw_pair_trades_scanned") or 0)
+    unique_makers = len(makers)
+    weak_ratio = buckets["weak"] / unique_makers if unique_makers else 1.0
+    concentration = top_maker_concentration(makers)
+    top_direction = makers[0]["net_direction"] if makers else "n/a"
+    liquidity = safe_float(candidate.get("liquidity"))
+
+    if raw_trades < 15 or unique_makers < 2:
+        state = "Needs more data"
+        why = f"Only {raw_trades} raw trades and {unique_makers} maker(s) in normal scan."
+    elif weak_ratio > 0.60:
+        state = "Weak/Noisy"
+        why = f"Weak makers dominate ({buckets['weak']}/{unique_makers})."
+    elif buckets["buy_heavy"] > buckets["sell_heavy"]:
+        state = "Accumulation"
+        why = f"Buy-heavy makers outnumber sell-heavy ({buckets['buy_heavy']} vs {buckets['sell_heavy']})."
+    elif buckets["sell_heavy"] > buckets["buy_heavy"]:
+        state = "Distribution"
+        why = f"Sell-heavy makers outnumber buy-heavy ({buckets['sell_heavy']} vs {buckets['buy_heavy']})."
+    elif buckets["buy_heavy"] and buckets["sell_heavy"]:
+        state = "Mixed/Choppy"
+        why = "Buy-heavy and sell-heavy makers are both active without clear dominance."
+    else:
+        state = "Needs more data"
+        why = "Maker direction is not strong enough in the normal scan."
+
+    risks = []
+    if raw_trades < 30:
+        risks.append("shallow scan")
+    if concentration >= 0.45:
+        risks.append("concentrated maker activity")
+    if liquidity is not None and liquidity < 20_000:
+        risks.append("low liquidity")
+    if weak_ratio > 0.60:
+        risks.append("many weak makers")
+
+    risk = ", ".join(risks) if risks else "normal first-pass scan risk"
+    if makers:
+        next_check = f"/makertrades {pair} {makers[0]['wallet']}"
+    else:
+        next_check = f"/pairmakers {pair} deep"
+
+    return {
+        "state": state,
+        "why": f"{why} Top maker is {top_direction}; concentration {concentration:.0%}.",
+        "risk": risk,
+        "next_check": next_check,
+    }
+
+
 def format_top_maker(idx, row):
     return (
         f"{idx}. {compact(row['wallet'])} | "
@@ -116,6 +182,7 @@ def build_msf_signal_analysis_text(address: str):
     maker_result = get_birdeye_pair_makers(pair, mode="normal")
     makers = summarize_pair_makers(maker_result.get("items") or [])
     buckets = behavior_counts(makers)
+    verdict = build_analyst_verdict(candidate, maker_result, makers, buckets, pair)
 
     lines = [
         "MSF Signal Analysis",
@@ -126,6 +193,12 @@ def build_msf_signal_analysis_text(address: str):
         f"Dex: {candidate.get('dex') or candidate.get('source') or resolved.get('source') or 'n/a'}",
         f"Liquidity: {format_usd(candidate.get('liquidity'))}",
         f"Volume24h: {format_usd(candidate.get('volume24h'))}",
+        "",
+        "Analyst verdict:",
+        f"- State: {verdict['state']}",
+        f"- Why: {verdict['why']}",
+        f"- Risk: {verdict['risk']}",
+        f"- Next check: {verdict['next_check']}",
         "",
         "Pairmakers:",
         f"- Scan mode: {maker_result.get('mode')}",
