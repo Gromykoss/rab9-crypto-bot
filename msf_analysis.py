@@ -20,6 +20,18 @@ def symbol_from_label(label):
     return text.split("/", 1)[0].strip() or "n/a"
 
 
+def format_market_cap_fdv(candidate):
+    market_cap = candidate.get("marketCap")
+    if market_cap not in (None, "n/a"):
+        return format_usd(market_cap)
+
+    fdv = candidate.get("fdv")
+    if fdv not in (None, "n/a"):
+        return format_usd(fdv)
+
+    return "n/a"
+
+
 def find_dex_match(pair, dex_candidates):
     pair_lower = str(pair or "").lower()
     for item in dex_candidates:
@@ -362,6 +374,7 @@ def build_msf_signal_analysis_text(address: str):
         "MSF Signal Analysis",
         f"Token: {symbol_from_label(candidate.get('base'))}",
         f"Quote: {symbol_from_label(candidate.get('quote'))}",
+        f"Market Cap / FDV: {format_market_cap_fdv(candidate)}",
         f"Input: {address}",
         f"Resolved pair: {pair}",
         f"Dex: {candidate.get('dex') or candidate.get('source') or resolved.get('source') or 'n/a'}",

@@ -79,6 +79,8 @@ def normalize_dex_pair(item):
         "quote": token_label(item.get("quoteToken")),
         "liquidity": liquidity.get("usd"),
         "volume24h": volume.get("h24") or volume.get("24h") or item.get("volume24h"),
+        "marketCap": item.get("marketCap"),
+        "fdv": item.get("fdv"),
     }
 
 

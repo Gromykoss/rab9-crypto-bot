@@ -24,3 +24,4 @@
 - Added production MSF spiral analysis for `/testsignal`, Telegram `RAB9_SIGNAL`, and `POST /msf-signal`: normal scan first, automatic deep scan only for unclear/noisy verdicts, no automatic deep50.
 - Added MSF-only dust filtering for verdict construction: known USD trades below $10 are ignored, missing-USD trades are kept, and `/pairmakers` output remains unchanged.
 - Added compact spiral trace plus raw/meaningful/dust/unknown trade counters to the MSF compact report.
+- Added Market Cap / FDV to compact MSF reports, preferring Dexscreener marketCap and falling back to fdv when marketCap is unavailable.
