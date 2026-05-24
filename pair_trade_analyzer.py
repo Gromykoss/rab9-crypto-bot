@@ -96,7 +96,12 @@ def format_cache_windows_block(summary):
     ten = summary["last_10k"]
     all_stored = summary["all"]
     weak_delta = ten["weak_ratio"] - one["weak_ratio"]
-    weak_trend = "flat" if abs(weak_delta) < 0.05 else ("higher in 10k" if weak_delta > 0 else "lower in 10k")
+    if weak_delta >= 0.05:
+        weak_trend = "recent 1k is cleaner than wider history"
+    elif weak_delta <= -0.05:
+        weak_trend = "wider history is cleaner than recent 1k"
+    else:
+        weak_trend = "weak ratio stable across windows"
 
     return [
         "Cache windows:",
@@ -104,7 +109,10 @@ def format_cache_windows_block(summary):
         format_window(one),
         format_window(ten),
         format_window(all_stored),
-        f"- Trend: weak {weak_trend}; top5 overlap {summary['top5_overlap_1k_10k']}/5",
+        (
+            f"- Trend: {weak_trend}; weak {one['weak_ratio']:.0%} -> {ten['weak_ratio']:.0%}; "
+            f"top5 overlap {summary['top5_overlap_1k_10k']}/5"
+        ),
         "",
     ]
 
