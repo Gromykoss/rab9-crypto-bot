@@ -77,7 +77,7 @@ def start_msf_http_server(application: Application, loop: asyncio.AbstractEventL
             )
 
             try:
-                future.result(timeout=180)
+                future.result(timeout=600)
             except Exception as error:
                 logger.exception("MSF signal processing failed: %s", error)
                 self.send_json(500, {"ok": False, "error": "processing_failed"})

@@ -39,8 +39,10 @@ MAKER_FIND_AROUND_MAX_RAW_TRADES = 1000
 MAKER_FIND_AROUND_EARLY_STOP_COUNT = 50
 PAIR_MAKERS_DEEP_MAX_PAGES = 20
 PAIR_MAKERS_DEEP50_MAX_PAGES = 50
+PAIR_MAKERS_DEEP200_MAX_PAGES = 200
 PAIR_MAKERS_DEEP_MAX_RAW_TRADES = 1000
 PAIR_MAKERS_DEEP50_MAX_RAW_TRADES = 2500
+PAIR_MAKERS_DEEP200_MAX_RAW_TRADES = 10000
 PAIR_MAKER_KEY_PRIORITY = (
     "owner",
     "wallet",
@@ -884,6 +886,8 @@ def pair_makers_mode_config(mode):
     mode = str(mode or "deep").lower()
     if mode == "normal":
         return "normal", 1, DEEP_PAGE_SIZE
+    if mode == "deep200":
+        return "deep200", PAIR_MAKERS_DEEP200_MAX_PAGES, PAIR_MAKERS_DEEP200_MAX_RAW_TRADES
 
     mode = "deep50" if mode == "deep50" else "deep"
     max_pages = PAIR_MAKERS_DEEP50_MAX_PAGES if mode == "deep50" else PAIR_MAKERS_DEEP_MAX_PAGES

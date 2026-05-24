@@ -105,6 +105,9 @@ UNCLEAR_STATES = {"Weak/Noisy", "Mixed/Choppy", "Mixed/Unstable", "Needs more da
 
 
 def meaning_for_state(state, mode="normal"):
+    if mode == "deep200" and state in UNCLEAR_STATES:
+        return "Structure remained unclear even after maximum MSF scan."
+
     if mode == "deep50" and state in UNCLEAR_STATES:
         return "Structure remained unclear even after extended scan."
 
@@ -267,7 +270,7 @@ def should_deepen(scan):
     return state in {"Weak/Noisy", "Mixed/Choppy", "Needs more data"}
 
 
-def should_run_deep50(scan):
+def should_widen_spiral(scan):
     state = scan["verdict"]["state"]
     if scan_failed(scan):
         return False
@@ -320,8 +323,8 @@ def apply_spiral_stability(scans):
     return final
 
 
-def prefer_deep50_next_check(final_scan):
-    if final_scan["mode"] != "deep50":
+def prefer_wide_scan_next_check(final_scan):
+    if final_scan["mode"] not in {"deep50", "deep200"}:
         return
 
     verdict = final_scan["verdict"]
@@ -340,11 +343,14 @@ def run_spiral(pair, candidate):
     if should_deepen(scans[0]):
         scans.append(run_spiral_scan(pair, "deep", candidate))
         deep_final = apply_spiral_stability(scans)
-        if deep_final["mode"] == "deep" and should_run_deep50(deep_final):
+        if deep_final["mode"] == "deep" and should_widen_spiral(deep_final):
             scans.append(run_spiral_scan(pair, "deep50", candidate))
+            deep50_final = apply_spiral_stability(scans)
+            if deep50_final["mode"] == "deep50" and should_widen_spiral(deep50_final):
+                scans.append(run_spiral_scan(pair, "deep200", candidate))
 
     final_scan = apply_spiral_stability(scans)
-    prefer_deep50_next_check(final_scan)
+    prefer_wide_scan_next_check(final_scan)
     return scans, final_scan
 
 
