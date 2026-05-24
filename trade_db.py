@@ -85,6 +85,57 @@ def ensure_schema(conn):
     conn.executescript(SCHEMA)
 
 
+def connect_readonly(path=None):
+    db_path = path or RAB9_DB_PATH
+    if not RAB9_DB_ENABLED or not os.path.exists(db_path):
+        return None
+
+    conn = sqlite3.connect(db_path, timeout=30)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
+
+
+def fetch_pair_meta(pair_address, path=None):
+    conn = connect_readonly(path)
+    if conn is None:
+        return None
+
+    try:
+        return conn.execute(
+            "SELECT * FROM pairs WHERE pair_address = ?",
+            (pair_address,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+
+def fetch_pair_trades(pair_address, limit=None, path=None):
+    conn = connect_readonly(path)
+    if conn is None:
+        return []
+
+    params = [pair_address]
+    limit_clause = ""
+    if limit is not None:
+        limit_clause = "LIMIT ?"
+        params.append(int(limit))
+
+    try:
+        return conn.execute(
+            f"""
+            SELECT *
+            FROM pair_trades
+            WHERE pair_address = ?
+            ORDER BY COALESCE(trade_unix, 0) DESC, id DESC
+            {limit_clause}
+            """,
+            params,
+        ).fetchall()
+    finally:
+        conn.close()
+
+
 def to_float(value):
     try:
         return float(value) if value is not None and value != "n/a" else None

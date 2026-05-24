@@ -1,5 +1,6 @@
 from address_validation import is_msf_solana_address
 from maker_sources import get_birdeye_pair_makers, summarize_pair_makers
+from pair_trade_analyzer import build_cache_windows_block
 from pair_trade_collector import persist_final_msf_scan
 from pair_sources import get_birdeye_candidates, get_dexscreener_candidates
 from swap_sources import compact, format_usd
@@ -407,6 +408,7 @@ def build_msf_signal_analysis_text(address: str):
     candidate = resolved.get("candidate") or {}
     scans, final_scan = run_spiral(pair, candidate)
     persist_final_msf_scan(pair, candidate, resolved, final_scan)
+    cache_windows_block = build_cache_windows_block(pair)
     maker_result = final_scan["maker_result"]
     makers = final_scan["makers"]
     buckets = final_scan["buckets"]
@@ -434,6 +436,7 @@ def build_msf_signal_analysis_text(address: str):
         "",
         *format_spiral_trace(scans, final_scan),
         "",
+        *cache_windows_block,
         "Pairmakers:",
         f"- Scan mode: {maker_result.get('mode')}",
         f"- Raw trades scanned: {maker_result.get('raw_pair_trades_scanned', 0)}",
