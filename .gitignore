@@ -4,6 +4,8 @@ __pycache__/
 *.pyc
 *.log
 *.save
+data/*.db
+data/*.db-*
 
 watchlist.json
 alert_state.json

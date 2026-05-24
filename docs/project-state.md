@@ -27,3 +27,4 @@
 - Added Market Cap / FDV to compact MSF reports, preferring Dexscreener marketCap and falling back to fdv when marketCap is unavailable.
 - Extended MSF spiral analysis to normal -> deep -> deep50, using deep50 only when the deep verdict remains unclear and extending the HTTP processing timeout to 180 seconds.
 - Added internal MSF `deep200` spiral mode for up to 10,000 raw pair trades after unclear deep50 results, with HTTP processing timeout raised to 600 seconds.
+- Added Phase 1 write-only SQLite persistence for MSF final scan maker trades at `data/rab9_trades.db`, gated by `RAB9_DB_ENABLED` and kept out of report/verdict read paths.

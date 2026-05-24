@@ -18,6 +18,13 @@ XAI_BASE_URL = os.getenv("XAI_BASE_URL", "https://api.x.ai")
 RAB9_HTTP_HOST = os.getenv("RAB9_HTTP_HOST", "127.0.0.1")
 RAB9_HTTP_PORT = int(os.getenv("RAB9_HTTP_PORT", "8089"))
 RAB9_HTTP_SECRET = os.getenv("RAB9_HTTP_SECRET")
+RAB9_DB_ENABLED = os.getenv("RAB9_DB_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+RAB9_DB_PATH = os.getenv("RAB9_DB_PATH", os.path.join(BASE_DIR, "data", "rab9_trades.db"))
 
 WATCHLIST_PATH = os.path.join(BASE_DIR, "watchlist.json")
 ALERT_STATE_PATH = os.path.join(BASE_DIR, "alert_state.json")
