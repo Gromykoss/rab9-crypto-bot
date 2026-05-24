@@ -18,3 +18,9 @@
 - Reworked the MSF/testsignal analysis output into a single compact structured report: token/pair metadata, normal-mode maker scan stats, behavior buckets, and top 5 makers only, without appending full diagnostics.
 - Added a deterministic analyst verdict section to compact MSF/testsignal reports using only first-pass liquidity, volume, maker count, raw trades, behavior buckets, and maker concentration.
 - Improved compact MSF analyst verdict wording with factual why bullets, human-readable meaning, and risk bullets while preserving the deterministic state rules.
+
+## 2026-05-24
+
+- Added production MSF spiral analysis for `/testsignal`, Telegram `RAB9_SIGNAL`, and `POST /msf-signal`: normal scan first, automatic deep scan only for unclear/noisy verdicts, no automatic deep50.
+- Added MSF-only dust filtering for verdict construction: known USD trades below $10 are ignored, missing-USD trades are kept, and `/pairmakers` output remains unchanged.
+- Added compact spiral trace plus raw/meaningful/dust/unknown trade counters to the MSF compact report.

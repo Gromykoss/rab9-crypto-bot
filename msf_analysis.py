@@ -98,6 +98,7 @@ def meaning_for_state(state):
         "Accumulation": "Buy-heavy makers currently dominate the scanned window.",
         "Distribution": "Sell-heavy makers currently dominate the scanned window.",
         "Mixed/Choppy": "Both sides are active without clear directional control.",
+        "Mixed/Unstable": "The deeper scan changed the first-pass direction, so the pair needs broader review.",
         "Needs more data": "The scan is too shallow for reliable interpretation.",
     }
     return meanings.get(state, "The first-pass scan is inconclusive.")
@@ -136,10 +137,37 @@ def build_why_bullets(raw_trades, unique_makers, buckets, weak_ratio, concentrat
     return bullets
 
 
+def filter_msf_dust(items):
+    kept = []
+    dust_ignored = 0
+    usd_unknown_kept = 0
+
+    for item in items:
+        usd_value = safe_float(item.get("usd_value"))
+        if usd_value is None:
+            usd_unknown_kept += 1
+            kept.append(item)
+            continue
+        if usd_value < 10:
+            dust_ignored += 1
+            continue
+        kept.append(item)
+
+    return kept, {
+        "meaningful_trades_used": len(kept),
+        "dust_ignored": dust_ignored,
+        "usd_unknown_kept": usd_unknown_kept,
+    }
+
+
+def weak_ratio_for(buckets, unique_makers):
+    return buckets["weak"] / unique_makers if unique_makers else 1.0
+
+
 def build_analyst_verdict(candidate, maker_result, makers, buckets, pair):
     raw_trades = int(maker_result.get("raw_pair_trades_scanned") or 0)
     unique_makers = len(makers)
-    weak_ratio = buckets["weak"] / unique_makers if unique_makers else 1.0
+    weak_ratio = weak_ratio_for(buckets, unique_makers)
     concentration = top_maker_concentration(makers)
     top_direction = makers[0]["net_direction"] if makers else "n/a"
     liquidity = safe_float(candidate.get("liquidity"))
@@ -181,6 +209,104 @@ def build_analyst_verdict(candidate, maker_result, makers, buckets, pair):
     }
 
 
+def run_spiral_scan(pair, mode, candidate):
+    maker_result = get_birdeye_pair_makers(pair, mode=mode)
+    filtered_items, dust = filter_msf_dust(maker_result.get("items") or [])
+    makers = summarize_pair_makers(filtered_items)
+    buckets = behavior_counts(makers)
+    verdict = build_analyst_verdict(candidate, maker_result, makers, buckets, pair)
+
+    unique_makers = len(makers)
+    weak_ratio = weak_ratio_for(buckets, unique_makers)
+    return {
+        "mode": mode,
+        "pair": pair,
+        "maker_result": maker_result,
+        "makers": makers,
+        "buckets": buckets,
+        "verdict": verdict,
+        "weak_ratio": weak_ratio,
+        **dust,
+    }
+
+
+def scan_failed(scan):
+    result = scan.get("maker_result") or {}
+    status = result.get("status")
+    return result.get("rate_limited") or status == 429 or (result.get("error") and not result.get("items"))
+
+
+def should_deepen(scan):
+    state = scan["verdict"]["state"]
+    if scan_failed(scan):
+        return False
+    return state in {"Weak/Noisy", "Mixed/Choppy", "Needs more data"}
+
+
+def top_wallets(scan, limit=5):
+    return {row["wallet"] for row in (scan.get("makers") or [])[:limit]}
+
+
+def strong_flip(normal_scan, deep_scan):
+    normal_state = normal_scan["verdict"]["state"]
+    deep_state = deep_scan["verdict"]["state"]
+    directional = {"Accumulation", "Distribution"}
+    return normal_state in directional and deep_state in directional and normal_state != deep_state
+
+
+def apply_spiral_stability(scans):
+    final = scans[-1]
+    if len(scans) >= 2 and scan_failed(final):
+        return scans[-2]
+    if len(scans) < 2:
+        return final
+
+    normal_scan = scans[0]
+    deep_scan = scans[-1]
+    overlap = len(top_wallets(normal_scan) & top_wallets(deep_scan))
+    weak_improvement = normal_scan["weak_ratio"] - deep_scan["weak_ratio"]
+
+    final["stability"] = {
+        "state_persisted": normal_scan["verdict"]["state"] == deep_scan["verdict"]["state"],
+        "weak_improvement": weak_improvement,
+        "top_overlap": overlap,
+    }
+
+    if strong_flip(normal_scan, deep_scan):
+        final["verdict"] = {
+            **deep_scan["verdict"],
+            "state": "Mixed/Unstable",
+            "meaning": meaning_for_state("Mixed/Unstable"),
+            "why": [
+                f"Normal scan was {normal_scan['verdict']['state']}, deep scan was {deep_scan['verdict']['state']}",
+                f"Top maker overlap between normal and deep: {overlap}",
+                f"Weak maker ratio changed by {weak_improvement:.0%}",
+            ],
+            "risk": deep_scan["verdict"]["risk"] + ["State changed strongly between scan depths"],
+            "next_check": f"/pairmakers {deep_scan['pair']} deep",
+        }
+
+    return final
+
+
+def run_spiral(pair, candidate):
+    scans = [run_spiral_scan(pair, "normal", candidate)]
+    if should_deepen(scans[0]):
+        scans.append(run_spiral_scan(pair, "deep", candidate))
+    return scans, apply_spiral_stability(scans)
+
+
+def format_spiral_trace(scans, final_scan):
+    lines = ["Spiral:"]
+    for scan in scans:
+        lines.append(f"- {scan['mode']} -> {scan['verdict']['state']} | weak {scan['weak_ratio']:.0%}")
+        if scan_failed(scan):
+            lines.append("- stop -> rate limit/API failure")
+            break
+    lines.append(f"- final -> {final_scan['verdict']['state']}")
+    return lines
+
+
 def format_top_maker(idx, row):
     return (
         f"{idx}. {compact(row['wallet'])} | "
@@ -220,10 +346,11 @@ def build_msf_signal_analysis_text(address: str):
         return build_unresolved_text(address, resolved)
 
     candidate = resolved.get("candidate") or {}
-    maker_result = get_birdeye_pair_makers(pair, mode="normal")
-    makers = summarize_pair_makers(maker_result.get("items") or [])
-    buckets = behavior_counts(makers)
-    verdict = build_analyst_verdict(candidate, maker_result, makers, buckets, pair)
+    scans, final_scan = run_spiral(pair, candidate)
+    maker_result = final_scan["maker_result"]
+    makers = final_scan["makers"]
+    buckets = final_scan["buckets"]
+    verdict = final_scan["verdict"]
 
     lines = [
         "MSF Signal Analysis",
@@ -244,9 +371,14 @@ def build_msf_signal_analysis_text(address: str):
         *[f"  - {item}" for item in verdict["risk"]],
         f"- Next check: {verdict['next_check']}",
         "",
+        *format_spiral_trace(scans, final_scan),
+        "",
         "Pairmakers:",
         f"- Scan mode: {maker_result.get('mode')}",
         f"- Raw trades scanned: {maker_result.get('raw_pair_trades_scanned', 0)}",
+        f"- Meaningful trades used: {final_scan['meaningful_trades_used']}",
+        f"- Dust ignored: {final_scan['dust_ignored']}",
+        f"- USD unknown kept: {final_scan['usd_unknown_kept']}",
         f"- Unique makers: {len(makers)}",
         f"- Status: {maker_result.get('status')}",
         "",
