@@ -188,16 +188,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "RAB9 Crypto Intel Bot online.\n\n"
-        "Сетка сканеров:\n"
-        "/micro — MC $20K–$100K\n"
-        "/degen — MC $100K–$2M\n"
-        "/scan — MC $2M–$15M\n\n"
-        "Watchlist:\n"
-        "/watch solana ADDRESS заметка\n"
-        "/watchlist\n"
-        "/checkwatch\n"
-        "/refreshwatch\n"
-        "/unwatch ADDRESS",
+        "Visible test command:\n"
+        "/testsignal ADDRESS",
         reply_markup=main_reply_keyboard(),
     )
 
@@ -209,7 +201,7 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await update.message.reply_text(
-        "RAB9 меню. Выбирай действие:",
+        "RAB9 menu: visible test command only.",
         reply_markup=main_inline_keyboard(),
     )
 
@@ -890,6 +882,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"BUTTON CALLBACK DATA: {data}")
 
     await query.answer("Принято")
+
+    if data == "menu:testsignal_help":
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Use /testsignal ADDRESS to run the MSF-style analysis pipeline.",
+        )
+        return
 
     if data == "menu:status":
         await context.bot.send_message(chat_id=chat_id, text="Проверяю системы...")

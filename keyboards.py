@@ -4,13 +4,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMa
 def main_reply_keyboard():
     return ReplyKeyboardMarkup(
         [
-            ["/status", "/menu"],
-            ["/micro", "/degen", "/scan", "/hot"],
-            ["/watchlist", "/checkwatch"],
-            ["/refreshwatch", "/alertsnow"],
-            ["/arkhamstatus", "/arktoken", "/wallet"],
-            ["/watchwallet", "/walletlist", "/checkwallets"],
-            ["/token", "/morning", "/evening"],
+            ["/testsignal"],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -20,32 +14,7 @@ def main_reply_keyboard():
 def main_inline_keyboard():
     return InlineKeyboardMarkup(
         [
-            [
-                InlineKeyboardButton("✅ Status", callback_data="menu:status"),
-                InlineKeyboardButton("🧨 Scan Micro", callback_data="scan:micro"),
-            ],
-            [
-                InlineKeyboardButton("🎰 Scan Degen", callback_data="scan:degen"),
-                InlineKeyboardButton("🔍 Scan Normal", callback_data="scan:normal"),
-            ],
-            [
-                InlineKeyboardButton("🔥 Hot", callback_data="scan:hot"),
-            ],
-            [
-                InlineKeyboardButton("📋 Watchlist", callback_data="watch:list"),
-                InlineKeyboardButton("🔁 Check Watch", callback_data="watch:check"),
-            ],
-            [
-                InlineKeyboardButton("👛 Walletlist", callback_data="wallet:list"),
-                InlineKeyboardButton("🔁 Check Wallets", callback_data="wallet:check"),
-            ],
-            [
-                InlineKeyboardButton("🧪 Token Help", callback_data="menu:token_help"),
-                InlineKeyboardButton("🌅 Morning", callback_data="menu:morning"),
-            ],
-            [
-                InlineKeyboardButton("🌙 Evening", callback_data="menu:evening"),
-            ],
+            [InlineKeyboardButton("/testsignal", callback_data="menu:testsignal_help")],
         ]
     )
 

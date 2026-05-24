@@ -30,3 +30,4 @@
 - Added Phase 1 write-only SQLite persistence for MSF final scan maker trades at `data/rab9_trades.db`, gated by `RAB9_DB_ENABLED` and kept out of report/verdict read paths.
 - Added Phase 2 read-only cache window summaries for MSF reports, showing compact 1k/10k/all stored maker context without changing live verdict or pairmakers logic.
 - Improved MSF cache window trend wording to explain whether the recent 1k or wider 10k history is cleaner while keeping the block compact.
+- Hid legacy Telegram reply/inline menu buttons from the visible UI, leaving `/testsignal` as the only visible keyboard command while keeping old command handlers available for manual typing.
