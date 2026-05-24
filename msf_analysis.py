@@ -89,12 +89,18 @@ def top_maker_concentration(makers):
     return makers[0].get("trades", 0) / total_trades
 
 
-def meaning_for_state(state):
-    meanings = {
-        "Weak/Noisy": (
+def meaning_for_state(state, mode="normal"):
+    weak_noisy_meaning = (
+        "Activity exists on this pair, but wallet behavior remained noisy even after deeper scan; "
+        "no clear accumulation or distribution structure emerged."
+        if mode == "deep"
+        else (
             "Activity exists on this pair, but most wallets show few trades; "
             "there is no clear accumulation or distribution pattern in this shallow scan."
-        ),
+        )
+    )
+    meanings = {
+        "Weak/Noisy": weak_noisy_meaning,
         "Accumulation": "Buy-heavy makers currently dominate the scanned window.",
         "Distribution": "Sell-heavy makers currently dominate the scanned window.",
         "Mixed/Choppy": "Both sides are active without clear directional control.",
@@ -164,7 +170,7 @@ def weak_ratio_for(buckets, unique_makers):
     return buckets["weak"] / unique_makers if unique_makers else 1.0
 
 
-def build_analyst_verdict(candidate, maker_result, makers, buckets, pair):
+def build_analyst_verdict(candidate, maker_result, makers, buckets, pair, mode="normal"):
     raw_trades = int(maker_result.get("raw_pair_trades_scanned") or 0)
     unique_makers = len(makers)
     weak_ratio = weak_ratio_for(buckets, unique_makers)
@@ -203,7 +209,7 @@ def build_analyst_verdict(candidate, maker_result, makers, buckets, pair):
     return {
         "state": state,
         "why": build_why_bullets(raw_trades, unique_makers, buckets, weak_ratio, concentration, top_direction),
-        "meaning": meaning_for_state(state),
+        "meaning": meaning_for_state(state, mode),
         "risk": risks or ["Normal first-pass scan risk"],
         "next_check": next_check,
     }
@@ -214,7 +220,7 @@ def run_spiral_scan(pair, mode, candidate):
     filtered_items, dust = filter_msf_dust(maker_result.get("items") or [])
     makers = summarize_pair_makers(filtered_items)
     buckets = behavior_counts(makers)
-    verdict = build_analyst_verdict(candidate, maker_result, makers, buckets, pair)
+    verdict = build_analyst_verdict(candidate, maker_result, makers, buckets, pair, mode)
 
     unique_makers = len(makers)
     weak_ratio = weak_ratio_for(buckets, unique_makers)
