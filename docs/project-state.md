@@ -25,3 +25,4 @@
 - Added MSF-only dust filtering for verdict construction: known USD trades below $10 are ignored, missing-USD trades are kept, and `/pairmakers` output remains unchanged.
 - Added compact spiral trace plus raw/meaningful/dust/unknown trade counters to the MSF compact report.
 - Added Market Cap / FDV to compact MSF reports, preferring Dexscreener marketCap and falling back to fdv when marketCap is unavailable.
+- Extended MSF spiral analysis to normal -> deep -> deep50, using deep50 only when the deep verdict remains unclear and extending the HTTP processing timeout to 180 seconds.

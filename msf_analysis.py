@@ -101,7 +101,13 @@ def top_maker_concentration(makers):
     return makers[0].get("trades", 0) / total_trades
 
 
+UNCLEAR_STATES = {"Weak/Noisy", "Mixed/Choppy", "Mixed/Unstable", "Needs more data"}
+
+
 def meaning_for_state(state, mode="normal"):
+    if mode == "deep50" and state in UNCLEAR_STATES:
+        return "Structure remained unclear even after extended scan."
+
     weak_noisy_meaning = (
         "Activity exists on this pair, but wallet behavior remained noisy even after deeper scan; "
         "no clear accumulation or distribution structure emerged."
@@ -261,6 +267,13 @@ def should_deepen(scan):
     return state in {"Weak/Noisy", "Mixed/Choppy", "Needs more data"}
 
 
+def should_run_deep50(scan):
+    state = scan["verdict"]["state"]
+    if scan_failed(scan):
+        return False
+    return state in UNCLEAR_STATES
+
+
 def top_wallets(scan, limit=5):
     return {row["wallet"] for row in (scan.get("makers") or [])[:limit]}
 
@@ -294,7 +307,7 @@ def apply_spiral_stability(scans):
         final["verdict"] = {
             **deep_scan["verdict"],
             "state": "Mixed/Unstable",
-            "meaning": meaning_for_state("Mixed/Unstable"),
+            "meaning": meaning_for_state("Mixed/Unstable", deep_scan["mode"]),
             "why": [
                 f"Normal scan was {normal_scan['verdict']['state']}, deep scan was {deep_scan['verdict']['state']}",
                 f"Top maker overlap between normal and deep: {overlap}",
@@ -307,11 +320,32 @@ def apply_spiral_stability(scans):
     return final
 
 
+def prefer_deep50_next_check(final_scan):
+    if final_scan["mode"] != "deep50":
+        return
+
+    verdict = final_scan["verdict"]
+    if not verdict.get("next_check", "").startswith("/pairmakers"):
+        return
+
+    makers = final_scan.get("makers") or []
+    if makers:
+        verdict["next_check"] = f"/makertrades {final_scan['pair']} {makers[0]['wallet']}"
+    else:
+        verdict["next_check"] = "Monitor next MSF signal on this token"
+
+
 def run_spiral(pair, candidate):
     scans = [run_spiral_scan(pair, "normal", candidate)]
     if should_deepen(scans[0]):
         scans.append(run_spiral_scan(pair, "deep", candidate))
-    return scans, apply_spiral_stability(scans)
+        deep_final = apply_spiral_stability(scans)
+        if deep_final["mode"] == "deep" and should_run_deep50(deep_final):
+            scans.append(run_spiral_scan(pair, "deep50", candidate))
+
+    final_scan = apply_spiral_stability(scans)
+    prefer_deep50_next_check(final_scan)
+    return scans, final_scan
 
 
 def format_spiral_trace(scans, final_scan):
