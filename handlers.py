@@ -1087,8 +1087,10 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if rab9_signal_match:
         address = rab9_signal_match.group("address")
+        logger.info("RAB9_SIGNAL received: %s from chat %s", address, update.effective_chat.id)
         await update.message.reply_text("🔎 RAB9 начал анализ MSF-сигнала...")
         result = await asyncio.to_thread(build_msf_signal_analysis_text, address)
+        logger.info("RAB9_SIGNAL analysis complete: %d chars", len(result))
         await reply_long(update, result, main_reply_keyboard())
         return
 
