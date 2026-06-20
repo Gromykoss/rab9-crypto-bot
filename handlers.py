@@ -58,6 +58,7 @@ RAB9_SIGNAL_RE = re.compile(
     r"\bRAB9_SIGNAL\s+solana\s+(?P<address>[1-9A-HJ-NP-Za-km-z]{32,44})\b",
     re.IGNORECASE,
 )
+TESTSIGNAL_PENDING = set()
 ALLOWED_FLOW_PERIODS = {"1h", "6h", "12h", "24h", "7d", "30d"}
 FLOW_PERIOD_HINT = "Допустимый период: 1h, 6h, 12h, 24h, 7d, 30d"
 
@@ -125,6 +126,34 @@ def compact_log_value(value, left=6, right=4) -> str:
     return f"{text[:left]}...{text[-right:]}"
 
 
+def pending_key(update: Update):
+    if not update.effective_chat or not update.effective_user:
+        return None
+    return (update.effective_chat.id, update.effective_user.id)
+
+
+def extract_testsignal_address(text: str):
+    text = (text or "").strip()
+    if not text:
+        return None
+
+    if is_msf_solana_address(text):
+        return text
+
+    solana_match = SOLANA_RE.search(text)
+    if solana_match and ("dexscreener.com/solana/" in text.lower() or is_msf_solana_address(solana_match.group(0))):
+        return solana_match.group(0)
+
+    return None
+
+
+async def run_testsignal_analysis(update: Update, address: str):
+    logger.info("Manual testsignal triggered for %s", address)
+    await update.message.reply_text("🔎 RAB9 начал анализ MSF-сигнала...")
+    text = await asyncio.to_thread(build_msf_signal_analysis_text, address)
+    await reply_long(update, text, main_reply_keyboard())
+
+
 def telegram_safe_plain_text(text) -> str:
     text = "" if text is None else str(text)
     return "".join(ch for ch in text if ch in "\n\t" or ord(ch) >= 32)
@@ -188,16 +217,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "RAB9 Crypto Intel Bot online.\n\n"
-        "Сетка сканеров:\n"
-        "/micro — MC $20K–$100K\n"
-        "/degen — MC $100K–$2M\n"
-        "/scan — MC $2M–$15M\n\n"
-        "Watchlist:\n"
-        "/watch solana ADDRESS заметка\n"
-        "/watchlist\n"
-        "/checkwatch\n"
-        "/refreshwatch\n"
-        "/unwatch ADDRESS",
+        "Visible test command:\n"
+        "/testsignal ADDRESS",
         reply_markup=main_reply_keyboard(),
     )
 
@@ -209,7 +230,7 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await update.message.reply_text(
-        "RAB9 меню. Выбирай действие:",
+        "RAB9 menu: visible test command only.",
         reply_markup=main_inline_keyboard(),
     )
 
@@ -572,19 +593,25 @@ async def testsignal_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     if len(context.args) < 1:
-        await update.message.reply_text("Формат:\n/testsignal ADDRESS", reply_markup=main_reply_keyboard())
+        key = pending_key(update)
+        if key:
+            TESTSIGNAL_PENDING.add(key)
+        await update.message.reply_text(
+            "Пришли Solana token address или Dexscreener link для тестового анализа.",
+            reply_markup=main_reply_keyboard(),
+        )
         return
 
-    address = context.args[0].strip()
+    address = extract_testsignal_address(" ".join(context.args))
 
-    if not is_msf_solana_address(address):
+    if not address:
         await update.message.reply_text("Invalid Solana address.", reply_markup=main_reply_keyboard())
         return
 
-    logger.info("Manual testsignal triggered for %s", address)
-    await update.message.reply_text("🔎 RAB9 начал анализ MSF-сигнала...")
-    text = await asyncio.to_thread(build_msf_signal_analysis_text, address)
-    await reply_long(update, text, main_reply_keyboard())
+    key = pending_key(update)
+    if key:
+        TESTSIGNAL_PENDING.discard(key)
+    await run_testsignal_analysis(update, address)
 
 
 async def walletprofile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -891,6 +918,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.answer("Принято")
 
+    if data == "menu:testsignal_help":
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Use /testsignal ADDRESS to run the MSF-style analysis pipeline.",
+        )
+        return
+
     if data == "menu:status":
         await context.bot.send_message(chat_id=chat_id, text="Проверяю системы...")
         text = await asyncio.to_thread(build_status_text)
@@ -1045,6 +1079,7 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     text = (update.message.text or "").strip()
+    key = pending_key(update)
 
     rab9_signal_match = RAB9_SIGNAL_RE.search(text)
     evm_match = EVM_RE.search(text)
@@ -1057,6 +1092,19 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await reply_long(update, result, main_reply_keyboard())
         return
 
+    if key in TESTSIGNAL_PENDING:
+        address = extract_testsignal_address(text)
+        if not address:
+            await update.message.reply_text(
+                "Не вижу Solana-адрес. Пришли token address или Dexscreener link.",
+                reply_markup=main_reply_keyboard(),
+            )
+            return
+
+        TESTSIGNAL_PENDING.discard(key)
+        await run_testsignal_analysis(update, address)
+        return
+
     if evm_match:
         address = evm_match.group(0)
         await update.message.reply_text(
@@ -1066,11 +1114,6 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     if sol_match:
-        address = sol_match.group(0)
-        await update.message.reply_text(
-            f"Похоже на Solana-адрес:\n{address}\n\nЧто делаем?",
-            reply_markup=token_chain_keyboard(address, "solana"),
-        )
         return
 
 
