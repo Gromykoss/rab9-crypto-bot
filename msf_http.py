@@ -16,7 +16,13 @@ logger = logging.getLogger("rab9_crypto_intel_bot")
 
 
 async def send_msf_pairresolve(application: Application, address: str):
+    logger.info("MSF analysis started for: %s", address)
     text = await asyncio.to_thread(build_msf_signal_analysis_text, address)
+    logger.info("MSF analysis complete: %d chars", len(text))
+    # Log wallet intelligence section for Hermes monitoring
+    for line in text.splitlines():
+        if any(kw in line for kw in ["Wallet Intelligence", "Кабалы", "Auto-escalation", "Инфраструктура"]):
+            logger.info("INTEL: %s", line.strip())
 
     for chunk in split_text(text):
         await application.bot.send_message(
