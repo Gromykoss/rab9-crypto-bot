@@ -11,3 +11,5 @@ wallet_watchlist.json
 
 *_backup_*.py
 *_before_*.py
+data/rab9_trades.db
+rab9-crypto-hermes.service
