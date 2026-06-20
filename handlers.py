@@ -1091,6 +1091,10 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("🔎 RAB9 начал анализ MSF-сигнала...")
         result = await asyncio.to_thread(build_msf_signal_analysis_text, address)
         logger.info("RAB9_SIGNAL analysis complete: %d chars", len(result))
+        # Log wallet intelligence section for Hermes monitoring
+        for line in result.splitlines():
+            if "Wallet Intelligence" in line or "Кабалы" in line or "Auto-escalation" in line or "Инфраструктура" in line:
+                logger.info("INTEL: %s", line.strip())
         await reply_long(update, result, main_reply_keyboard())
         return
 
