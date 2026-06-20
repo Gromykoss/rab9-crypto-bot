@@ -1,0 +1,17 @@
+[Unit]
+Description=RAB9 Crypto Intel Bot (Hermes-managed)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hermes-workspace/rab9
+EnvironmentFile=/home/hermes-workspace/rab9/.env
+ExecStart=/home/hermes-workspace/rab9/venv/bin/python /home/hermes-workspace/rab9/rab9_bot.py
+Restart=always
+RestartSec=5
+User=hermes-user
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

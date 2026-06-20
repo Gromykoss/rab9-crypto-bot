@@ -40,7 +40,7 @@ from arkham import (
 from price_sources import build_price_source_text
 from swap_sources import build_wallet_swaps_text
 from maker_sources import build_maker_find_text, build_maker_trades_text, build_pair_makers_text
-from msf_analysis import build_msf_signal_analysis_text
+from msf_analysis import build_msf_signal_analysis_text, build_compact_analysis_text
 from pair_sources import build_pair_resolve_text
 from wallet_profile import build_wallet_profile_text
 from wallet_watch import (
@@ -1088,14 +1088,13 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if rab9_signal_match:
         address = rab9_signal_match.group("address")
         logger.info("RAB9_SIGNAL received: %s from chat %s", address, update.effective_chat.id)
-        await update.message.reply_text("🔎 RAB9 начал анализ MSF-сигнала...")
-        result = await asyncio.to_thread(build_msf_signal_analysis_text, address)
+        await update.message.reply_text("🔎 Анализирую...")
+        result = await asyncio.to_thread(build_compact_analysis_text, address)
         logger.info("RAB9_SIGNAL analysis complete: %d chars", len(result))
-        # Log wallet intelligence section for Hermes monitoring
         for line in result.splitlines():
-            if "Wallet Intelligence" in line or "Кабалы" in line or "Auto-escalation" in line or "Инфраструктура" in line:
+            if any(kw in line for kw in ["Кабалы", "Инфраструктура", "⚠️"]):
                 logger.info("INTEL: %s", line.strip())
-        await reply_long(update, result, main_reply_keyboard())
+        await update.message.reply_text(result)
         return
 
     if key in TESTSIGNAL_PENDING:
@@ -1122,13 +1121,13 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if sol_match:
         address = sol_match.group(0)
         logger.info("Solana address detected: %s from chat %s", address, update.effective_chat.id)
-        await update.message.reply_text("🔎 Анализирую Solana-адрес...")
-        result = await asyncio.to_thread(build_msf_signal_analysis_text, address)
+        await update.message.reply_text("🔎 Анализирую...")
+        result = await asyncio.to_thread(build_compact_analysis_text, address)
         logger.info("Solana analysis complete: %d chars", len(result))
         for line in result.splitlines():
-            if any(kw in line for kw in ["Wallet Intelligence", "Кабалы", "Auto-escalation", "Инфраструктура"]):
+            if any(kw in line for kw in ["Кабалы", "Инфраструктура", "⚠️"]):
                 logger.info("INTEL: %s", line.strip())
-        await reply_long(update, result, main_reply_keyboard())
+        await update.message.reply_text(result)
         return
 
 

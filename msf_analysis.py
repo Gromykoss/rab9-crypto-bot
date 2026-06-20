@@ -124,3 +124,72 @@ def build_msf_signal_analysis_text(address: str):
     )
 
     return "\n".join(summary_lines)
+
+
+def build_compact_analysis_text(address: str):
+    """Compact analysis for auto-respond: key metrics + wallet intel only."""
+    pair_resolve_text = build_pair_resolve_text(address)
+    pair = extract_recommended_pair(pair_resolve_text)
+
+    if not pair:
+        # Unresolved — return short message
+        return "⚠️ Не удалось определить pair для этого адреса."
+
+    result = get_birdeye_pair_makers(pair, mode="normal")
+    items = result.get("items") or []
+    makers = summarize_pair_makers(items)
+
+    buy_heavy = len([m for m in makers if m.get("net_direction") == "buy-heavy"])
+    sell_heavy = len([m for m in makers if m.get("net_direction") == "sell-heavy"])
+    mixed = len([m for m in makers if m.get("net_direction") == "mixed"])
+    weak = len([m for m in makers if m.get("trades", 0) < 3])
+
+    # Extract token info from pair_resolve_text
+    token_symbol = "?"
+    dex = "?"
+    liq = "?"
+    mc = "?"
+    for line in pair_resolve_text.splitlines():
+        if line.startswith("Token:") and token_symbol == "?":
+            token_symbol = line.split(":", 1)[1].strip() if ":" in line else "?"
+        if line.startswith("DEX:") or line.startswith("Dex:"):
+            dex = line.split(":", 1)[1].strip() if ":" in line else "?"
+        if line.startswith("Liq:") or line.startswith("Liquidity:"):
+            liq = line.split(":", 1)[1].strip() if ":" in line else "?"
+
+    # Wallet intel
+    cabal = _get_cabal()
+    xref = cross_reference_makers(makers, cabal)
+
+    # Auto-escalation
+    buy_ratio = buy_heavy / max(sell_heavy, 1)
+    concentration = sum(m["trades"] for m in makers[:5]) / max(sum(m["trades"] for m in makers), 1)
+    should_escalate, escalate_reason, _ = auto_escalation_check(
+        len(makers), xref["cabal_count"], buy_ratio, concentration
+    )
+
+    # Fail gracefully if no makers found
+    if not makers:
+        return f"🔍 `{token_symbol}` | {dex} | liq={liq}\n⚠️ Мейкеры не найдены — недостаточно данных."
+
+    lines = [
+        f"🔍 **{token_symbol}** | {dex}",
+        f"Pair: `{compact(pair)}`",
+        f"👥 Makers: {len(makers)} (buy-heavy: {buy_heavy}, sell-heavy: {sell_heavy}, mixed: {mixed})",
+    ]
+
+    top5 = makers[:5]
+    top5_str = " • ".join(
+        f"`{m['wallet'][:6]}…` {m['trades']}t" for m in top5
+    )
+    lines.append(f"Топ-5: {top5_str}")
+
+    if xref["summary"]:
+        lines.append(xref["summary"])
+
+    if should_escalate:
+        lines.append(f"⚠️ {escalate_reason} — `/makertrades {compact(pair)} 50 deep50`")
+
+    lines.append("_Без PnL, без торговых советов._")
+
+    return "\n".join(lines)
