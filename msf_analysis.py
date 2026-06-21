@@ -33,6 +33,7 @@ def compact(value, left=6, right=4):
 
 from pair_sources import build_pair_resolve_text
 from maker_sources import get_birdeye_pair_makers, summarize_pair_makers
+from token_intel import ask_grok
 
 
 PAIR_RECOMMENDATION_RE = re.compile(r"Use this address for /makertrades:\s*(?P<pair>\S+)")
@@ -127,69 +128,164 @@ def build_msf_signal_analysis_text(address: str):
 
 
 def build_compact_analysis_text(address: str):
-    """Compact analysis for auto-respond: key metrics + wallet intel only."""
+    """Compact analysis for auto-respond: token name, MC, makers, kabals, verdict."""
+    import requests
+    from config import BIRDEYE_API_KEY
+
     pair_resolve_text = build_pair_resolve_text(address)
     pair = extract_recommended_pair(pair_resolve_text)
 
     if not pair:
-        # Unresolved — return short message
         return "⚠️ Не удалось определить pair для этого адреса."
 
     result = get_birdeye_pair_makers(pair, mode="normal")
     items = result.get("items") or []
     makers = summarize_pair_makers(items)
 
+    # ── Token metadata: MC, symbol ──
+    token_name = "?"
+    token_mc = "?"
+    dex = "?"
+
+    if BIRDEYE_API_KEY:
+        try:
+            meta = requests.get(
+                "https://public-api.birdeye.so/defi/token_overview",
+                headers={"accept": "application/json", "X-API-KEY": BIRDEYE_API_KEY, "x-chain": "solana"},
+                params={"address": address},
+                timeout=15,
+            )
+            if meta.ok:
+                data = (meta.json() or {}).get("data") or {}
+                token_name = data.get("symbol") or data.get("name") or "?"
+                token_mc_raw = data.get("marketCap") or data.get("mc") or data.get("market_cap")
+                if token_mc_raw:
+                    if token_mc_raw >= 1_000_000:
+                        token_mc = f"${token_mc_raw/1_000_000:.1f}M"
+                    elif token_mc_raw >= 1_000:
+                        token_mc = f"${token_mc_raw/1_000:.0f}K"
+                    else:
+                        token_mc = f"${token_mc_raw}"
+        except Exception:
+            pass
+
+    # ── DEX fallback ──
+    for line in pair_resolve_text.splitlines():
+        if line.startswith("#1") and dex == "?" and "dex:" in line:
+            dex_val = line.split("dex:", 1)[1].split("|")[0].strip() if "dex:" in line else "?"
+            if dex_val and dex_val != "n/a":
+                dex = dex_val
+
     buy_heavy = len([m for m in makers if m.get("net_direction") == "buy-heavy"])
     sell_heavy = len([m for m in makers if m.get("net_direction") == "sell-heavy"])
     mixed = len([m for m in makers if m.get("net_direction") == "mixed"])
-    weak = len([m for m in makers if m.get("trades", 0) < 3])
 
-    # Extract token info from pair_resolve_text
-    token_symbol = "?"
-    dex = "?"
-    liq = "?"
-    mc = "?"
-    for line in pair_resolve_text.splitlines():
-        if line.startswith("Token:") and token_symbol == "?":
-            token_symbol = line.split(":", 1)[1].strip() if ":" in line else "?"
-        if line.startswith("DEX:") or line.startswith("Dex:"):
-            dex = line.split(":", 1)[1].strip() if ":" in line else "?"
-        if line.startswith("Liq:") or line.startswith("Liquidity:"):
-            liq = line.split(":", 1)[1].strip() if ":" in line else "?"
-
-    # Wallet intel
+    # ── Wallet intel ──
     cabal = _get_cabal()
     xref = cross_reference_makers(makers, cabal)
+    cabal_count = xref.get("cabal_count", 0)
 
-    # Auto-escalation
-    buy_ratio = buy_heavy / max(sell_heavy, 1)
-    concentration = sum(m["trades"] for m in makers[:5]) / max(sum(m["trades"] for m in makers), 1)
-    should_escalate, escalate_reason, _ = auto_escalation_check(
-        len(makers), xref["cabal_count"], buy_ratio, concentration
+    # ── Kabal per top-5 ──
+    cabal_wallets = {addr.lower(): info for addr, info in cabal.items()} if cabal else {}
+    top5_kabal_count = sum(
+        1 for m in makers[:5] if m["wallet"].lower() in cabal_wallets
     )
 
-    # Fail gracefully if no makers found
+    # ── Verdict ──
+    buy_ratio = buy_heavy / max(sell_heavy, 1)
     if not makers:
-        return f"🔍 `{token_symbol}` | {dex} | liq={liq}\n⚠️ Мейкеры не найдены — недостаточно данных."
+        verdict = "🟡 Нет данных"
+    elif token_mc != "?" and token_mc.startswith("$") and float(token_mc.replace("$", "").replace("M", "").replace("K", "")) > 0.5:
+        verdict = "🟢 Стоит следить" if cabal_count >= 1 or buy_ratio >= 0.5 else "🟡 Под вопросом"
+    elif len(makers) >= 10 and buy_ratio >= 1.5 and cabal_count >= 1:
+        verdict = "🟢 Стоит следить"
+    elif len(makers) >= 10:
+        verdict = "🟡 Стоит следить"
+    elif len(makers) >= 5 and buy_ratio >= 1.0:
+        verdict = "🟡 Стоит следить"
+    else:
+        verdict = "⚫ Проходной"
 
+    # ── Fail gracefully if no makers ──
+    if not makers:
+        header = f"🔍 {token_name} | MC: {token_mc} | DEX: {dex}"
+        lines = [
+            header,
+            f"Pair: {compact(pair)}",
+            "",
+            "─── Makers ───",
+            "⚠️ Мейкеры не найдены — недостаточно данных.",
+            "",
+            "─── Вердикт ───",
+            f"→ {verdict}",
+            "_Без PnL, без торговых советов._",
+        ]
+        return "\n".join(lines)
+
+    # ── Header ──
     lines = [
-        f"🔍 **{token_symbol}** | {dex}",
-        f"Pair: `{compact(pair)}`",
-        f"👥 Makers: {len(makers)} (buy-heavy: {buy_heavy}, sell-heavy: {sell_heavy}, mixed: {mixed})",
+        f"🔍 {token_name} | MC: {token_mc} | DEX: {dex}",
+        f"Pair: {compact(pair)}",
     ]
 
-    top5 = makers[:5]
-    top5_str = " • ".join(
-        f"`{m['wallet'][:6]}…` {m['trades']}t" for m in top5
-    )
-    lines.append(f"Топ-5: {top5_str}")
+    # ── Makers section ──
+    lines.append("")
+    lines.append("─── Makers ───")
+    lines.append(f"👥 Всего: {len(makers)} ({buy_heavy} buy / {sell_heavy} sell / {mixed} mix)")
 
-    if xref["summary"]:
+    top5 = makers[:5]
+    top5_parts = []
+    for i, m in enumerate(top5, 1):
+        addr = m["wallet"]
+        short = f"{addr[:6]}...{addr[-4:]}" if len(addr) > 10 else addr
+        kabal_tag = " Kabal" if addr.lower() in cabal_wallets else ""
+        top5_parts.append(f"  {i}. {short} — {m['trades']} trades{kabal_tag}")
+    lines.append("Топ-5:")
+    lines.extend(top5_parts)
+
+    if top5_kabal_count > 0:
+        lines.append(f"⚠️ Kabals в топ-5: {top5_kabal_count}")
+
+    if xref.get("summary"):
+        lines.append("")
+        lines.append("─── Wallet Intel ───")
         lines.append(xref["summary"])
 
-    if should_escalate:
-        lines.append(f"⚠️ {escalate_reason} — `/makertrades {compact(pair)} 50 deep50`")
+    # ── Grok analytical summary ──
+    grok_summary = ""
+    try:
+        grok_prompt = (
+            f"Токен {token_name}, MC {token_mc}, DEX {dex}. "
+            f"Мейкеров: {len(makers)} ({buy_heavy} buy / {sell_heavy} sell / {mixed} mix). "
+            f"Buy ratio: {buy_ratio:.1f}. "
+            f"Kabals: {cabal_count} (в топ-5: {top5_kabal_count}). "
+            f"Вердикт: {verdict}. "
+            "Дай ОДНО короткое предложение на русском — аналитический вывод: что происходит с токеном по этим данным, "
+            "на что обратить внимание. Без PnL, без «рекомендую», без нумерации."
+        )
+        raw = ask_grok(grok_prompt).strip()
+        if raw and not raw.lower().startswith("grok"):
+            grok_summary = raw.lstrip("•-→0123456789. )")
+    except Exception:
+        pass
 
+    if grok_summary:
+        lines.append("")
+        lines.append("─── AI-анализ ───")
+        lines.append(f"📊 {grok_summary}")
+
+    # ── Auto-escalation ──
+    concentration = sum(m["trades"] for m in top5) / max(sum(m["trades"] for m in makers), 1)
+    should_escalate, escalate_reason, _ = auto_escalation_check(
+        len(makers), cabal_count, buy_ratio, concentration
+    )
+    if should_escalate:
+        lines.append("")
+        lines.append(f"⚠️ {escalate_reason}")
+
+    lines.append("")
+    lines.append("─── Вердикт ───")
+    lines.append(f"→ {verdict}")
     lines.append("_Без PnL, без торговых советов._")
 
     return "\n".join(lines)

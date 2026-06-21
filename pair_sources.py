@@ -221,6 +221,9 @@ def build_pair_resolve_text(address):
     dex_candidates = dex.get("candidates") or []
     birdeye_candidates = birdeye.get("candidates") or []
     recommendation = next((item.get("market") for item in birdeye_candidates if item.get("market") and item.get("market") != "n/a"), None)
+    # Fallback: use DexScreener pair if Birdeye returned nothing
+    if recommendation is None:
+        recommendation = next((item.get("pair") for item in dex_candidates if item.get("pair") and item.get("pair") != "n/a"), None)
 
     lines = [
         "Pair Resolve Diagnostic",

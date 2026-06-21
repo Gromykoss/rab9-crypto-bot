@@ -2,7 +2,7 @@ import re
 import asyncio
 import logging
 
-from telegram import Update
+from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -1094,7 +1094,7 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         for line in result.splitlines():
             if any(kw in line for kw in ["Кабалы", "Инфраструктура", "⚠️"]):
                 logger.info("INTEL: %s", line.strip())
-        await update.message.reply_text(result)
+        await update.message.reply_text(result, reply_markup=ReplyKeyboardRemove())
         return
 
     if key in TESTSIGNAL_PENDING:
@@ -1127,7 +1127,7 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         for line in result.splitlines():
             if any(kw in line for kw in ["Кабалы", "Инфраструктура", "⚠️"]):
                 logger.info("INTEL: %s", line.strip())
-        await update.message.reply_text(result)
+        await update.message.reply_text(result, reply_markup=ReplyKeyboardRemove())
         return
 
 

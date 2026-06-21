@@ -131,12 +131,12 @@ def cross_reference_makers(makers, cabal_library=None):
     if cabal:
         lines.append(f"🎯 Кабалы ({len(cabal)}):")
         for c in cabal[:5]:
-            lines.append(f"  • `{c['maker'][:8]}…` — {c['intel']['winner_count']} winner tokens, {c['intel']['total_trades']} trades ({c['intel']['signal_strength']})")
+            lines.append(f"  • {c['maker'][:8]}... — {c['intel']['winner_count']} winner tokens, {c['intel']['total_trades']} trades ({c['intel']['signal_strength']})")
 
     if infra and len(infra) <= 3:
         lines.append(f"🤖 Инфраструктура ({len(infra)}):")
         for i in infra[:3]:
-            lines.append(f"  • `{i['maker'][:8]}…` — {i['intel']['all_tokens']} tokens (MEV/bot)")
+            lines.append(f"  • {i['maker'][:8]}... — {i['intel']['all_tokens']} tokens (MEV/bot)")
 
     summary = "\n".join(lines) if lines else ""
 
@@ -197,7 +197,7 @@ def delta_compare(new_makers, pair_address):
         new = next((m for m in new_makers if m.get("maker") == addr), {})
         old_net = old["buys"] - old["sells"]
         changes.append(
-            f"  • `{addr[:8]}…` — {old['trades']} trades historically, now active"
+            f"  • {addr[:8]}... — {old['trades']} trades historically, now active"
         )
 
     lines = []
