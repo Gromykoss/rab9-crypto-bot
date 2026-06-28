@@ -70,15 +70,20 @@ def token_label(value):
 def normalize_dex_pair(item):
     liquidity = item.get("liquidity") if isinstance(item.get("liquidity"), dict) else {}
     volume = item.get("volume") if isinstance(item.get("volume"), dict) else {}
+    base_token = item.get("baseToken") or {}
+    quote_token = item.get("quoteToken") or {}
 
     return {
         "pair": item.get("pairAddress") or item.get("pair_address") or item.get("address") or "n/a",
         "dex": item.get("dexId") or item.get("dex") or "n/a",
         "chain": item.get("chainId") or item.get("chain") or "n/a",
-        "base": token_label(item.get("baseToken")),
-        "quote": token_label(item.get("quoteToken")),
+        "base": token_label(base_token),
+        "quote": token_label(quote_token),
         "liquidity": liquidity.get("usd"),
         "volume24h": volume.get("h24") or volume.get("24h") or item.get("volume24h"),
+        # Extract token metadata for name/MC lookup
+        "token_name": base_token.get("symbol") or base_token.get("name"),
+        "token_address": base_token.get("address"),
     }
 
 

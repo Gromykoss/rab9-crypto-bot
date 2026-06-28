@@ -1,4 +1,6 @@
 import re
+import os
+import json
 
 from address_validation import is_msf_solana_address
 from maker_sources import build_pair_makers_text
@@ -49,6 +51,32 @@ def extract_recommended_pair(pair_resolve_text: str):
         return None
 
     return pair
+
+
+def get_token_address_from_dex(address: str) -> str | None:
+    """Try DexScreener pair endpoint to extract base token address.
+    Handles pair addresses (pumpswap/raydium) that Birdeye can't resolve.
+    """
+    try:
+        import requests
+        from config import DEXSCREENER_BASE_URL
+        r = requests.get(
+            f"{DEXSCREENER_BASE_URL}/latest/dex/pairs/solana/{address}",
+            timeout=10,
+        )
+        if r.ok:
+            data = r.json()
+            pairs = data.get("pairs") or []
+            if isinstance(data, dict) and not pairs:
+                pairs = [data] if data.get("pairAddress") else []
+            for p in pairs:
+                base = p.get("baseToken") or {}
+                tok_addr = base.get("address")
+                if tok_addr and tok_addr != address and is_msf_solana_address(tok_addr):
+                    return tok_addr
+    except Exception:
+        pass
+    return None
 
 
 def extract_line(text: str, prefix: str):
@@ -132,11 +160,20 @@ def build_compact_analysis_text(address: str):
     import requests
     from config import BIRDEYE_API_KEY
 
+    # Initialize enrichment contexts (filled later by radars)
+    score_context = ""
+    radar_context = ""
+    chart_context = ""
+    onchain_context = ""
+
     pair_resolve_text = build_pair_resolve_text(address)
     pair = extract_recommended_pair(pair_resolve_text)
 
     if not pair:
         return "⚠️ Не удалось определить pair для этого адреса."
+
+    # Get actual token address from DexScreener (pair → token)
+    token_addr = get_token_address_from_dex(address) or address
 
     result = get_birdeye_pair_makers(pair, mode="normal")
     items = result.get("items") or []
@@ -152,7 +189,7 @@ def build_compact_analysis_text(address: str):
             meta = requests.get(
                 "https://public-api.birdeye.so/defi/token_overview",
                 headers={"accept": "application/json", "X-API-KEY": BIRDEYE_API_KEY, "x-chain": "solana"},
-                params={"address": address},
+                params={"address": token_addr},
                 timeout=15,
             )
             if meta.ok:
@@ -169,12 +206,17 @@ def build_compact_analysis_text(address: str):
         except Exception:
             pass
 
-    # ── DEX fallback ──
+    # ── DEX + name fallback (DexScreener for PumpSwap tokens Birdeye misses) ──
     for line in pair_resolve_text.splitlines():
         if line.startswith("#1") and dex == "?" and "dex:" in line:
             dex_val = line.split("dex:", 1)[1].split("|")[0].strip() if "dex:" in line else "?"
             if dex_val and dex_val != "n/a":
                 dex = dex_val
+        # Extract token name from DexScreener pair resolve: "name: TOKEN"
+        if token_name == "?" and "name:" in line and "base " in line:
+            name_part = line.split("name:", 1)[1].strip()
+            if name_part and name_part != "n/a" and len(name_part) <= 30:
+                token_name = name_part
 
     buy_heavy = len([m for m in makers if m.get("net_direction") == "buy-heavy"])
     sell_heavy = len([m for m in makers if m.get("net_direction") == "sell-heavy"])
@@ -191,10 +233,34 @@ def build_compact_analysis_text(address: str):
         1 for m in makers[:5] if m["wallet"].lower() in cabal_wallets
     )
 
-    # ── Verdict ──
+    # ── Verdict (scoring-based for meme coins) ──
     buy_ratio = buy_heavy / max(sell_heavy, 1)
+    # Use meme_score tier if available, fall back to old logic
+    meme_tier = ""
+    if score_context:
+        # Extract tier from score_context
+        if "HIGH CONVICTION" in score_context:
+            meme_tier = "HIGH CONVICTION"
+        elif "SOLID" in score_context:
+            meme_tier = "SOLID"
+        elif "SPECULATIVE" in score_context:
+            meme_tier = "SPECULATIVE"
+        elif "AVOID" in score_context:
+            meme_tier = "AVOID"
+
     if not makers:
         verdict = "🟡 Нет данных"
+    elif meme_tier == "HIGH CONVICTION":
+        verdict = "🟢 HIGH CONVICTION"
+    elif meme_tier == "SOLID":
+        if buy_ratio < 0.3:
+            verdict = "🟢 SOLID (pressure watch)"
+        else:
+            verdict = "🟢 SOLID"
+    elif meme_tier == "SPECULATIVE":
+        verdict = "🟡 SPECULATIVE"
+    elif meme_tier == "AVOID":
+        verdict = "⚫ AVOID"
     elif token_mc != "?" and token_mc.startswith("$") and float(token_mc.replace("$", "").replace("M", "").replace("K", "")) > 0.5:
         verdict = "🟢 Стоит следить" if cabal_count >= 1 or buy_ratio >= 0.5 else "🟡 Под вопросом"
     elif len(makers) >= 10 and buy_ratio >= 1.5 and cabal_count >= 1:
@@ -251,6 +317,135 @@ def build_compact_analysis_text(address: str):
         lines.append("─── Wallet Intel ───")
         lines.append(xref["summary"])
 
+    # ── Token X account lookup (from DexScreener socials) ──
+    x_account_info = ""
+    try:
+        import requests as req
+        dr = req.get(
+            f"https://api.dexscreener.com/latest/dex/pairs/solana/{address}",
+            timeout=10,
+        )
+        if dr.ok:
+            pairs = dr.json().get("pairs", [])
+            if pairs:
+                socials = pairs[0].get("info", {}).get("socials", [])
+                for s in socials:
+                    if s.get("type") == "twitter":
+                        handle = s.get("url", "").rstrip("/").split("/")[-1].split("?")[0]
+                        if handle and handle not in ("?", "twitter.com", ""):
+                            from radar_x import _load_oauth, lookup_account
+                            acc = lookup_account(handle)
+                            if acc:
+                                x_account_info = f"X: @{acc['username']} — {acc['followers']:,} подписчиков, {acc['tweets']:,} твитов"
+                                # Check community sentiment file
+                                sentiment_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "community_sentiment.jsonl")
+                                if os.path.exists(sentiment_file):
+                                    with open(sentiment_file) as sf:
+                                        lines = sf.readlines()
+                                        if lines:
+                                            last = json.loads(lines[-1])
+                                            x_account_info += f" | sentiment: {last.get('sentiment','?')}"
+                        break
+    except Exception:
+        pass
+    try:
+        import os, subprocess
+        rab9_dir = os.path.dirname(os.path.abspath(__file__))
+        venv_python = os.path.join(rab9_dir, "venv", "bin", "python3")
+
+        # Build search query: token name + address
+        radar_query = f"{token_name} {address}" if token_name != "?" else address
+        # X search: use lowercase for meme coins (Toly tweets "burnie" not "BURNIE")
+        x_query = token_name.lower() if token_name != "?" else address[:12]
+
+        # Run radars + chart in parallel
+        def _run_radar(script, query):
+            try:
+                r = subprocess.run(
+                    [venv_python, os.path.join(rab9_dir, script), query],
+                    capture_output=True, text=True, timeout=15,
+                )
+                if r.returncode == 0 and r.stdout.strip():
+                    return r.stdout.strip()
+            except Exception:
+                pass
+            return ""
+
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        x_raw = ""
+        gh_raw = ""
+        chart_raw = ""
+        onchain_raw = ""
+        score_raw = ""
+        with ThreadPoolExecutor(max_workers=5) as ex:
+            futures = {
+                ex.submit(_run_radar, "radar_x.py", x_query): "x",
+                ex.submit(_run_radar, "radar_gh.py", token_name if token_name != "?" else address): "gh",
+                ex.submit(_run_radar, "chart_analysis.py", token_addr): "chart",
+                ex.submit(_run_radar, "onchain_check.py", token_addr): "onchain",
+                ex.submit(_run_radar, "meme_score.py", token_addr): "score",
+            }
+            for f in as_completed(futures, timeout=20):
+                kind = futures[f]
+                try:
+                    raw = f.result()
+                except Exception:
+                    raw = ""
+                if kind == "x":
+                    x_raw = raw
+                elif kind == "gh":
+                    gh_raw = raw
+                elif kind == "chart":
+                    chart_raw = raw
+                elif kind == "onchain":
+                    onchain_raw = raw
+                elif kind == "score":
+                    score_raw = raw
+
+        # Format for Grok
+        if x_raw:
+            try:
+                import json
+                x_data = json.loads(x_raw)
+                from radar_x import format_for_grok as fmt_x
+                radar_context += fmt_x(x_data) + "\n"
+            except Exception:
+                pass
+        if gh_raw:
+            try:
+                import json
+                gh_data = json.loads(gh_raw)
+                from radar_gh import format_for_grok as fmt_gh
+                radar_context += fmt_gh(gh_data) + "\n"
+            except Exception:
+                pass
+        if chart_raw:
+            try:
+                import json
+                chart_data = json.loads(chart_raw)
+                from chart_analysis import format_for_grok as fmt_chart
+                chart_context = fmt_chart(chart_data)
+            except Exception:
+                pass
+        if onchain_raw:
+            try:
+                import json
+                onchain_data = json.loads(onchain_raw)
+                from onchain_check import format_for_grok as fmt_onchain
+                onchain_context = fmt_onchain(onchain_data)
+            except Exception:
+                pass
+        if score_raw:
+            try:
+                import json
+                score_data = json.loads(score_raw)
+                from meme_score import format_for_grok as fmt_score
+                score_context = fmt_score(score_data)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
     # ── Grok analytical summary ──
     grok_summary = ""
     try:
@@ -259,9 +454,35 @@ def build_compact_analysis_text(address: str):
             f"Мейкеров: {len(makers)} ({buy_heavy} buy / {sell_heavy} sell / {mixed} mix). "
             f"Buy ratio: {buy_ratio:.1f}. "
             f"Kabals: {cabal_count} (в топ-5: {top5_kabal_count}). "
-            f"Вердикт: {verdict}. "
-            "Дай ОДНО короткое предложение на русском — аналитический вывод: что происходит с токеном по этим данным, "
-            "на что обратить внимание. Без PnL, без «рекомендую», без нумерации."
+            f"Вердикт: {verdict}."
+        )
+        if x_account_info:
+            grok_prompt += f"\n\nАККАУНТ ТОКЕНА: {x_account_info}"
+        if radar_context:
+            grok_prompt += (
+                f"\n\nДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ (радар):\n{radar_context}"
+                "\n\nИспользуй эти данные чтобы уточнить вывод: есть ли негативные сигналы (rug-pull, scam), "
+                "есть ли реальная dev-активность, обсуждается ли токен позитивно или негативно."
+            )
+        if onchain_context:
+            grok_prompt += (
+                f"\n\nON-CHAIN АНАЛИЗ:\n{onchain_context}"
+            )
+        if chart_context:
+            grok_prompt += (
+                f"\n\nДОЛГОСРОЧНЫЙ ТРЕНД:\n{chart_context}"
+            )
+        if score_context:
+            grok_prompt += (
+                f"\n\nСКОРИНГ МЕМКОИНА:\n{score_context}"
+                "\n\nИспользуй скор для калибровки вывода: HIGH CONVICTION/SOLID/SPECULATIVE/AVOID."
+            )
+        grok_prompt += (
+            "\n\nСТРУКТУРА ОТВЕТА (строго): ДВА предложения НА РУССКОМ. "
+            "Предложение 1: токен, MC, X-аккаунт (followers, активность). Если followers >10K — это СИЛЬНЫЙ сигнал. "
+            "ОБЯЗАТЕЛЬНО упомяни influencer backing (KB или LIVE). "
+            "Предложение 2: ончейн-риски, тренд цены (если DOWNTREND — напиши %), итоговый вердикт. "
+            "Без PnL, без «рекомендую», без нумерации. ТОЛЬКО РУССКИЙ."
         )
         raw = ask_grok(grok_prompt).strip()
         if raw and not raw.lower().startswith("grok"):
