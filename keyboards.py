@@ -13,7 +13,8 @@ def main_reply_keyboard():
             ["/token", "/morning", "/evening"],
         ],
         resize_keyboard=True,
-        is_persistent=True,
+        is_persistent=False,
+        one_time_keyboard=True,
     )
 
 
