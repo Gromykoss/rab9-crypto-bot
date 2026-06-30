@@ -65,6 +65,12 @@ def search_x(query: str) -> dict:
     total_likes = 0
     total_rt = 0
 
+    SPAM_PATTERNS = [
+        "voted YES for", "get listed on FOMO", "almost on moonshot",
+        "only N more votes", "is about to get listed on moonshot",
+        "is so close for moonshot", "just voted YES",
+    ]
+
     try:
         r = requests.get(
             "https://api.x.com/2/tweets/search/recent",
@@ -86,6 +92,9 @@ def search_x(query: str) -> dict:
                 username = user.get("username", "?")
                 followers = user.get("public_metrics", {}).get("followers_count", 0)
                 text = t.get("text", "")[:200]
+                text_lower = text.lower()
+                if any(p.lower() in text_lower for p in SPAM_PATTERNS) or ("moonshot" in text_lower and ("vote" in text_lower or "voted" in text_lower)):
+                    continue  # skip spam vote-begging
                 metrics = t.get("public_metrics", {})
                 likes = metrics.get("like_count", 0)
                 rt = metrics.get("retweet_count", 0)
@@ -137,6 +146,9 @@ def lookup_account(username: str) -> dict | None:
     except Exception:
         pass
     return None
+
+
+def format_for_terminal(result: dict) -> str:
     if not result.get("ok"):
         return "X: нет данных."
 
@@ -158,6 +170,32 @@ def lookup_account(username: str) -> dict | None:
             lines.append(f"  {p[:180]}")
 
     return "\n".join(lines)
+
+
+def format_for_grok(result: dict) -> str:
+    """Format X radar results for Grok prompt injection."""
+    if not result.get("ok"):
+        return "X: нет данных."
+
+    lines = []
+    eng = result.get("engagement", {})
+    count = result.get("count", 0)
+    if eng or count:
+        lines.append(f"X: {count} упоминаний, {eng.get('likes',0)}♥ {eng.get('retweets',0)}↻")
+
+    infs = result.get("influencers", [])
+    if infs:
+        lines.append(f"Influencer backing: {len(infs)}")
+        for inf in infs[:4]:
+            lines.append(f"  {inf}")
+
+    posts = result.get("posts", [])
+    if posts:
+        lines.append(f"Обсуждение:")
+        for p in posts[:3]:
+            lines.append(f"  {p[:200]}")
+
+    return "\n".join(lines) if lines else "X: нет значимых упоминаний."
 
 
 if __name__ == "__main__":

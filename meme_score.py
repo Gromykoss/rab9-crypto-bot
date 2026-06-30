@@ -56,8 +56,22 @@ def fetch_market(address: str) -> dict:
     return {}
 
 
+def _get_token_age_days(onchain: dict, market: dict) -> float:
+    """Get token age in days. Uses Birdeye creationTime (unix sec) or DexScreener pairCreatedAt (unix ms)."""
+    import time
+    # Birdeye creationTime is unix seconds
+    bt = onchain.get("creationTime", 0) or 0
+    if bt > 1e9:
+        return (time.time() - bt) / 86400
+    # DexScreener pairCreatedAt is unix ms
+    pc = market.get("pairCreatedAt", 0) or 0
+    if pc > 1e9:
+        return (time.time() * 1000 - pc) / (86400 * 1000)
+    return 0
+
+
 def score_security(onchain: dict) -> tuple[int, list[str]]:
-    """Pillar 1: Security & On-chain hygiene (20 pts)."""
+    """Pillar 1: Security & On-chain hygiene (20 pts). Survival tokens (>7d) get conviction credit."""
     score = 20
     notes = []
 
@@ -74,9 +88,15 @@ def score_security(onchain: dict) -> tuple[int, list[str]]:
         notes.append("✓ metadata immutable")
 
     creator_pct = float(onchain.get("creatorPercentage", 0) or 0)
+    age_days = _get_token_age_days(onchain, {})
+    survival = age_days > 7
+
     if creator_pct > 5:
-        score -= 8
-        notes.append(f"⚠️ creator holds {creator_pct*100:.0f}%")
+        if survival:
+            notes.append(f"· creator holds {creator_pct*100:.0f}% — conviction ({age_days:.0f}d)")
+        else:
+            score -= 8
+            notes.append(f"⚠️ creator holds {creator_pct*100:.0f}% — fresh risk")
     elif creator_pct > 0:
         notes.append(f"✓ creator {creator_pct*100:.1f}%")
 
@@ -84,13 +104,25 @@ def score_security(onchain: dict) -> tuple[int, list[str]]:
     if top10_pct < 1:  # Value is decimal (0.1927 = 19.27%)
         top10_pct *= 100
     if top10_pct > 50:
-        score -= 8
-        notes.append(f"⚠️ top10={top10_pct:.0f}% concentrated")
+        if survival:
+            score -= 2
+            notes.append(f"· top10={top10_pct:.0f}% — conviction ({age_days:.0f}d survival)")
+        else:
+            score -= 8
+            notes.append(f"⚠️ top10={top10_pct:.0f}% concentrated")
     elif top10_pct > 30:
-        score -= 4
-        notes.append(f"⚠️ top10={top10_pct:.0f}% moderate")
+        if survival:
+            notes.append(f"· top10={top10_pct:.0f}% — held through accumulation")
+        else:
+            score -= 4
+            notes.append(f"⚠️ top10={top10_pct:.0f}% moderate")
     else:
         notes.append(f"✓ top10={top10_pct:.0f}% distributed")
+
+    # Survival bonus: immutable + no freeze + >7 days
+    if survival and not onchain.get("freezeAuthority") and not onchain.get("mutableMetadata"):
+        score += 3
+        notes.append(f"✓ survival bonus ({age_days:.0f}d + clean security) +3")
 
     lock = onchain.get("lockInfo")
     if not lock:
@@ -175,25 +207,59 @@ def score_market(market: dict, chart: dict | None) -> tuple[int, list[str]]:
             notes.append(f"24h={ch24:+.0f}% pump")
             score -= 2  # FOMO risk
 
+    # ATH drawdown — critical: SOLID coin shouldn't be -80%+ from ATH
+    ath_dd = chart.get("ath_drawdown", 0) if chart else 0
+    if ath_dd and ath_dd < -80:
+        score -= 8
+        notes.append(f"🔴 ATH drawdown={ath_dd:+.0f}% — deep loss")
+    elif ath_dd and ath_dd < -50:
+        score -= 4
+        notes.append(f"🟠 ATH drawdown={ath_dd:+.0f}% — significant")
+
+    # Trend phase penalty
+    phase = (chart or {}).get("phase", "")
+    trend = (chart or {}).get("trend", "")
+    if "decay" in phase.lower() or "затухание" in phase.lower():
+        score -= 8
+        notes.append("🔴 decay phase — dying")
+    elif "distribution" in phase.lower() or "раздача" in phase.lower():
+        score -= 5
+        notes.append("🟠 distribution phase — selling pressure")
+    elif "markup" in phase.lower() or "разгон" in phase.lower():
+        score -= 3
+        notes.append("⚠️ markup phase — entry risk")
+    if "downtrend" in trend.lower():
+        score -= 3
+        notes.append(f"📉 {trend}")
+
     return max(0, score), notes
 
 
 def score_holders(onchain: dict) -> tuple[int, list[str]]:
-    """Pillar 3: Holder Distribution (15 pts)."""
+    """Pillar 3: Holder Distribution (15 pts). Survival tokens (>7d) get conviction credit."""
     score = 15
     notes = []
 
     top10 = float(onchain.get("top10HolderPercent", 0) or 0)
     creator = float(onchain.get("creatorPercentage", 0) or 0)
+    age_days = _get_token_age_days(onchain, {})
+    survival = age_days > 7
 
     if top10 > 0:
         top10_pct = top10 * 100
         if top10_pct > 40:
-            score -= 8
-            notes.append(f"⚠️ top10={top10_pct:.0f}% — whale zone")
+            if survival:
+                notes.append(f"· top10={top10_pct:.0f}% — distribution held ({age_days:.0f}d)")
+            else:
+                score -= 8
+                notes.append(f"⚠️ top10={top10_pct:.0f}% — whale zone")
         elif top10_pct > 25:
-            score -= 4
-            notes.append(f"top10={top10_pct:.0f}% — moderate")
+            if survival:
+                score -= 1
+                notes.append(f"top10={top10_pct:.0f}% — held steady ({age_days:.0f}d)")
+            else:
+                score -= 4
+                notes.append(f"top10={top10_pct:.0f}% — moderate")
         elif top10_pct > 10:
             notes.append(f"✓ top10={top10_pct:.0f}% — good")
         else:
@@ -201,10 +267,18 @@ def score_holders(onchain: dict) -> tuple[int, list[str]]:
 
     if creator > 0:
         if creator > 0.10:
-            score -= 5
-            notes.append(f"⚠️ creator={creator*100:.0f}% — large bag")
+            if survival:
+                notes.append(f"· creator {creator*100:.0f}% — conviction bag ({age_days:.0f}d)")
+            else:
+                score -= 5
+                notes.append(f"⚠️ creator={creator*100:.0f}% — large bag")
         elif creator < 0.02:
             notes.append(f"✓ creator={creator*100:.1f}% — minimal")
+
+    # Survival bonus for holders
+    if survival and creator > 0.10:
+        score += 3
+        notes.append(f"✓ holders conviction ({age_days:.0f}d + creator held) +3")
 
     return max(0, score), notes
 
@@ -290,10 +364,24 @@ def score_narrative(token_name: str, market: dict) -> tuple[int, list[str]]:
     return max(0, min(10, score)), notes
 
 
-def score_influencers() -> tuple[int, list[str]]:
-    """Pillar 6: Influencer Backing (10 pts)."""
-    # Will be overridden if radar data available
-    return 5, ["⚠️ influencer check not yet run — run radar_x first"]
+def score_influencers(token_name: str = "", market: dict = None) -> tuple[int, list[str]]:
+    """Pillar 6: Influencer Backing (10 pts). Checks X account presence from DexScreener socials."""
+    score = 5
+    notes = []
+
+    if market:
+        info = market.get("info", {}) or {}
+        socials = info.get("socials", []) or []
+        has_twitter = any(s.get("type") == "twitter" for s in socials)
+        if has_twitter:
+            score += 2
+            notes.append("✓ X account found in DexScreener")
+        else:
+            notes.append("✗ no X account")
+    else:
+        notes.append("⚠️ market data unavailable")
+
+    return max(0, min(10, score)), notes
 
 
 def compute_score(address: str, chart_data: dict | None = None) -> dict:
@@ -334,7 +422,7 @@ def compute_score(address: str, chart_data: dict | None = None) -> dict:
     total += s
     max_total += 10
 
-    s, n = score_influencers()
+    s, n = score_influencers(token_name, market)
     pillars["influencers"] = {"score": s, "max": 10, "notes": n}
     total += s
     max_total += 10
@@ -376,10 +464,28 @@ def format_for_grok(result: dict) -> str:
 
 
 if __name__ == "__main__":
+    import sys
     if len(sys.argv) < 2:
-        print(json.dumps({"ok": False, "error": "Usage: meme_score.py <address>"}))
+        print(json.dumps({"ok": False, "error": "Usage: meme_score.py <address> [--chart]"}))
         sys.exit(1)
 
-    result = compute_score(sys.argv[1])
+    address = sys.argv[1]
+    chart_data = None
+    if "--chart" in sys.argv:
+        # Run chart_analysis internally
+        import subprocess, os
+        rab9_dir = os.path.dirname(os.path.abspath(__file__))
+        chart_addr = address
+        try:
+            r = subprocess.run(
+                [sys.executable, os.path.join(rab9_dir, "chart_analysis.py"), chart_addr],
+                capture_output=True, text=True, timeout=20,
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                chart_data = json.loads(r.stdout.strip())
+        except Exception as e:
+            print(f"[SCORE] chart_analysis failed: {e}", file=sys.stderr)
+
+    result = compute_score(address, chart_data)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     sys.exit(0 if result["ok"] else 1)

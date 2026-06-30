@@ -1,5 +1,6 @@
 import re
 import os
+import sys
 import json
 
 from address_validation import is_msf_solana_address
@@ -165,6 +166,7 @@ def build_compact_analysis_text(address: str):
     radar_context = ""
     chart_context = ""
     onchain_context = ""
+    creator_context = ""
 
     pair_resolve_text = build_pair_resolve_text(address)
     pair = extract_recommended_pair(pair_resolve_text)
@@ -232,61 +234,6 @@ def build_compact_analysis_text(address: str):
     top5_kabal_count = sum(
         1 for m in makers[:5] if m["wallet"].lower() in cabal_wallets
     )
-
-    # ── Verdict (scoring-based for meme coins) ──
-    buy_ratio = buy_heavy / max(sell_heavy, 1)
-    # Use meme_score tier if available, fall back to old logic
-    meme_tier = ""
-    if score_context:
-        # Extract tier from score_context
-        if "HIGH CONVICTION" in score_context:
-            meme_tier = "HIGH CONVICTION"
-        elif "SOLID" in score_context:
-            meme_tier = "SOLID"
-        elif "SPECULATIVE" in score_context:
-            meme_tier = "SPECULATIVE"
-        elif "AVOID" in score_context:
-            meme_tier = "AVOID"
-
-    if not makers:
-        verdict = "🟡 Нет данных"
-    elif meme_tier == "HIGH CONVICTION":
-        verdict = "🟢 HIGH CONVICTION"
-    elif meme_tier == "SOLID":
-        if buy_ratio < 0.3:
-            verdict = "🟢 SOLID (pressure watch)"
-        else:
-            verdict = "🟢 SOLID"
-    elif meme_tier == "SPECULATIVE":
-        verdict = "🟡 SPECULATIVE"
-    elif meme_tier == "AVOID":
-        verdict = "⚫ AVOID"
-    elif token_mc != "?" and token_mc.startswith("$") and float(token_mc.replace("$", "").replace("M", "").replace("K", "")) > 0.5:
-        verdict = "🟢 Стоит следить" if cabal_count >= 1 or buy_ratio >= 0.5 else "🟡 Под вопросом"
-    elif len(makers) >= 10 and buy_ratio >= 1.5 and cabal_count >= 1:
-        verdict = "🟢 Стоит следить"
-    elif len(makers) >= 10:
-        verdict = "🟡 Стоит следить"
-    elif len(makers) >= 5 and buy_ratio >= 1.0:
-        verdict = "🟡 Стоит следить"
-    else:
-        verdict = "⚫ Проходной"
-
-    # ── Fail gracefully if no makers ──
-    if not makers:
-        header = f"🔍 {token_name} | MC: {token_mc} | DEX: {dex}"
-        lines = [
-            header,
-            f"Pair: {compact(pair)}",
-            "",
-            "─── Makers ───",
-            "⚠️ Мейкеры не найдены — недостаточно данных.",
-            "",
-            "─── Вердикт ───",
-            f"→ {verdict}",
-            "_Без PnL, без торговых советов._",
-        ]
-        return "\n".join(lines)
 
     # ── Header ──
     lines = [
@@ -367,7 +314,8 @@ def build_compact_analysis_text(address: str):
                 )
                 if r.returncode == 0 and r.stdout.strip():
                     return r.stdout.strip()
-            except Exception:
+            except Exception as e:
+                print(f"[ENRICH] {script} failed: {e}", file=sys.stderr)
                 pass
             return ""
 
@@ -376,20 +324,21 @@ def build_compact_analysis_text(address: str):
         gh_raw = ""
         chart_raw = ""
         onchain_raw = ""
-        score_raw = ""
-        with ThreadPoolExecutor(max_workers=5) as ex:
+        creator_raw = ""
+        with ThreadPoolExecutor(max_workers=6) as ex:
             futures = {
                 ex.submit(_run_radar, "radar_x.py", x_query): "x",
                 ex.submit(_run_radar, "radar_gh.py", token_name if token_name != "?" else address): "gh",
                 ex.submit(_run_radar, "chart_analysis.py", token_addr): "chart",
                 ex.submit(_run_radar, "onchain_check.py", token_addr): "onchain",
-                ex.submit(_run_radar, "meme_score.py", token_addr): "score",
+                ex.submit(_run_radar, "creator_monitor.py", token_addr): "creator",
             }
             for f in as_completed(futures, timeout=20):
                 kind = futures[f]
                 try:
                     raw = f.result()
-                except Exception:
+                except Exception as e:
+                    print(f"[ENRICH] {kind} future failed: {e}", file=sys.stderr)
                     raw = ""
                 if kind == "x":
                     x_raw = raw
@@ -399,8 +348,20 @@ def build_compact_analysis_text(address: str):
                     chart_raw = raw
                 elif kind == "onchain":
                     onchain_raw = raw
-                elif kind == "score":
-                    score_raw = raw
+                elif kind == "creator":
+                    creator_raw = raw
+
+        # Run meme_score in-process with chart data already available (avoids subprocess timeout)
+        score_raw = ""
+        try:
+            chart_data_for_score = None
+            if chart_raw:
+                chart_data_for_score = json.loads(chart_raw)
+            from meme_score import compute_score, format_for_grok as fmt_score
+            score_result = compute_score(token_addr, chart_data_for_score)
+            score_raw = json.dumps(score_result, ensure_ascii=False)
+        except Exception as e:
+            print(f"[ENRICH] meme_score in-process failed: {e}", file=sys.stderr)
 
         # Format for Grok
         if x_raw:
@@ -409,7 +370,8 @@ def build_compact_analysis_text(address: str):
                 x_data = json.loads(x_raw)
                 from radar_x import format_for_grok as fmt_x
                 radar_context += fmt_x(x_data) + "\n"
-            except Exception:
+            except Exception as e:
+                print(f"[ENRICH] radar_x format failed: {e}", file=sys.stderr)
                 pass
         if gh_raw:
             try:
@@ -417,7 +379,8 @@ def build_compact_analysis_text(address: str):
                 gh_data = json.loads(gh_raw)
                 from radar_gh import format_for_grok as fmt_gh
                 radar_context += fmt_gh(gh_data) + "\n"
-            except Exception:
+            except Exception as e:
+                print(f"[ENRICH] radar_gh format failed: {e}", file=sys.stderr)
                 pass
         if chart_raw:
             try:
@@ -425,7 +388,8 @@ def build_compact_analysis_text(address: str):
                 chart_data = json.loads(chart_raw)
                 from chart_analysis import format_for_grok as fmt_chart
                 chart_context = fmt_chart(chart_data)
-            except Exception:
+            except Exception as e:
+                print(f"[ENRICH] chart_analysis format failed: {e}", file=sys.stderr)
                 pass
         if onchain_raw:
             try:
@@ -433,7 +397,8 @@ def build_compact_analysis_text(address: str):
                 onchain_data = json.loads(onchain_raw)
                 from onchain_check import format_for_grok as fmt_onchain
                 onchain_context = fmt_onchain(onchain_data)
-            except Exception:
+            except Exception as e:
+                print(f"[ENRICH] onchain_check format failed: {e}", file=sys.stderr)
                 pass
         if score_raw:
             try:
@@ -441,10 +406,124 @@ def build_compact_analysis_text(address: str):
                 score_data = json.loads(score_raw)
                 from meme_score import format_for_grok as fmt_score
                 score_context = fmt_score(score_data)
-            except Exception:
+            except Exception as e:
+                print(f"[ENRICH] meme_score format failed: {e}", file=sys.stderr)
                 pass
-    except Exception:
+        if creator_raw:
+            try:
+                import json
+                creator_data = json.loads(creator_raw)
+                from creator_monitor import format_for_grok as fmt_creator
+                creator_context = fmt_creator(creator_data)
+            except Exception as e:
+                print(f"[ENRICH] creator_monitor format failed: {e}", file=sys.stderr)
+                pass
+    except Exception as e:
+        print(f"[ENRICH] enrichment block failed: {e}", file=sys.stderr)
         pass
+
+    # ── Verdict (scoring-based for meme coins) ──
+    buy_ratio = buy_heavy / max(sell_heavy, 1)
+    # Use meme_score tier if available, fall back to old logic
+    meme_tier = ""
+    if score_context:
+        # Extract tier from score_context
+        if "HIGH CONVICTION" in score_context:
+            meme_tier = "HIGH CONVICTION"
+        elif "SOLID" in score_context:
+            meme_tier = "SOLID"
+        elif "SPECULATIVE" in score_context:
+            meme_tier = "SPECULATIVE"
+        elif "AVOID" in score_context:
+            meme_tier = "AVOID"
+
+    if not makers:
+        verdict = "🟡 Нет данных"
+    elif meme_tier == "HIGH CONVICTION":
+        verdict = "🟢 HIGH CONVICTION"
+    elif meme_tier == "SOLID":
+        if buy_ratio < 0.3:
+            verdict = "🟢 SOLID (pressure watch)"
+        else:
+            verdict = "🟢 SOLID"
+    elif meme_tier == "SPECULATIVE":
+        verdict = "🟡 SPECULATIVE"
+    elif meme_tier == "AVOID":
+        verdict = "⚫ AVOID"
+    elif token_mc != "?" and token_mc.startswith("$") and float(token_mc.replace("$", "").replace("M", "").replace("K", "")) > 0.5:
+        verdict = "🟢 Стоит следить" if cabal_count >= 1 or buy_ratio >= 0.5 else "🟡 Под вопросом"
+    elif len(makers) >= 10 and buy_ratio >= 1.5 and cabal_count >= 1:
+        verdict = "🟢 Стоит следить"
+    elif len(makers) >= 10:
+        verdict = "🟡 Стоит следить"
+    elif len(makers) >= 5 and buy_ratio >= 1.0:
+        verdict = "🟡 Стоит следить"
+    else:
+        verdict = "⚫ Проходной"
+
+    # ── Chart phase adjustment: accumulation=upgrade, markup/decay=penalty ──
+    if chart_context:
+        chart_lower = chart_context.lower()
+        # Accumulation + rising volume = best entry — upgrade
+        if "накопление" in chart_lower and "vol ▲" in chart_lower:
+            upgrades = {
+                "🟡 SPECULATIVE": "🟢 SPECULATIVE (накопление ▲)",
+                "🟡 Стоит следить": "🟢 Стоит следить (накопление ▲)",
+                "🟡 Под вопросом": "🟡 Стоит следить (накопление ▲)",
+                "⚫ Проходной": "🟡 Под вопросом (накопление ▲)",
+                "⚫ AVOID": "🟡 SPECULATIVE (накопление ▲)",
+            }
+            if verdict in upgrades:
+                verdict = upgrades[verdict]
+        # Markup = already pumped, downgrade
+        elif "разгон" in chart_lower or "markup" in chart_lower:
+            downgrades = {
+                "🟢 HIGH CONVICTION": "🟡 HIGH CONVICTION (markup — поздно)",
+                "🟢 SOLID (pressure watch)": "🟡 SOLID (markup — поздно)",
+                "🟢 SOLID": "🟡 SOLID (markup — поздно)",
+                "🟢 Стоит следить": "🟡 Стоит следить (markup — поздно)",
+                "🟡 SPECULATIVE": "⚫ SPECULATIVE (markup — поздно)",
+            }
+            if verdict in downgrades:
+                verdict = downgrades[verdict]
+        # Decay = dying, hard avoid
+        elif "decay" in chart_lower or "затухание" in chart_lower:
+            downgrades = {
+                "🟢 HIGH CONVICTION": "🟡 SOLID (chart: decay)",
+                "🟢 SOLID (pressure watch)": "🟡 SPECULATIVE (chart: decay)",
+                "🟢 SOLID": "🟡 SPECULATIVE (chart: decay)",
+                "🟡 SPECULATIVE": "⚫ AVOID (chart: decay)",
+                "🟡 Стоит следить": "⚫ Проходной (chart: decay)",
+                "🟡 Под вопросом": "⚫ Проходной (chart: decay)",
+            }
+            if verdict in downgrades:
+                verdict = downgrades[verdict]
+        # Distribution = selling, downgrade (but don't kill SPECULATIVE — it's a timing signal, not terminal)
+        elif "distribution" in chart_lower or "раздача" in chart_lower:
+            downgrades = {
+                "🟢 HIGH CONVICTION": "🟡 SOLID (chart: distribution)",
+                "🟢 SOLID (pressure watch)": "🟡 SPECULATIVE (chart: distribution)",
+                "🟢 SOLID": "🟡 SPECULATIVE (chart: distribution)",
+                "🟡 SPECULATIVE": "🟡 SPECULATIVE (chart: distribution — wait)",  # Skill: "Wait" pattern, not AVOID
+            }
+            if verdict in downgrades:
+                verdict = downgrades[verdict]
+
+    # ── Fail gracefully if no makers ──
+    if not makers:
+        header = f"🔍 {token_name} | MC: {token_mc} | DEX: {dex}"
+        lines = [
+            header,
+            f"Pair: {compact(pair)}",
+            "",
+            "─── Makers ───",
+            "⚠️ Мейкеры не найдены — недостаточно данных.",
+            "",
+            "─── Вердикт ───",
+            f"→ {verdict}",
+            "_Без PnL, без торговых советов._",
+        ]
+        return "\n".join(lines)
 
     # ── Grok analytical summary ──
     grok_summary = ""
@@ -477,12 +556,14 @@ def build_compact_analysis_text(address: str):
                 f"\n\nСКОРИНГ МЕМКОИНА:\n{score_context}"
                 "\n\nИспользуй скор для калибровки вывода: HIGH CONVICTION/SOLID/SPECULATIVE/AVOID."
             )
+        if creator_context and "too early" not in creator_context.lower():
+            grok_prompt += (
+                f"\n\nКОШЕЛЁК СОЗДАТЕЛЯ:\n{creator_context}"
+                "\n\nУчти поведение создателя: conviction = НЕ продаёт >7 дней (BULLISH), "
+                "selling/dumped = продаёт (BEARISH). Упомяни это в выводе."
+            )
         grok_prompt += (
-            "\n\nСТРУКТУРА ОТВЕТА (строго): ДВА предложения НА РУССКОМ. "
-            "Предложение 1: токен, MC, X-аккаунт (followers, активность). Если followers >10K — это СИЛЬНЫЙ сигнал. "
-            "ОБЯЗАТЕЛЬНО упомяни influencer backing (KB или LIVE). "
-            "Предложение 2: ончейн-риски, тренд цены (если DOWNTREND — напиши %), итоговый вердикт. "
-            "Без PnL, без «рекомендую», без нумерации. ТОЛЬКО РУССКИЙ."
+            "\n\nСТРУКТУРА ОТВЕТА (строго): 4-5 ПРЕДЛОЖЕНИЙ НА РУССКОМ. 1) X presence, community size, influencer signals (LIVE > KB historical). 2) On-chain security & risks. 3) Chart trend & momentum. 4) Creator behavior (if available). 5) Integrated verdict with conviction level. Если только KB (исторические данные) — не акцентируй как текущий сигнал. Без PnL, без «рекомендую», без нумерации. ТОЛЬКО РУССКИЙ."
         )
         raw = ask_grok(grok_prompt).strip()
         if raw and not raw.lower().startswith("grok"):
