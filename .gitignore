@@ -8,8 +8,14 @@ __pycache__/
 watchlist.json
 alert_state.json
 wallet_watchlist.json
-
 *_backup_*.py
 *_before_*.py
 data/rab9_trades.db
 rab9-crypto-hermes.service
+# local secrets/runtime
+x_oauth.json
+msf_token.txt
+community_sentiment.jsonl
+data/
+.hermes/
+msf_offset.txt
