@@ -23,6 +23,11 @@ NEGATIVE_QUERY = (
     'BURNIE (rug OR scam OR dump OR dumped OR warning OR abandoned OR dead '
     'OR "exit liquidity") -is:retweet'
 )
+BULLISH_QUERY = (
+    'BURNIE (toly OR anatoly OR buy OR signal OR primed OR send OR sending '
+    'OR moonshot OR listing OR vote OR accumulation OR bottom OR bounce OR '
+    'pump OR breakout OR bullish) -is:retweet'
+)
 
 NEGATIVE_TERMS = (
     "rug",
@@ -51,6 +56,25 @@ POSITIVE_TERMS = (
     "based",
     "solid",
     "accumulation",
+    "primed",
+    "bounce",
+    "breakout",
+    "pump",
+)
+TOLY_TERMS = (
+    "toly",
+    "anatoly",
+    "yakovenko",
+    "@toly",
+)
+AI_BUY_TERMS = (
+    "buy signal",
+    "strong buy",
+    "target",
+    "upside",
+    "x from",
+    "openclaw",
+    "iscan",
 )
 
 
@@ -116,11 +140,13 @@ def build_snapshot() -> tuple[dict[str, Any], list[str]]:
     search_code, search_payload, search_raw = run_xurl(["search", COMMUNITY_QUERY, "-n", "10"])
     posts_code, posts_payload, posts_raw = run_xurl(["search", f"from:{ACCOUNT}", "-n", "10"])
     neg_code, neg_payload, neg_raw = run_xurl(["search", NEGATIVE_QUERY, "-n", "10"])
+    bull_code, bull_payload, bull_raw = run_xurl(["search", BULLISH_QUERY, "-n", "10"])
 
     for label, code, payload, raw in (
         (f"@{ACCOUNT} API", user_code, user_payload, user_raw),
         (f'X search "{COMMUNITY_QUERY}"', search_code, search_payload, search_raw),
         ("negative scan", neg_code, neg_payload, neg_raw),
+        ("bullish scan", bull_code, bull_payload, bull_raw),
         (f"@{ACCOUNT} recent posts", posts_code, posts_payload, posts_raw),
     ):
         err = first_error(label, code, payload, raw)
@@ -135,23 +161,51 @@ def build_snapshot() -> tuple[dict[str, Any], list[str]]:
     community_posts = items(search_payload)
     recent_posts = items(posts_payload)
     negative_posts = items(neg_payload)
+    bullish_posts = items(bull_payload)
     community_texts = [str(post.get("text") or "") for post in community_posts]
     negative_texts = [str(post.get("text") or "") for post in negative_posts]
-    all_scan_texts = community_texts + negative_texts
+    bullish_texts = [str(post.get("text") or "") for post in bullish_posts]
+    all_scan_texts = community_texts + negative_texts + bullish_texts
 
     neg_hits = term_count(all_scan_texts, NEGATIVE_TERMS) + term_count(
         all_scan_texts, SCAM_PATTERNS
     )
-    pos_hits = term_count(community_texts, POSITIVE_TERMS)
+    pos_hits = term_count(all_scan_texts, POSITIVE_TERMS)
+    toly_hits = term_count(all_scan_texts, TOLY_TERMS)
+    ai_buy_hits = term_count(all_scan_texts, AI_BUY_TERMS)
     strong_negative = [
         compact_text(text, 100)
         for text in all_scan_texts
         if any(term in text.lower() for term in NEGATIVE_TERMS + SCAM_PATTERNS)
     ][:3]
+    strong_bullish = [
+        compact_text(text, 100)
+        for text in bullish_texts
+        if any(term in text.lower() for term in POSITIVE_TERMS + TOLY_TERMS + AI_BUY_TERMS)
+    ][:3]
 
-    if strong_negative or neg_hits >= 2:
+    # Track follower growth from previous snapshot
+    prev_followers = 0
+    if OUTFILE.exists():
+        try:
+            with OUTFILE.open("r") as fh:
+                lines = fh.readlines()
+                if lines:
+                    prev = json.loads(lines[-1])
+                    prev_followers = prev.get("followers", 0)
+        except (json.JSONDecodeError, OSError):
+            pass
+    follower_delta = followers - prev_followers if prev_followers else 0
+
+    # Weighted sentiment: Toly + AI signals are strong bullish multipliers
+    bullish_score = (toly_hits * 3) + (ai_buy_hits * 2) + pos_hits + (1 if len(bullish_posts) >= 5 else 0) + (1 if follower_delta > 50 else 0)
+    bearish_score = neg_hits + len(strong_negative)
+
+    if strong_negative and neg_hits >= 3 and bullish_score < bearish_score:
         sentiment = "neg"
-    elif pos_hits > neg_hits and community_posts:
+    elif bullish_score > bearish_score:
+        sentiment = "pos"
+    elif toly_hits >= 1 or ai_buy_hits >= 2:
         sentiment = "pos"
     else:
         sentiment = "neutral"
@@ -168,10 +222,12 @@ def build_snapshot() -> tuple[dict[str, Any], list[str]]:
     notes = [
         f'X search "{COMMUNITY_QUERY}": {len(community_posts)} posts',
         f"negative scan: {len(negative_posts)} hits, strong_hits={len(strong_negative)}",
-        f"sentiment_terms neg={neg_hits} pos={pos_hits}",
+        f"bullish scan: {len(bullish_posts)} hits, toly={toly_hits} ai_buy={ai_buy_hits}",
+        f"sentiment_terms neg={neg_hits} pos={pos_hits} toly={toly_hits} ai={ai_buy_hits}",
     ]
     if followers:
-        notes.append(f"@{ACCOUNT}: {followers} followers, {tweet_count} tweets")
+        delta_str = f"+{follower_delta}" if follower_delta > 0 else str(follower_delta)
+        notes.append(f"@{ACCOUNT}: {followers} followers ({delta_str}), {tweet_count} tweets")
     if recent_posts:
         notes.append(
             f"recent {len(recent_posts)} posts: {recent_totals['likes']} likes, "
@@ -183,6 +239,8 @@ def build_snapshot() -> tuple[dict[str, Any], list[str]]:
         notes.append("strong_negative: " + " | ".join(strong_negative))
     elif not errors:
         notes.append("no rug-pull accusations or dump warnings detected")
+    if strong_bullish:
+        notes.append("strong_bullish: " + " | ".join(strong_bullish))
     if errors:
         notes.extend(errors)
 
@@ -214,6 +272,12 @@ def main() -> int:
     if snapshot["sentiment"] == "neg":
         print(
             "ALERT: BURNIE negative community signal\n"
+            f"followers={snapshot['followers']} sentiment={snapshot['sentiment']}\n"
+            f"notes={snapshot['notes']}"
+        )
+    elif snapshot["sentiment"] == "pos":
+        print(
+            "BULLISH: BURNIE positive drivers detected\n"
             f"followers={snapshot['followers']} sentiment={snapshot['sentiment']}\n"
             f"notes={snapshot['notes']}"
         )

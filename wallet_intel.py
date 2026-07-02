@@ -116,7 +116,8 @@ def cross_reference_makers(makers, cabal_library=None):
     infra = []
 
     for m in makers:
-        addr = m.get("maker", "")
+        # summarize_pair_makers returns "wallet" key, not "maker"
+        addr = m.get("wallet", "") or m.get("maker", "")
         if addr in cabal_library:
             info = cabal_library[addr]
             entry = {**m, "intel": info}
@@ -131,12 +132,15 @@ def cross_reference_makers(makers, cabal_library=None):
     if cabal:
         lines.append(f"🎯 Кабалы ({len(cabal)}):")
         for c in cabal[:5]:
-            lines.append(f"  • {c['maker'][:8]}... — {c['intel']['winner_count']} winner tokens, {c['intel']['total_trades']} trades ({c['intel']['signal_strength']})")
+            lines.append(f"  • {c['wallet'][:8]}... — {c['intel']['winner_count']} winner tokens, {c['intel']['total_trades']} trades ({c['intel']['signal_strength']})")
 
-    if infra and len(infra) <= 3:
+    if infra:
         lines.append(f"🤖 Инфраструктура ({len(infra)}):")
-        for i in infra[:3]:
-            lines.append(f"  • {i['maker'][:8]}... — {i['intel']['all_tokens']} tokens (MEV/bot)")
+        if len(infra) <= 3:
+            for i in infra[:3]:
+                lines.append(f"  • {i['wallet'][:8]}... — {i['intel']['all_tokens']} tokens (MEV/bot)")
+        else:
+            lines.append(f"  {len(infra)} кошельков (MEV/bot) — типично для ликвидных пар")
 
     summary = "\n".join(lines) if lines else ""
 
@@ -183,7 +187,7 @@ def delta_compare(new_makers, pair_address):
         return {"has_history": False, "summary": "📝 Первый скан для этого токена."}
 
     old_makers = {row["maker"]: dict(row) for row in hist}
-    new_maker_addrs = {m.get("maker", "") for m in new_makers}
+    new_maker_addrs = {m.get("wallet", "") or m.get("maker", "") for m in new_makers}
 
     # Find wallets present in both, only in old, only in new
     stayed = [a for a in old_makers if a in new_maker_addrs]
@@ -194,7 +198,7 @@ def delta_compare(new_makers, pair_address):
     changes = []
     for addr in stayed[:5]:
         old = old_makers[addr]
-        new = next((m for m in new_makers if m.get("maker") == addr), {})
+        new = next((m for m in new_makers if (m.get("wallet", "") or m.get("maker", "")) == addr), {})
         old_net = old["buys"] - old["sells"]
         changes.append(
             f"  • {addr[:8]}... — {old['trades']} trades historically, now active"

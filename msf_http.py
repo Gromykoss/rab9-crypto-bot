@@ -21,7 +21,7 @@ logger = logging.getLogger("rab9_crypto_intel_bot")
 
 async def send_msf_pairresolve(application: Application, address: str):
     logger.info("MSF analysis started for: %s", address)
-    text = await asyncio.to_thread(build_compact_analysis_text, address)
+    text = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
     logger.info("MSF analysis complete: %d chars", len(text))
 
     # ── Loop Memory: skip duplicates, record results ──
@@ -47,21 +47,16 @@ async def send_msf_pairresolve(application: Application, address: str):
         logger.info("DUPLICATE: token %s — %d duplicates total", address[:12], mem["duplicates"])
     try:
         from loop_verifier import verify_analysis
-        # Extract context for verifier
         import re
-        token_match = re.search(r'🔍 (\S+)', text)
-        mc_match = re.search(r'MC: (\S+)', text)
-        verdict_match = re.search(r'→ (\S+)', text)
-        ai_match = re.search(r'📊 (.+)', text)
 
+        token_match = re.search(r'🔍 (\S+)', text)
         token_name = token_match.group(1) if token_match else "?"
-        context = {
-            "mc": mc_match.group(1) if mc_match else "?",
-            "verdict": verdict_match.group(1) if verdict_match else "?",
-            "onchain_risk": "LOW" if "LOW" in text else ("HIGH" if "HIGH" in text else "?"),
-            "x_followers": "N/A",
-        }
+        # AI text: in full mode has "📊 " prefix, in summary mode also has it
+        ai_match = re.search(r'📊 (.+)', text)
         ai_text = ai_match.group(1) if ai_match else text
+
+        # Pass the FULL report as ground truth for the verifier
+        context = {"full_report": text}
 
         verification = verify_analysis(token_name, ai_text, context)
         v = verification.get("verdict", "PASS")

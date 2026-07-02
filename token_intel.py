@@ -39,7 +39,11 @@ def ask_grok(prompt: str) -> str:
                     "Отсутствие GitHub-активности для мемкоина = НОРМА (не red flag). "
                     "X-обсуждения и комьюнити = ключевой фактор для мемкоина (не dev). "
                     "Низкая ликвидность для мемкоина = нормально (не rug-pull признак). "
-                    "Rug-pull риск определяй по ON-CHAIN данным (freeze, lock, creator%), а не по отсутствию GitHub."
+                    "Rug-pull риск определяй по ON-CHAIN данным (freeze, lock, creator%), а не по отсутствию GitHub. "
+                    "МАНИПУЛЯЦИЯ — проверяй: "
+                    "1) Если в данных есть 'Community tags X but X never posted' или 'Manufactured narrative' — это FAKE backing, red flag. "
+                    "2) Если sell/buy > 3x — это КАБАЛ СБРАСЫВАЕТ на хомяках, а не 'органические продажи'. "
+                    "3) Если упоминается 'Kabal' в makers — это coordinated dump, не случайность."
                 ),
             },
             {
@@ -48,7 +52,7 @@ def ask_grok(prompt: str) -> str:
             },
         ],
         "temperature": 0.1,
-        "max_tokens": 350,
+        "max_tokens": 500,
     }
 
     try:

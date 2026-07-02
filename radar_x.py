@@ -48,7 +48,7 @@ def search_x(query: str) -> dict:
         if token_name.upper() in query_upper:
             for inf in data.get("influencers", []):
                 kb_influencers.append(
-                    f"⭐ KB: @{inf['handle']} ({inf['role']}) — {inf['evidence']}"
+                    f"⚠️ KB-HISTORICAL (unverified): @{inf['handle']} ({inf['role']}) — {inf['evidence']} [CHECK: did they actually post?]"
                 )
 
     if not auth:
@@ -64,6 +64,8 @@ def search_x(query: str) -> dict:
     live_influencers = []
     total_likes = 0
     total_rt = 0
+    spam_count = 0
+    kabal_warnings = []
 
     SPAM_PATTERNS = [
         "voted YES for", "get listed on FOMO", "almost on moonshot",
@@ -94,6 +96,7 @@ def search_x(query: str) -> dict:
                 text = t.get("text", "")[:200]
                 text_lower = text.lower()
                 if any(p.lower() in text_lower for p in SPAM_PATTERNS) or ("moonshot" in text_lower and ("vote" in text_lower or "voted" in text_lower)):
+                    spam_count += 1
                     continue  # skip spam vote-begging
                 metrics = t.get("public_metrics", {})
                 likes = metrics.get("like_count", 0)
@@ -114,12 +117,20 @@ def search_x(query: str) -> dict:
     # Merge KB + live influencers
     all_influencers = kb_influencers + live_influencers
 
+    # Build manipulation warnings
+    if spam_count >= 5:
+        kabal_warnings.append(f"⚠️ MANIPULATION: {spam_count} vote-spam posts detected — likely bot farm coordinating listing campaign")
+    if kb_influencers and not live_influencers:
+        kabal_warnings.append("⚠️ MANIPULATION: Influencer backing is KB-HISTORICAL only — NO live posts found. Community may be manufacturing narrative.")
+
     return {
         "ok": True, "query": clean_query,
         "posts": posts[:MAX_RESULTS],
         "influencers": all_influencers[:5],
         "engagement": {"likes": total_likes, "retweets": total_rt},
         "count": len(posts),
+        "spam_detected": spam_count,
+        "kabal_warnings": kabal_warnings,
     }
 
 
@@ -180,8 +191,14 @@ def format_for_grok(result: dict) -> str:
     lines = []
     eng = result.get("engagement", {})
     count = result.get("count", 0)
+    spam = result.get("spam_detected", 0)
     if eng or count:
-        lines.append(f"X: {count} упоминаний, {eng.get('likes',0)}♥ {eng.get('retweets',0)}↻")
+        lines.append(f"X: {count} упоминаний, {eng.get('likes',0)}♥ {eng.get('retweets',0)}↻, vote-spam filtered: {spam}")
+
+    # Kabal warnings FIRST (before influencer list)
+    warnings = result.get("kabal_warnings", [])
+    for w in warnings:
+        lines.append(w)
 
     infs = result.get("influencers", [])
     if infs:

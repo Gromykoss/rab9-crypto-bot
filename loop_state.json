@@ -15,9 +15,57 @@
       "verdict": "🟡",
       "tier": "",
       "duplicate": false
+    },
+    {
+      "address": "EKpQGSJtjMFq...",
+      "token": "$WIF",
+      "ts": 1782999934,
+      "verdict": "🟢",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "7GCihgDB8fe6...",
+      "token": "POPCAT",
+      "ts": 1783000130,
+      "verdict": "⚠️",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "DezXAZ8z7Pnr...",
+      "token": "Bonk",
+      "ts": 1783000309,
+      "verdict": "⚠️",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "GKDdjR8Nm4Y1...",
+      "token": "?",
+      "ts": 1783000599,
+      "verdict": "🟡",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "Ak7hDCxDSocD...",
+      "token": "SOLANGELES",
+      "ts": 1783000658,
+      "verdict": "⚠️",
+      "tier": "AVOID",
+      "duplicate": false
+    },
+    {
+      "address": "A9aWUTdyVV1R...",
+      "token": "ASTEROID",
+      "ts": 1783000726,
+      "verdict": "⚫",
+      "tier": "SPECULATIVE",
+      "duplicate": false
     }
   ],
   "duplicates": 0,
-  "total": 2,
-  "last_cleanup": 1782872186
+  "total": 8,
+  "last_cleanup": 1782999934
 }

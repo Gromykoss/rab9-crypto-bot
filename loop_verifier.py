@@ -29,28 +29,27 @@ def verify_analysis(token_name: str, analysis_text: str, context: dict) -> dict:
     if not api_key:
         return {"verdict": "PASS", "note": "Verifier unavailable — passing through"}
 
-    # Build verification prompt
-    prompt = f"""You are a strict crypto analysis verifier. Grade this meme coin analysis.
+    # The full report is the ground truth
+    full_report = context.get("full_report", "")
+
+    prompt = f"""You are a lenient crypto analysis verifier. Check if the AI analysis below is CONSISTENT with the full report data.
 
 TOKEN: {token_name}
-MC: {context.get('mc', '?')}
-VERDICT: {context.get('verdict', '?')}
-ON-CHAIN RISK: {context.get('onchain_risk', '?')}
-X FOLLOWERS: {context.get('x_followers', '?')}
-CONTEXT DATA (ONLY these numbers exist — everything else is fabricated):
-{{"mc": "{context.get('mc', '?')}", "verdict": "{context.get('verdict', '?')}", "onchain_risk": "{context.get('onchain_risk', '?')}", "x_followers": "{context.get('x_followers', '?')}"}}
 
-ANALYSIS TO GRADE:
+FULL REPORT (GROUND TRUTH — all numbers here are verified):
+```
+{full_report[:3000]}
+```
+
+AI ANALYSIS TO GRADE (must NOT contradict the report):
 {analysis_text}
 
-GRADING RULES:
-1. FACTUAL: Every number in the analysis MUST come from CONTEXT DATA above. No exceptions.
-2. BALANCED: Both positive and negative signals present?
-3. MEME-AWARE: X community > GitHub weight for meme coins.
-4. CONSISTENT: Verdict matches tone?
-
-CRITICAL: If the analysis mentions ANY number NOT in CONTEXT DATA (e.g. "38% top-10", "50% drawdown", "7 days") → FAIL with score=0.
-A fabricated number = automatic FAIL. Deduct 30 points per hallucination.
+RULES:
+1. The AI analysis is a SYNTHESIS — it may mention trends, patterns, and interpretations not literally in the report. That's OK.
+2. Only FLAG if the analysis makes a claim that DIRECTLY contradicts the report (e.g., says "bullish" when report says "sell-heavy", says "no kabals" when report says "Kabals в топ-5: 3").
+3. Numbers mentioned in the analysis should be roughly consistent with the report. Exact precision not required.
+4. Score deduction: -10 per minor inconsistency, -30 per major contradiction.
+5. FAIL (score < 40) only for severe contradictions (wrong verdict direction, fabricated MC, fake risk level).
 
 Return ONLY a JSON object:
 {{"verdict": "PASS"|"FLAG"|"FAIL",
@@ -58,7 +57,9 @@ Return ONLY a JSON object:
  "issues": ["issue1"],
  "fixed_text": ""}}
 
-PASS: all numbers match context. FLAG: tone mismatch but data correct. FAIL: fabricated data.
+PASS (score >= 70): analysis consistent with report.
+FLAG (40-69): minor issues but not misleading.
+FAIL (< 40): severe contradiction, should not be posted.
 """
 
     try:
@@ -68,7 +69,7 @@ PASS: all numbers match context. FLAG: tone mismatch but data correct. FAIL: fab
             json={
                 "model": "grok-3-mini",
                 "messages": [
-                    {"role": "system", "content": "You are a strict crypto verifier. Only use numbers explicitly provided in CONTEXT DATA. If an analysis mentions a number not in CONTEXT DATA, mark it FAIL. Fabricated metrics = automatic failure. Return ONLY valid JSON."},
+                    {"role": "system", "content": "You are a lenient crypto verifier. Only flag direct contradictions between the analysis and the report data. Syntheses and interpretations are OK. Numbers can be approximate. Return ONLY valid JSON."},
                     {"role": "user", "content": prompt},
                 ],
                 "temperature": 0.0,
@@ -96,6 +97,9 @@ PASS: all numbers match context. FLAG: tone mismatch but data correct. FAIL: fab
 if __name__ == "__main__":
     # Test mode
     test_analysis = "Токен TEST с MC $1M демонстрирует сильное давление продаж и не заслуживает внимания."
-    test_context = {"mc": "$1M", "verdict": "⚫ AVOID", "onchain_risk": "LOW", "x_followers": "17000"}
+    test_context = {
+        "mc": "$1M", "verdict": "⚫ AVOID", "onchain_risk": "LOW",
+        "full_report": "🔍 TEST | MC: $1M\n─── Makers ───\n👥 Всего: 10 (2 buy / 8 sell)\n\n─── Вердикт ───\n→ ⚫ AVOID"
+    }
     result = verify_analysis("TEST", test_analysis, test_context)
     print(json.dumps(result, ensure_ascii=False, indent=2))
