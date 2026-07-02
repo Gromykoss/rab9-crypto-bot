@@ -2,6 +2,7 @@ import re
 import os
 import sys
 import json
+import datetime
 
 from address_validation import is_msf_solana_address
 from maker_sources import build_pair_makers_text
@@ -641,6 +642,28 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         raw = ask_grok(grok_prompt).strip()
         if raw and not raw.lower().startswith("grok"):
             grok_summary = raw.lstrip("•-→0123456789. )")
+            try:
+                grok_log_path = os.path.join(
+                    os.path.dirname(__file__),
+                    "data",
+                    "grok_analyses.jsonl",
+                )
+                grok_log_entry = {
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "token": token_name,
+                    "mc": token_mc,
+                    "dex": dex,
+                    "verdict": verdict,
+                    "buy_heavy": buy_heavy,
+                    "sell_heavy": sell_heavy,
+                    "buy_ratio": buy_ratio,
+                    "kabals_top5": top5_kabal_count,
+                    "analysis": grok_summary,
+                }
+                with open(grok_log_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(grok_log_entry, ensure_ascii=False) + "\n")
+            except Exception:
+                pass
     except Exception:
         pass
 
