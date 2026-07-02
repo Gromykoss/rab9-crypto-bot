@@ -4,6 +4,10 @@ import logging
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+
+class ReuseThreadingHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+
 from telegram.ext import Application
 
 from address_validation import is_msf_solana_address
@@ -155,7 +159,7 @@ def start_msf_http_server(application: Application, loop: asyncio.AbstractEventL
 
             self.send_json(200, {"ok": True, "status": "sent"})
 
-    server = ThreadingHTTPServer((RAB9_HTTP_HOST, RAB9_HTTP_PORT), MsfSignalHandler)
+    server = ReuseThreadingHTTPServer((RAB9_HTTP_HOST, RAB9_HTTP_PORT), MsfSignalHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True, name="rab9-msf-http")
     thread.start()
     logger.info("MSF HTTP endpoint listening on %s:%s", RAB9_HTTP_HOST, RAB9_HTTP_PORT)
