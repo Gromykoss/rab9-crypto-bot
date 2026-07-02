@@ -565,12 +565,17 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     # ── Grok analytical summary ──
     grok_summary = ""
     try:
+        # Fable 5 style: goal + why + effort before data
         grok_prompt = (
-            f"Токен {token_name}, MC {token_mc}, DEX {dex}. "
+            "GOAL: Быстрый анализ мемкоина для трейдера — решение вход/выход/ждать. "
+            "EFFORT: High. Используй trading theory как аналитическую рамку, не как чеклист. "
+            "Контекст: трейдеру нужно понять манипуляции кабалов, стадию жизненного цикла, "
+            "риски on-chain и реальный ли интерес сообщества.\n\n"
+            f"ДАННЫЕ: Токен {token_name}, MC {token_mc}, DEX {dex}. "
             f"Мейкеров: {len(makers)} ({buy_heavy} buy / {sell_heavy} sell / {mixed} mix). "
             f"Buy ratio: {buy_ratio:.1f}. "
             f"Kabals: {total_matched} (в топ-5: {top5_kabal_count}). "
-            f"Вердикт: {verdict}."
+            f"Вердикт системы: {verdict}."
         )
         if x_account_info:
             grok_prompt += f"\n\nАККАУНТ ТОКЕНА: {x_account_info}"
@@ -614,14 +619,12 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 "on-chain risk и sentiment-price correlation."
             )
         grok_prompt += (
-            "\n\nСТРУКТУРА ОТВЕТА (строго): МАКСИМУМ 3 ПРЕДЛОЖЕНИЯ НА РУССКОМ, НЕ БОЛЕЕ 300 СИМВОЛОВ. "
-            "1) X/комьюнити и манипуляции (спам, fake backing, kabal dump). "
-            "2) On-chain + чарт. "
-            "3) Интегрированный вердикт. "
-            "Если buy/sell < 0.5 — КАБАЛ СБРАСЫВАЕТ. "
-            "Если Kabal count > 1 в топ-5 — coordinated dump. "
-            "Без PnL, без «рекомендую», без нумерации, без маркдауна. ТОЛЬКО РУССКИЙ. "
-            "НЕ ВЫХОДИ ЗА 300 СИМВОЛОВ."
+            "\n\nФОРМАТ: 3 предложения на русском, ≤300 символов. Без маркдауна, без нумерации. "
+            "1) X/комьюнити — реальный интерес или манипуляция. "
+            "2) On-chain + чарт — тренд и риски. "
+            "3) Интегрированный вердикт по trading theory. "
+            "ПРАВИЛА: buy ratio <0.5 + kabals в топ-5 = coordinated dump. "
+            "Не уточняй, не спрашивай — действуй по теории и дай готовый вывод."
         )
         raw = ask_grok(grok_prompt).strip()
         if raw and not raw.lower().startswith("grok"):
