@@ -156,8 +156,13 @@ def build_msf_signal_analysis_text(address: str):
     return "\n".join(summary_lines)
 
 
-def build_compact_analysis_text(address: str):
-    """Compact analysis for auto-respond: token name, MC, makers, kabals, verdict."""
+def build_compact_analysis_text(address: str, mode: str = "full"):
+    """Compact analysis for auto-respond.
+
+    Modes:
+      - \"full\": all sections (makers, wallet intel, AI, verdict)
+      - \"summary\": one-line header + wallet intel + AI summary + verdict (no maker list)
+    """
     import requests
     from config import BIRDEYE_API_KEY
 
@@ -168,14 +173,17 @@ def build_compact_analysis_text(address: str):
     onchain_context = ""
     creator_context = ""
 
+    # Get actual token address from DexScreener (pair → token) FIRST
+    token_addr = get_token_address_from_dex(address) or address
+
     pair_resolve_text = build_pair_resolve_text(address)
     pair = extract_recommended_pair(pair_resolve_text)
 
     if not pair:
-        return "⚠️ Не удалось определить pair для этого адреса."
+        pair = address  # fallback: use input as pair (may work with Birdeye pair trades)
 
-    # Get actual token address from DexScreener (pair → token)
-    token_addr = get_token_address_from_dex(address) or address
+    if not pair:
+        return "⚠️ Не удалось определить pair для этого адреса."
 
     result = get_birdeye_pair_makers(pair, mode="normal")
     items = result.get("items") or []
@@ -228,6 +236,8 @@ def build_compact_analysis_text(address: str):
     cabal = _get_cabal()
     xref = cross_reference_makers(makers, cabal)
     cabal_count = xref.get("cabal_count", 0)
+    total_matched = len(xref.get("known", []))
+    infra_count = len(xref.get("infrastructure", []))
 
     # ── Kabal per top-5 ──
     cabal_wallets = {addr.lower(): info for addr, info in cabal.items()} if cabal else {}
@@ -235,34 +245,56 @@ def build_compact_analysis_text(address: str):
         1 for m in makers[:5] if m["wallet"].lower() in cabal_wallets
     )
 
-    # ── Header ──
-    lines = [
-        f"🔍 {token_name} | MC: {token_mc} | DEX: {dex}",
-        f"Pair: {compact(pair)}",
-    ]
+    # ── Build output lines ──
+    lines = []
 
-    # ── Makers section ──
-    lines.append("")
-    lines.append("─── Makers ───")
-    lines.append(f"👥 Всего: {len(makers)} ({buy_heavy} buy / {sell_heavy} sell / {mixed} mix)")
+    if mode == "summary":
+        # Compact one-line header
+        top5 = makers[:5]
+        ratio_str = f" ({buy_heavy}b/{sell_heavy}s)"
+        kabal_str = f"kabals:{top5_kabal_count}" if top5_kabal_count > 0 else ""
+        header_parts = [f"🔍 {token_name} | MC: {token_mc}"]
+        if dex != "?":
+            header_parts.append(f"DEX: {dex}")
+        if ratio_str.strip(" ()"):
+            header_parts.append(f"{buy_heavy}b/{sell_heavy}s")
+        if kabal_str:
+            header_parts.append(kabal_str)
+        lines.append(" | ".join(header_parts))
 
-    top5 = makers[:5]
-    top5_parts = []
-    for i, m in enumerate(top5, 1):
-        addr = m["wallet"]
-        short = f"{addr[:6]}...{addr[-4:]}" if len(addr) > 10 else addr
-        kabal_tag = " Kabal" if addr.lower() in cabal_wallets else ""
-        top5_parts.append(f"  {i}. {short} — {m['trades']} trades{kabal_tag}")
-    lines.append("Топ-5:")
-    lines.extend(top5_parts)
+        # Wallet intel — one line
+        if xref.get("summary"):
+            lines.append(f"💰 Кошельки: {total_matched}/{len(makers)} known ({cabal_count} kabal + {infra_count} infra)")
+    else:
+        # Full mode — header
+        lines = [
+            f"🔍 {token_name} | MC: {token_mc} | DEX: {dex}",
+            f"Pair: {compact(pair)}",
+        ]
 
-    if top5_kabal_count > 0:
-        lines.append(f"⚠️ Kabals в топ-5: {top5_kabal_count}")
-
-    if xref.get("summary"):
+        # ── Makers section ──
         lines.append("")
-        lines.append("─── Wallet Intel ───")
-        lines.append(xref["summary"])
+        lines.append("─── Makers ───")
+        lines.append(f"👥 Всего: {len(makers)} ({buy_heavy} buy / {sell_heavy} sell / {mixed} mix)")
+
+        top5 = makers[:5]
+        top5_parts = []
+        for i, m in enumerate(top5, 1):
+            addr = m["wallet"]
+            short = f"{addr[:6]}...{addr[-4:]}" if len(addr) > 10 else addr
+            kabal_tag = " Kabal" if addr.lower() in cabal_wallets else ""
+            top5_parts.append(f"  {i}. {short} — {m['trades']} trades{kabal_tag}")
+        lines.append("Топ-5:")
+        lines.extend(top5_parts)
+
+        if top5_kabal_count > 0:
+            lines.append(f"⚠️ Kabals в топ-5: {top5_kabal_count}")
+
+        if xref.get("summary"):
+            lines.append("")
+            lines.append("─── Wallet Intel ───")
+            lines.append(xref["summary"])
+            lines.append(f"Всего: {total_matched} кошельков найдено ({cabal_count} кабалов + {infra_count} инфраструктура)")
 
     # ── Token X account lookup (from DexScreener socials) ──
     x_account_info = ""
@@ -288,9 +320,9 @@ def build_compact_analysis_text(address: str):
                                 sentiment_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "community_sentiment.jsonl")
                                 if os.path.exists(sentiment_file):
                                     with open(sentiment_file) as sf:
-                                        lines = sf.readlines()
-                                        if lines:
-                                            last = json.loads(lines[-1])
+                                        sf_lines = sf.readlines()
+                                        if sf_lines:
+                                            last = json.loads(sf_lines[-1])
                                             x_account_info += f" | sentiment: {last.get('sentiment','?')}"
                         break
     except Exception:
@@ -455,6 +487,10 @@ def build_compact_analysis_text(address: str):
     else:
         verdict = "⚫ Проходной"
 
+    # ── Kabal dump override: if sell >> buy and kabals present, force AVOID ──
+    if buy_ratio < 0.5 and top5_kabal_count >= 1:
+        verdict = "⚠️ HIGH SELL PRESSURE — WAIT"
+
     # ── Chart phase adjustment: accumulation=upgrade, markup/decay=penalty ──
     if chart_context:
         chart_lower = chart_context.lower()
@@ -526,7 +562,7 @@ def build_compact_analysis_text(address: str):
             f"Токен {token_name}, MC {token_mc}, DEX {dex}. "
             f"Мейкеров: {len(makers)} ({buy_heavy} buy / {sell_heavy} sell / {mixed} mix). "
             f"Buy ratio: {buy_ratio:.1f}. "
-            f"Kabals: {cabal_count} (в топ-5: {top5_kabal_count}). "
+            f"Kabals: {total_matched} (в топ-5: {top5_kabal_count}). "
             f"Вердикт: {verdict}."
         )
         if x_account_info:
@@ -556,8 +592,23 @@ def build_compact_analysis_text(address: str):
                 "\n\nУчти поведение создателя: conviction = НЕ продаёт >7 дней (BULLISH), "
                 "selling/dumped = продаёт (BEARISH). Упомяни это в выводе."
             )
+        # Wallet intelligence: pass cross-referenced cabal data
+        wallet_intel = xref.get("summary", "")
+        if wallet_intel:
+            grok_prompt += (
+                f"\n\nWALLET INTELLIGENCE (кошельки-кабалы):\n{wallet_intel}"
+                "\n\nЭто кошельки которые ранее торговали на winner-токенах (MC > $500K). "
+                "Если они сейчас SELL-heavy — это кабал сбрасывает. Если BUY-heavy — накапливают."
+            )
         grok_prompt += (
-            "\n\nСТРУКТУРА ОТВЕТА (строго): 4-5 ПРЕДЛОЖЕНИЙ НА РУССКОМ. 1) X presence, community size, influencer signals (LIVE > KB historical). 2) On-chain security & risks. 3) Chart trend & momentum. 4) Creator behavior (if available). 5) Integrated verdict with conviction level. Если только KB (исторические данные) — не акцентируй как текущий сигнал. Без PnL, без «рекомендую», без нумерации. ТОЛЬКО РУССКИЙ."
+            "\n\nСТРУКТУРА ОТВЕТА (строго): МАКСИМУМ 3 ПРЕДЛОЖЕНИЯ НА РУССКОМ, НЕ БОЛЕЕ 300 СИМВОЛОВ. "
+            "1) X/комьюнити и манипуляции (спам, fake backing, kabal dump). "
+            "2) On-chain + чарт. "
+            "3) Интегрированный вердикт. "
+            "Если buy/sell < 0.5 — КАБАЛ СБРАСЫВАЕТ. "
+            "Если Kabal count > 1 в топ-5 — coordinated dump. "
+            "Без PnL, без «рекомендую», без нумерации, без маркдауна. ТОЛЬКО РУССКИЙ. "
+            "НЕ ВЫХОДИ ЗА 300 СИМВОЛОВ."
         )
         raw = ask_grok(grok_prompt).strip()
         if raw and not raw.lower().startswith("grok"):
@@ -566,9 +617,12 @@ def build_compact_analysis_text(address: str):
         pass
 
     if grok_summary:
-        lines.append("")
-        lines.append("─── AI-анализ ───")
-        lines.append(f"📊 {grok_summary}")
+        if mode == "summary":
+            lines.append(f"📊 {grok_summary}")
+        else:
+            lines.append("")
+            lines.append("─── AI-анализ ───")
+            lines.append(f"📊 {grok_summary}")
 
     # ── Auto-escalation ──
     concentration = sum(m["trades"] for m in top5) / max(sum(m["trades"] for m in makers), 1)
@@ -576,12 +630,14 @@ def build_compact_analysis_text(address: str):
         len(makers), cabal_count, buy_ratio, concentration
     )
     if should_escalate:
-        lines.append("")
         lines.append(f"⚠️ {escalate_reason}")
 
-    lines.append("")
-    lines.append("─── Вердикт ───")
-    lines.append(f"→ {verdict}")
-    lines.append("_Без PnL, без торговых советов._")
+    if mode == "summary":
+        lines.append(f"{verdict}")
+    else:
+        lines.append("")
+        lines.append("─── Вердикт ───")
+        lines.append(f"→ {verdict}")
+        lines.append("_Без PnL, без торговых советов._")
 
     return "\n".join(lines)
