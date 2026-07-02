@@ -1089,8 +1089,7 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         address = rab9_signal_match.group("address")
         logger.info("RAB9_SIGNAL received: %s from chat %s", address, update.effective_chat.id)
         await update.message.reply_text("🔎 Анализирую...")
-        result = await asyncio.to_thread(build_compact_analysis_text, address)
-        logger.info("RAB9_SIGNAL analysis complete: %d chars", len(result))
+        result = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
         for line in result.splitlines():
             if any(kw in line for kw in ["Кабалы", "Инфраструктура", "⚠️"]):
                 logger.info("INTEL: %s", line.strip())
@@ -1122,8 +1121,7 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         address = sol_match.group(0)
         logger.info("Solana address detected: %s from chat %s", address, update.effective_chat.id)
         await update.message.reply_text("🔎 Анализирую...")
-        result = await asyncio.to_thread(build_compact_analysis_text, address)
-        logger.info("Solana analysis complete: %d chars", len(result))
+        result = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
         for line in result.splitlines():
             if any(kw in line for kw in ["Кабалы", "Инфраструктура", "⚠️"]):
                 logger.info("INTEL: %s", line.strip())
