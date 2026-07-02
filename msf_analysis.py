@@ -166,6 +166,13 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     import requests
     from config import BIRDEYE_API_KEY
 
+    theory_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trading_theory.md")
+    try:
+        with open(theory_path, "r", encoding="utf-8") as f:
+            trading_theory = f.read().strip()
+    except OSError:
+        trading_theory = ""
+
     # Initialize enrichment contexts (filled later by radars)
     score_context = ""
     radar_context = ""
@@ -599,6 +606,12 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 f"\n\nWALLET INTELLIGENCE (кошельки-кабалы):\n{wallet_intel}"
                 "\n\nЭто кошельки которые ранее торговали на winner-токенах (MC > $500K). "
                 "Если они сейчас SELL-heavy — это кабал сбрасывает. Если BUY-heavy — накапливают."
+            )
+        if trading_theory:
+            grok_prompt += (
+                f"\n\nTRADING THEORY RULES:\n{trading_theory}"
+                "\n\nИспользуй эти правила как аналитическую рамку для оценки lifecycle, kabal behavior, "
+                "on-chain risk и sentiment-price correlation."
             )
         grok_prompt += (
             "\n\nСТРУКТУРА ОТВЕТА (строго): МАКСИМУМ 3 ПРЕДЛОЖЕНИЯ НА РУССКОМ, НЕ БОЛЕЕ 300 СИМВОЛОВ. "
