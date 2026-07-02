@@ -103,6 +103,12 @@ def start_msf_http_server(application: Application, loop: asyncio.AbstractEventL
             self.end_headers()
             self.wfile.write(body)
 
+        def do_GET(self):
+            if self.path == "/health":
+                self.send_json(200, {"ok": True, "status": "healthy", "service": "rab9-msf-http"})
+            else:
+                self.send_json(404, {"ok": False, "error": "not_found"})
+
         def do_POST(self):
             if self.path != "/msf-signal":
                 self.send_json(404, {"ok": False, "error": "not_found"})

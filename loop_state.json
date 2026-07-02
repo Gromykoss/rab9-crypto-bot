@@ -1,0 +1,23 @@
+{
+  "analyses": [
+    {
+      "address": "DezXAZ8z7Pnr...",
+      "token": "Bonk",
+      "ts": 1782839440,
+      "verdict": "🟢",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "DezXAZ8z7Pnr...",
+      "token": "Bonk",
+      "ts": 1782872186,
+      "verdict": "🟡",
+      "tier": "",
+      "duplicate": false
+    }
+  ],
+  "duplicates": 0,
+  "total": 2,
+  "last_cleanup": 1782872186
+}

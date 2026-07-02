@@ -30,32 +30,35 @@ def verify_analysis(token_name: str, analysis_text: str, context: dict) -> dict:
         return {"verdict": "PASS", "note": "Verifier unavailable — passing through"}
 
     # Build verification prompt
-    prompt = f"""You are a crypto analysis verifier. Grade this meme coin analysis.
+    prompt = f"""You are a strict crypto analysis verifier. Grade this meme coin analysis.
 
 TOKEN: {token_name}
 MC: {context.get('mc', '?')}
 VERDICT: {context.get('verdict', '?')}
 ON-CHAIN RISK: {context.get('onchain_risk', '?')}
 X FOLLOWERS: {context.get('x_followers', '?')}
+CONTEXT DATA (ONLY these numbers exist — everything else is fabricated):
+{{"mc": "{context.get('mc', '?')}", "verdict": "{context.get('verdict', '?')}", "onchain_risk": "{context.get('onchain_risk', '?')}", "x_followers": "{context.get('x_followers', '?')}"}}
 
 ANALYSIS TO GRADE:
 {analysis_text}
 
-GRADING RUBRIC:
-1. FACTUAL: Does the analysis match available data? (no fabricated numbers)
-2. BALANCED: Does it mention both positive and negative signals?
-3. MEME-AWARE: For meme coins — X community weight > GitHub weight
-4. CONSISTENT: Does the verdict match the analysis tone?
+GRADING RULES:
+1. FACTUAL: Every number in the analysis MUST come from CONTEXT DATA above. No exceptions.
+2. BALANCED: Both positive and negative signals present?
+3. MEME-AWARE: X community > GitHub weight for meme coins.
+4. CONSISTENT: Verdict matches tone?
+
+CRITICAL: If the analysis mentions ANY number NOT in CONTEXT DATA (e.g. "38% top-10", "50% drawdown", "7 days") → FAIL with score=0.
+A fabricated number = automatic FAIL. Deduct 30 points per hallucination.
 
 Return ONLY a JSON object:
 {{"verdict": "PASS"|"FLAG"|"FAIL",
  "score": 0-100,
- "issues": ["issue1", "issue2"],
- "fixed_text": "corrected version if FLAG, or empty string if PASS"}}
+ "issues": ["issue1"],
+ "fixed_text": ""}}
 
-PASS: accurate, balanced, meme-aware. Post as-is.
-FLAG: minor issues, post with correction below.
-FAIL: major errors, confident but wrong, or hallucinated data. Suppress.
+PASS: all numbers match context. FLAG: tone mismatch but data correct. FAIL: fabricated data.
 """
 
     try:
@@ -65,7 +68,7 @@ FAIL: major errors, confident but wrong, or hallucinated data. Suppress.
             json={
                 "model": "grok-3-mini",
                 "messages": [
-                    {"role": "system", "content": "You are a strict verifier. Be honest, even if the analysis sounds confident. Return ONLY valid JSON."},
+                    {"role": "system", "content": "You are a strict crypto verifier. Only use numbers explicitly provided in CONTEXT DATA. If an analysis mentions a number not in CONTEXT DATA, mark it FAIL. Fabricated metrics = automatic failure. Return ONLY valid JSON."},
                     {"role": "user", "content": prompt},
                 ],
                 "temperature": 0.0,

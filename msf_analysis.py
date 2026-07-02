@@ -366,7 +366,6 @@ def build_compact_analysis_text(address: str):
         # Format for Grok
         if x_raw:
             try:
-                import json
                 x_data = json.loads(x_raw)
                 from radar_x import format_for_grok as fmt_x
                 radar_context += fmt_x(x_data) + "\n"
@@ -375,7 +374,6 @@ def build_compact_analysis_text(address: str):
                 pass
         if gh_raw:
             try:
-                import json
                 gh_data = json.loads(gh_raw)
                 from radar_gh import format_for_grok as fmt_gh
                 radar_context += fmt_gh(gh_data) + "\n"
@@ -384,7 +382,6 @@ def build_compact_analysis_text(address: str):
                 pass
         if chart_raw:
             try:
-                import json
                 chart_data = json.loads(chart_raw)
                 from chart_analysis import format_for_grok as fmt_chart
                 chart_context = fmt_chart(chart_data)
@@ -393,7 +390,6 @@ def build_compact_analysis_text(address: str):
                 pass
         if onchain_raw:
             try:
-                import json
                 onchain_data = json.loads(onchain_raw)
                 from onchain_check import format_for_grok as fmt_onchain
                 onchain_context = fmt_onchain(onchain_data)
@@ -402,7 +398,6 @@ def build_compact_analysis_text(address: str):
                 pass
         if score_raw:
             try:
-                import json
                 score_data = json.loads(score_raw)
                 from meme_score import format_for_grok as fmt_score
                 score_context = fmt_score(score_data)
@@ -411,7 +406,6 @@ def build_compact_analysis_text(address: str):
                 pass
         if creator_raw:
             try:
-                import json
                 creator_data = json.loads(creator_raw)
                 from creator_monitor import format_for_grok as fmt_creator
                 creator_context = fmt_creator(creator_data)
