@@ -565,12 +565,22 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     # ── Grok analytical summary ──
     grok_summary = ""
     try:
-        # Fable 5 style: goal + why + effort before data
+        # Fable 5 + STORM: goal + multi-perspective framework
         grok_prompt = (
-            "GOAL: Быстрый анализ мемкоина для трейдера — решение вход/выход/ждать. "
+            "GOAL: Быстрый STORM-анализ мемкоина для трейдера — решение вход/выход/ждать. "
             "EFFORT: High. Используй trading theory как аналитическую рамку, не как чеклист. "
             "Контекст: трейдеру нужно понять манипуляции кабалов, стадию жизненного цикла, "
-            "риски on-chain и реальный ли интерес сообщества.\n\n"
+            "риски on-chain и реальный ли интерес сообщества. "
+            "Внутренне применяй Stanford STORM: много перспектив → карта противоречий → синтез.\n\n"
+            "STORM STEP 1 — MULTI-PERSPECTIVE SCAN. Проанализируй данные независимо от лица 5 экспертов:\n"
+            "PRACTITIONER: рыночная реальность на земле, что не видно в метриках, микро-динамика входа/выхода.\n"
+            "SKEPTIC: самые сильные контраргументы, скрытые риски, почему сигнал может быть фейком.\n"
+            "ECONOMIST: стимулы, power dynamics, кто зарабатывает, вторичные эффекты.\n"
+            "ON-CHAIN SPECIALIST: LP risk, концентрация supply, conviction создателя, metadata/контрактные риски.\n"
+            "SENTIMENT ANALYST: реальное комьюнити против манипуляции, fake buzz, инфлюенсерские паттерны.\n\n"
+            "STORM STEP 2 — CONTRADICTION MAP. Найди, где эксперты расходятся: bullish vs bearish, "
+            "сильные vs слабые доказательства, missing data. Ранжируй evidence strength внутренне.\n\n"
+            "STORM STEP 3 — SYNTHESIS. Сожми вывод в 3 русских предложения для Telegram; внутренний STORM-анализ не показывай.\n\n"
             f"ДАННЫЕ: Токен {token_name}, MC {token_mc}, DEX {dex}. "
             f"Мейкеров: {len(makers)} ({buy_heavy} buy / {sell_heavy} sell / {mixed} mix). "
             f"Buy ratio: {buy_ratio:.1f}. "
@@ -582,8 +592,8 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         if radar_context:
             grok_prompt += (
                 f"\n\nДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ (радар):\n{radar_context}"
-                "\n\nИспользуй эти данные чтобы уточнить вывод: есть ли негативные сигналы (rug-pull, scam), "
-                "есть ли реальная dev-активность, обсуждается ли токен позитивно или негативно."
+                "\n\nИспользуй эти данные в STORM-перспективах PRACTITIONER, SKEPTIC и SENTIMENT ANALYST: "
+                "есть ли негативные сигналы (rug-pull, scam), реальная dev-активность, позитивное/негативное обсуждение."
             )
         if onchain_context:
             grok_prompt += (
@@ -596,21 +606,21 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         if score_context:
             grok_prompt += (
                 f"\n\nСКОРИНГ МЕМКОИНА:\n{score_context}"
-                "\n\nИспользуй скор для калибровки вывода: HIGH CONVICTION/SOLID/SPECULATIVE/AVOID."
+                "\n\nИспользуй скор для калибровки synthesis: HIGH CONVICTION/SOLID/SPECULATIVE/AVOID."
             )
         if creator_context and "too early" not in creator_context.lower():
             grok_prompt += (
                 f"\n\nКОШЕЛЁК СОЗДАТЕЛЯ:\n{creator_context}"
-                "\n\nУчти поведение создателя: conviction = НЕ продаёт >7 дней (BULLISH), "
-                "selling/dumped = продаёт (BEARISH). Упомяни это в выводе."
+                "\n\nУчти в ON-CHAIN SPECIALIST: conviction = НЕ продаёт >7 дней (BULLISH), "
+                "selling/dumped = продаёт (BEARISH)."
             )
         # Wallet intelligence: pass cross-referenced cabal data
         wallet_intel = xref.get("summary", "")
         if wallet_intel:
             grok_prompt += (
                 f"\n\nWALLET INTELLIGENCE (кошельки-кабалы):\n{wallet_intel}"
-                "\n\nЭто кошельки которые ранее торговали на winner-токенах (MC > $500K). "
-                "Если они сейчас SELL-heavy — это кабал сбрасывает. Если BUY-heavy — накапливают."
+                "\n\nУчти в PRACTITIONER/SKEPTIC: это кошельки, которые ранее торговали winner-токенами (MC > $500K). "
+                "SELL-heavy = кабал сбрасывает; BUY-heavy = накапливают."
             )
         if trading_theory:
             grok_prompt += (
@@ -619,11 +629,13 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 "on-chain risk и sentiment-price correlation."
             )
         grok_prompt += (
-            "\n\nФОРМАТ: 3 предложения на русском, ≤300 символов. Без маркдауна, без нумерации. "
+            "\n\nФОРМАТ ФИНАЛА: строго 3 предложения на русском, общий лимит ≤300 символов. "
+            "Без маркдауна, без нумерации, без заголовков, без упоминания STORM или экспертов. "
             "1) X/комьюнити — реальный интерес или манипуляция. "
             "2) On-chain + чарт — тренд и риски. "
             "3) Интегрированный вердикт по trading theory. "
             "ПРАВИЛА: buy ratio <0.5 + kabals в топ-5 = coordinated dump. "
+            "Если перспективы конфликтуют, финальный вердикт должен отражать самый сильный риск. "
             "Не уточняй, не спрашивай — действуй по теории и дай готовый вывод."
         )
         raw = ask_grok(grok_prompt).strip()
