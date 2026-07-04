@@ -7,6 +7,18 @@
 - Distribution: volume declining, X buzz fading, MC 1M-10M, sell-heavy makers → 🔴 SELL / WAIT
 - Dead/Revival: volume near zero, no X activity, MC < 100K → 💀 DEAD (skip or cut losses)
 
+### Event-Driven Tokens (political memes, election coins)
+
+Standard lifecycle does NOT apply. These tokens have a **built-in future catalyst** (election date, policy event, political moment).
+
+| Phase | Behaviour | Signal |
+|---|---|---|
+| Pre-catalyst accumulation | Low volume, community holds, waiting for event | 🟡 ACCUMULATE (time to event) |
+| Catalyst window (election ±2 weeks) | Volume spike, narrative relevance peaks | 🟢 BUY / EXIT PLAN |
+| Post-catalyst decay | Narrative fades, holders exit | 🔴 SELL (take profits before expiry) |
+
+**Key metric: time-to-catalyst.** Token may look "dead" by standard metrics but be in pre-catalyst accumulation. Phase detector should account for known future events.
+
 ## 1a. 4-Phase Trading Signals (phase_detector.py)
 
 | Signal | Chart Phase | Key Triggers | Action |

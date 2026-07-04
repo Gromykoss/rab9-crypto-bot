@@ -75,7 +75,7 @@ DEAD = {
     "vol_24h_max": 5_000,                          # < $5K volume
     "txn_24h_max": 100,                            # < 100 txns
     "mc_max": 100_000,                             # < $100K MC
-    "flat_days_min": 14,                           # inactive >2 weeks
+    "flat_days_min": 14,                           # inactive >2 weeks (only if MC < $500K)
     "x_inactive_days_min": 7,                      # no posts >7 days
     "maker_count_max": 5,                          # < 5 makers
 }
@@ -208,9 +208,7 @@ def detect(
     if vol_24h > 0 and vol_24h < DEAD["vol_24h_max"]:
         dead_checks += 1
         evidence.append(f"💀 volume=${vol_24h:,.0f} < $5K")
-    elif vol_24h <= 0:
-        dead_checks += 1
-        evidence.append("💀 no volume data")
+    # Missing volume — don't penalize, could be data issue
     dead_total += 1
 
     if txn_24h > 0 and txn_24h < DEAD["txn_24h_max"]:
@@ -239,6 +237,9 @@ def detect(
     dead_total += 1
 
     dead_score = dead_checks / max(dead_total, 1)
+    # HARD OVERRIDE: if MC > $500K or volume > $50K/day, token is NOT dead
+    if mc > 500_000 or vol_24h > 50_000:
+        dead_score = 0
     if dead_score >= 0.5:
         return {
             "signal": "DEAD",
