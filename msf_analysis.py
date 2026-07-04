@@ -335,6 +335,12 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                         break
     except Exception:
         pass
+    # Initialize enrichment outputs (filled by radars, may stay empty)
+    chart_raw = ""
+    onchain_raw = ""
+    score_raw = ""
+    creator_raw = ""
+
     try:
         import subprocess
         rab9_dir = os.path.dirname(os.path.abspath(__file__))
@@ -362,9 +368,6 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         from concurrent.futures import ThreadPoolExecutor, as_completed
         x_raw = ""
         gh_raw = ""
-        chart_raw = ""
-        onchain_raw = ""
-        creator_raw = ""
         with ThreadPoolExecutor(max_workers=6) as ex:
             futures = {
                 ex.submit(_run_radar, "radar_x.py", x_query): "x",
@@ -456,12 +459,12 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         print(f"[ENRICH] enrichment block failed: {e}", file=sys.stderr)
         pass
 
-    # ── Verdict (scoring-based for meme coins) ──
+    # ── Phase Detector (4-signal model: BUY/ACCUMULATE/SELL/DEAD) ──
     buy_ratio = buy_heavy / max(sell_heavy, 1)
-    # Use meme_score tier if available, fall back to old logic
+
+    # Extract meme_score tier
     meme_tier = ""
     if score_context:
-        # Extract tier from score_context
         if "HIGH CONVICTION" in score_context:
             meme_tier = "HIGH CONVICTION"
         elif "SOLID" in score_context:
@@ -471,81 +474,134 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         elif "AVOID" in score_context:
             meme_tier = "AVOID"
 
-    if not makers:
-        verdict = "🟡 Нет данных"
-    elif meme_tier == "HIGH CONVICTION":
-        verdict = "🟢 HIGH CONVICTION"
-    elif meme_tier == "SOLID":
-        if buy_ratio < 0.3:
-            verdict = "🟢 SOLID (pressure watch)"
-        else:
-            verdict = "🟢 SOLID"
-    elif meme_tier == "SPECULATIVE":
-        verdict = "🟡 SPECULATIVE"
-    elif meme_tier == "AVOID":
-        verdict = "⚫ AVOID"
-    elif token_mc != "?" and token_mc.startswith("$") and float(token_mc.replace("$", "").replace("M", "").replace("K", "")) > 0.5:
-        verdict = "🟢 Стоит следить" if cabal_count >= 1 or buy_ratio >= 0.5 else "🟡 Под вопросом"
-    elif len(makers) >= 10 and buy_ratio >= 1.5 and cabal_count >= 1:
-        verdict = "🟢 Стоит следить"
-    elif len(makers) >= 10:
-        verdict = "🟡 Стоит следить"
-    elif len(makers) >= 5 and buy_ratio >= 1.0:
-        verdict = "🟡 Стоит следить"
+    # Prepare phase detector inputs
+    chart_data = None
+    try:
+        if chart_raw:
+            chart_data = json.loads(chart_raw)
+    except Exception:
+        pass
+
+    makers_data = {
+        "buy_heavy": buy_heavy,
+        "sell_heavy": sell_heavy,
+        "count": len(makers),
+        "buy_ratio": buy_ratio,
+        "kabals_top5": top5_kabal_count,
+        "kabals_sell_heavy": sum(
+            1 for m in makers[:5]
+            if m.get("net_direction") == "sell-heavy" and m["wallet"].lower() in cabal_wallets
+        ),
+    }
+
+    onchain_data = None
+    try:
+        if onchain_raw:
+            onchain_data = json.loads(onchain_raw)
+    except Exception:
+        pass
+
+    score_data = None
+    try:
+        if score_raw:
+            score_data = json.loads(score_raw)
+    except Exception:
+        pass
+
+    # Community sentiment
+    community_sentiment = "neutral"
+    try:
+        sentiment_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "community_sentiment.jsonl")
+        if os.path.exists(sentiment_path):
+            with open(sentiment_path) as sf:
+                sf_lines = sf.readlines()
+            if sf_lines:
+                last_sentiment = json.loads(sf_lines[-1])
+                community_sentiment = last_sentiment.get("sentiment", "neutral")
+    except Exception:
+        pass
+
+    # Run phase detector
+    phase_signal = None
+    phase_context = ""
+    try:
+        from phase_detector import detect as detect_phase, format_for_grok as fmt_phase
+        phase_signal = detect_phase(
+            chart_data or {},
+            makers_data,
+            onchain_data or {},
+            score_data or {},
+            community_sentiment,
+        )
+    except Exception as e:
+        print(f"[PHASE] detector failed: {e}", file=sys.stderr)
+
+    # Verdict from phase detector
+    if phase_signal:
+        verdict = f"{phase_signal['signal_emoji']} {phase_signal['signal']}"
+        if phase_signal.get("phase_label"):
+            verdict += f" | {phase_signal['phase_label']}"
+        phase_context = fmt_phase(phase_signal) if phase_signal else ""
     else:
-        verdict = "⚫ Проходной"
+        # Fallback: old verdict logic
+        if not makers:
+            verdict = "🟡 Нет данных"
+        elif meme_tier == "HIGH CONVICTION":
+            verdict = "🟢 HIGH CONVICTION"
+        elif meme_tier == "SOLID":
+            if buy_ratio < 0.3:
+                verdict = "🟢 SOLID (pressure watch)"
+            else:
+                verdict = "🟢 SOLID"
+        elif meme_tier == "SPECULATIVE":
+            verdict = "🟡 SPECULATIVE"
+        elif meme_tier == "AVOID":
+            verdict = "⚫ AVOID"
+        elif token_mc != "?" and token_mc.startswith("$") and float(token_mc.replace("$", "").replace("M", "").replace("K", "")) > 0.5:
+            verdict = "🟢 Стоит следить" if cabal_count >= 1 or buy_ratio >= 0.5 else "🟡 Под вопросом"
+        elif len(makers) >= 10 and buy_ratio >= 1.5 and cabal_count >= 1:
+            verdict = "🟢 Стоит следить"
+        elif len(makers) >= 10:
+            verdict = "🟡 Стоит следить"
+        elif len(makers) >= 5 and buy_ratio >= 1.0:
+            verdict = "🟡 Стоит следить"
+        else:
+            verdict = "⚫ Проходной"
 
-    # ── Kabal dump override: if sell >> buy and kabals present, force AVOID ──
-    if buy_ratio < 0.5 and top5_kabal_count >= 1:
-        verdict = "⚠️ HIGH SELL PRESSURE — WAIT"
+        # Kabal dump override
+        if buy_ratio < 0.5 and top5_kabal_count >= 1:
+            verdict = "⚠️ HIGH SELL PRESSURE — WAIT"
 
-    # ── Chart phase adjustment: accumulation=upgrade, markup/decay=penalty ──
-    if chart_context:
-        chart_lower = chart_context.lower()
-        # Accumulation + rising volume = best entry — upgrade
-        if "накопление" in chart_lower and "vol ▲" in chart_lower:
-            upgrades = {
-                "🟡 SPECULATIVE": "🟢 SPECULATIVE (накопление ▲)",
-                "🟡 Стоит следить": "🟢 Стоит следить (накопление ▲)",
-                "🟡 Под вопросом": "🟡 Стоит следить (накопление ▲)",
-                "⚫ Проходной": "🟡 Под вопросом (накопление ▲)",
-                "⚫ AVOID": "🟡 SPECULATIVE (накопление ▲)",
-            }
-            if verdict in upgrades:
-                verdict = upgrades[verdict]
-        # Markup = already pumped, downgrade
-        elif "разгон" in chart_lower or "markup" in chart_lower:
-            downgrades = {
-                "🟢 HIGH CONVICTION": "🟡 HIGH CONVICTION (markup — поздно)",
-                "🟢 SOLID (pressure watch)": "🟡 SOLID (markup — поздно)",
-                "🟢 SOLID": "🟡 SOLID (markup — поздно)",
-                "🟢 Стоит следить": "🟡 Стоит следить (markup — поздно)",
-                "🟡 SPECULATIVE": "⚫ SPECULATIVE (markup — поздно)",
-            }
-            if verdict in downgrades:
-                verdict = downgrades[verdict]
-        # Decay = dying, hard avoid
-        elif "decay" in chart_lower or "затухание" in chart_lower:
-            downgrades = {
-                "🟢 HIGH CONVICTION": "🟡 SOLID (chart: decay)",
-                "🟢 SOLID (pressure watch)": "🟡 SPECULATIVE (chart: decay)",
-                "🟢 SOLID": "🟡 SPECULATIVE (chart: decay)",
-                "🟡 SPECULATIVE": "⚫ AVOID (chart: decay)",
-                "🟡 Стоит следить": "⚫ Проходной (chart: decay)",
-                "🟡 Под вопросом": "⚫ Проходной (chart: decay)",
-            }
-            if verdict in downgrades:
-                verdict = downgrades[verdict]
-        # Distribution = selling, downgrade (but don't kill SPECULATIVE — it's a timing signal, not terminal)
-        elif "distribution" in chart_lower or "раздача" in chart_lower:
-            downgrades = {
-                "🟢 HIGH CONVICTION": "🟡 SOLID (chart: distribution)",
-                "🟢 SOLID (pressure watch)": "🟡 SPECULATIVE (chart: distribution)",
-                "🟢 SOLID": "🟡 SPECULATIVE (chart: distribution)",
-                "🟡 SPECULATIVE": "🟡 SPECULATIVE (chart: distribution — wait)",  # Skill: "Wait" pattern, not AVOID
-            }
-            if verdict in downgrades:
-                verdict = downgrades[verdict]
+        # Chart phase adjustments (fallback)
+        if chart_context:
+            chart_lower = chart_context.lower()
+            if "накопление" in chart_lower and "vol ▲" in chart_lower:
+                upgrades = {
+                    "🟡 SPECULATIVE": "🟢 SPECULATIVE (накопление ▲)",
+                    "🟡 Стоит следить": "🟢 Стоит следить (накопление ▲)",
+                    "🟡 Под вопросом": "🟡 Стоит следить (накопление ▲)",
+                    "⚫ Проходной": "🟡 Под вопросом (накопление ▲)",
+                    "⚫ AVOID": "🟡 SPECULATIVE (накопление ▲)",
+                }
+                if verdict in upgrades:
+                    verdict = upgrades[verdict]
+            elif "decay" in chart_lower or "затухание" in chart_lower:
+                downgrades = {
+                    "🟢 HIGH CONVICTION": "🟡 SOLID (chart: decay)",
+                    "🟢 SOLID": "🟡 SPECULATIVE (chart: decay)",
+                    "🟡 SPECULATIVE": "⚫ AVOID (chart: decay)",
+                    "🟡 Стоит следить": "⚫ Проходной (chart: decay)",
+                }
+                if verdict in downgrades:
+                    verdict = downgrades[verdict]
+            elif "distribution" in chart_lower or "раздача" in chart_lower:
+                downgrades = {
+                    "🟢 HIGH CONVICTION": "🟡 SOLID (chart: distribution)",
+                    "🟢 SOLID": "🟡 SPECULATIVE (chart: distribution)",
+                    "🟡 SPECULATIVE": "🟡 SPECULATIVE (chart: distribution — wait)",
+                }
+                if verdict in downgrades:
+                    verdict = downgrades[verdict]
 
     # ── Fail gracefully if no makers ──
     if not makers:
@@ -640,6 +696,12 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             grok_prompt += (
                 f"\n\nСКОРИНГ МЕМКОИНА:\n{score_context}"
                 "\n\nИспользуй скор для калибровки synthesis: HIGH CONVICTION/SOLID/SPECULATIVE/AVOID."
+            )
+        if phase_context:
+            grok_prompt += (
+                f"\n\nPHASE DETECTOR (основной торговый сигнал):\n{phase_context}"
+                "\n\nЭто definitive trading signal. Согласуй свой synthesis с этим сигналом. "
+                "Если сигнал BUY — synthesis bullish. Если SELL — bearish. Если WAIT/ACCUMULATE — neutral/cautious."
             )
         if creator_context and "too early" not in creator_context.lower():
             grok_prompt += (
