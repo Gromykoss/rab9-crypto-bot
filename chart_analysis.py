@@ -1,10 +1,14 @@
-"""Long-term chart analysis for meme coins.
+"""Long-term chart analysis for meme coins — with classic TA indicators.
 
-Uses daily candles (1D) for trend analysis, falls back to 4H/1H.
-Focus: trend direction, ATH, drawdown, accumulation/distribution.
+Indicators: RSI(14), SMA(20/50), EMA(12/26), MACD(12,26,9),
+Volume-Price Divergence, Support/Resistance swing points.
+
+Phase detection: accumulation/distribution based on volume-price
+divergence + indicator confluence, not just 3x breakout.
 
 Usage: python3 chart_analysis.py "token_address"
 """
+
 import json
 import sys
 import os
@@ -12,20 +16,193 @@ import time
 import requests
 from datetime import datetime, timezone
 
+
 TIMEOUT = 10
 
 
-def _seasonal_volume_multiplier() -> float:
-    """Adjust volume thresholds for seasonal patterns.
-    Summer (Jun-Aug): lower volume is normal — be more lenient.
-    Spring (Mar-May): high activity — stricter thresholds.
+# ── Indicator functions ──
+
+def _sma(data: list[float], period: int) -> list[float | None]:
+    """Simple Moving Average. Returns list same length, None for first period-1."""
+    result = [None] * len(data)
+    if len(data) < period:
+        return result
+    window_sum = sum(data[:period])
+    result[period - 1] = window_sum / period
+    for i in range(period, len(data)):
+        window_sum += data[i] - data[i - period]
+        result[i] = window_sum / period
+    return result
+
+
+def _ema(data: list[float], period: int) -> list[float | None]:
+    """Exponential Moving Average."""
+    result = [None] * len(data)
+    if len(data) < period:
+        return result
+    multiplier = 2 / (period + 1)
+    # Seed with SMA
+    seed = sum(data[:period]) / period
+    result[period - 1] = seed
+    for i in range(period, len(data)):
+        result[i] = (data[i] - result[i - 1]) * multiplier + result[i - 1]
+    return result
+
+
+def _rsi(closes: list[float], period: int = 14) -> list[float | None]:
+    """Relative Strength Index (Wilder's smoothing)."""
+    result = [None] * len(closes)
+    if len(closes) < period + 1:
+        return result
+
+    gains = [max(closes[i] - closes[i - 1], 0) for i in range(1, len(closes))]
+    losses = [max(closes[i - 1] - closes[i], 0) for i in range(1, len(closes))]
+
+    # First average
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+
+    if avg_loss == 0:
+        result[period] = 100.0
+    else:
+        rs = avg_gain / avg_loss
+        result[period] = 100 - (100 / (1 + rs))
+
+    for i in range(period + 1, len(closes)):
+        avg_gain = (avg_gain * (period - 1) + gains[i - 1]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i - 1]) / period
+        if avg_loss == 0:
+            result[i] = 100.0
+        else:
+            rs = avg_gain / avg_loss
+            result[i] = 100 - (100 / (1 + rs))
+
+    return result
+
+
+def _macd(closes: list[float]) -> dict:
+    """MACD (12, 26, 9). Returns {macd_line, signal_line, histogram}."""
+    ema12 = _ema(closes, 12)
+    ema26 = _ema(closes, 26)
+    macd_line = [None] * len(closes)
+    for i in range(len(closes)):
+        if ema12[i] is not None and ema26[i] is not None:
+            macd_line[i] = ema12[i] - ema26[i]
+
+    # Signal line: 9-period EMA of MACD line
+    valid_macd = [(v if v is not None else 0) for v in macd_line]
+    signal = _ema(valid_macd, 9)
+
+    histogram = [None] * len(closes)
+    for i in range(len(closes)):
+        if macd_line[i] is not None and signal[i] is not None:
+            histogram[i] = macd_line[i] - signal[i]
+
+    return {"macd_line": macd_line, "signal_line": signal, "histogram": histogram}
+
+
+def _swing_points(highs: list[float], lows: list[float], lookback: int = 5) -> dict:
+    """Find swing highs and lows (local extremes)."""
+    swing_highs = []
+    swing_lows = []
+    for i in range(lookback, len(highs) - lookback):
+        # Swing high: higher than all neighbors in window
+        if highs[i] == max(highs[i - lookback:i + lookback + 1]):
+            swing_highs.append({"index": i, "price": highs[i]})
+        # Swing low: lower than all neighbors
+        if lows[i] == min(lows[i - lookback:i + lookback + 1]):
+            swing_lows.append({"index": i, "price": lows[i]})
+    return {"highs": swing_highs, "lows": swing_lows}
+
+
+def _support_resistance(swings: dict, current_price: float) -> dict:
+    """Find nearest support and resistance from swing points."""
+    supports = []
+    resistances = []
+    for s in swings["lows"]:
+        if s["price"] < current_price:
+            supports.append(s)
+    for s in swings["highs"]:
+        if s["price"] > current_price:
+            resistances.append(s)
+
+    # Cluster nearby levels (within 5%)
+    def cluster(levels, max_diff_pct=5):
+        if not levels:
+            return []
+        levels.sort(key=lambda x: x["price"])
+        clusters = []
+        current_cluster = [levels[0]]
+        for l in levels[1:]:
+            if abs(l["price"] - current_cluster[-1]["price"]) / current_cluster[-1]["price"] * 100 < max_diff_pct:
+                current_cluster.append(l)
+            else:
+                clusters.append(current_cluster)
+                current_cluster = [l]
+        clusters.append(current_cluster)
+        return [{"price": sum(x["price"] for x in c) / len(c), "touches": len(c)} for c in clusters]
+
+    s_clusters = cluster(supports)
+    r_clusters = cluster(resistances)
+
+    nearest_support = s_clusters[-1] if s_clusters else None
+    nearest_resistance = r_clusters[0] if r_clusters else None
+
+    return {
+        "support": nearest_support,
+        "resistance": nearest_resistance,
+        "support_levels": s_clusters[-3:] if s_clusters else [],
+        "resistance_levels": r_clusters[:3] if r_clusters else [],
+    }
+
+
+def _volume_divergence(closes: list[float], volumes: list[float], window: int = 10) -> str:
+    """Detect price-volume divergence in recent window.
+
+    Returns: 'bullish_divergence' | 'bearish_divergence' | 'confluence' | 'none'
     """
+    if len(closes) < window:
+        return "insufficient_data"
+
+    recent_c = closes[-window:]
+    recent_v = volumes[-window:]
+
+    # Split window in half and compare trends
+    mid = window // 2
+    first_c = sum(recent_c[:mid]) / mid
+    last_c = sum(recent_c[mid:]) / (window - mid)
+    first_v = sum(recent_v[:mid]) / mid
+    last_v = sum(recent_v[mid:]) / (window - mid)
+
+    price_rising = last_c > first_c * 1.02
+    price_falling = last_c < first_c * 0.98
+    vol_rising = last_v > first_v * 1.1
+    vol_falling = last_v < first_v * 0.9
+
+    # Bullish divergence: price making lower lows, volume rising (accumulation)
+    if price_falling and vol_rising:
+        return "bullish_divergence"
+
+    # Bearish divergence: price making higher highs, volume falling (distribution)
+    if price_rising and vol_falling:
+        return "bearish_divergence"
+
+    # Confluence: price and volume moving together
+    if (price_rising and vol_rising) or (price_falling and vol_falling):
+        return "confluence"
+
+    return "none"
+
+
+# ── Data fetching ──
+
+def _seasonal_volume_multiplier() -> float:
     month = datetime.now(timezone.utc).month
     if month in (6, 7, 8):
-        return 0.65  # Summer lull: 35% vol drop ≈ normal
+        return 0.65
     elif month in (3, 4, 5):
-        return 1.2   # Spring: volume should hold stronger
-    return 1.0       # Autumn/Winter: normal
+        return 1.2
+    return 1.0
 
 
 def _read_birdeye_key():
@@ -58,8 +235,9 @@ def fetch_ohlcv(address: str, tf: str = "1D", days: int = 90) -> list[dict]:
     return []
 
 
+# ── Main analysis ──
+
 def analyze(address: str) -> dict:
-    """Long-term trend analysis using daily candles."""
     candles = fetch_ohlcv(address, "1D", 90)
     if not candles:
         candles = fetch_ohlcv(address, "4H", 30)
@@ -79,27 +257,69 @@ def analyze(address: str) -> dict:
     atl = min(lows)
     ath_drawdown = round((current - ath) / ath * 100, 1)
 
-    # Trend: compare first half avg vs second half avg
+    # ── TA Indicators ──
+
+    # RSI(14)
+    rsi_values = _rsi(closes, 14)
+    rsi = round(rsi_values[-1], 1) if rsi_values[-1] is not None else None
+
+    # SMA
+    sma20 = _sma(closes, 20)
+    sma50 = _sma(closes, 50)
+    sma20_val = round(sma20[-1], 8) if sma20[-1] is not None else None
+    sma50_val = round(sma50[-1], 8) if sma50[-1] is not None else None
+
+    # EMA
+    ema12 = _ema(closes, 12)
+    ema26 = _ema(closes, 26)
+    ema12_val = round(ema12[-1], 8) if ema12[-1] is not None else None
+    ema26_val = round(ema26[-1], 8) if ema26[-1] is not None else None
+
+    # MACD
+    macd_data = _macd(closes)
+    macd_val = round(macd_data["macd_line"][-1], 8) if macd_data["macd_line"][-1] is not None else None
+    macd_signal = round(macd_data["signal_line"][-1], 8) if macd_data["signal_line"][-1] is not None else None
+    macd_hist = round(macd_data["histogram"][-1], 8) if macd_data["histogram"][-1] is not None else None
+
+    # MACD crossover detection (last 3 bars)
+    macd_cross = "none"
+    if n >= 3:
+        h_prev = macd_data["histogram"]
+        valid = [(i, h_prev[i]) for i in range(n-3, n) if h_prev[i] is not None]
+        if len(valid) >= 2:
+            if valid[0][1] < 0 and valid[-1][1] > 0:
+                macd_cross = "bullish_crossover"
+            elif valid[0][1] > 0 and valid[-1][1] < 0:
+                macd_cross = "bearish_crossover"
+
+    # Volume divergence
+    vol_div = _volume_divergence(closes, volumes)
+
+    # Support / Resistance
+    swings = _swing_points(highs, lows)
+    sr = _support_resistance(swings, current)
+
+    # ── Trend ──
     mid = n // 2
     first_half_avg = sum(closes[:mid]) / mid if mid > 0 else current
     second_half_avg = sum(closes[mid:]) / (n - mid) if n > mid else current
     if second_half_avg > first_half_avg * 1.05:
-        trend = "UPTREND 📈"
+        trend = "UPTREND"
     elif second_half_avg < first_half_avg * 0.95:
-        trend = "DOWNTREND 📉"
+        trend = "DOWNTREND"
     else:
-        trend = "RANGE ↔"
+        trend = "RANGE"
 
-    # Recent momentum: last 3 candles vs previous 3
+    # Momentum
     if n >= 6:
         recent_3 = sum(closes[-3:]) / 3
         prev_3 = sum(closes[-6:-3]) / 3
         if recent_3 > prev_3 * 1.03:
-            momentum = "BULLISH ▲"
+            momentum = "BULLISH"
         elif recent_3 < prev_3 * 0.97:
-            momentum = "BEARISH ▼"
+            momentum = "BEARISH"
         else:
-            momentum = "FLAT —"
+            momentum = "FLAT"
     else:
         momentum = "?"
 
@@ -107,129 +327,167 @@ def analyze(address: str) -> dict:
     if n >= 6:
         recent_vol = sum(volumes[-3:]) / 3
         prev_vol = sum(volumes[-6:-3]) / 3 if n >= 6 else recent_vol
-        vol_trend = "RISING" if recent_vol > prev_vol * 1.2 else ("FALLING" if recent_vol < prev_vol * 0.8 else "STABLE")
+        if recent_vol > prev_vol * 1.2:
+            vol_trend = "RISING"
+        elif recent_vol < prev_vol * 0.8:
+            vol_trend = "FALLING"
+        else:
+            vol_trend = "STABLE"
     else:
         vol_trend = "?"
 
-    # ── Accumulation / Breakout detection ──
+    # Relative volume (vs 20-day average)
+    if n >= 20:
+        avg_vol20 = sum(volumes[-20:]) / 20
+        rel_vol = volumes[-1] / avg_vol20 if avg_vol20 > 0 else 1.0
+    else:
+        rel_vol = 1.0
+
+    # ── Phase Detection (TA-informed) ──
+
+    # Price vs SMA
+    above_sma20 = sma20_val is not None and current > sma20_val
+    above_sma50 = sma50_val is not None and current > sma50_val
+    sma_bullish = sma20_val is not None and sma50_val is not None and sma20_val > sma50_val
+
+    # Golden cross / death cross
+    golden_cross = False
+    death_cross = False
+    if n >= 3 and sma20[-1] is not None and sma50[-1] is not None:
+        if sma20[-3] is not None and sma50[-3] is not None:
+            if sma20[-3] <= sma50[-3] and sma20[-1] > sma50[-1]:
+                golden_cross = True
+            elif sma20[-3] >= sma50[-3] and sma20[-1] < sma50[-1]:
+                death_cross = True
+
+    # Phase decision matrix
     phase = "unknown"
+    phase_confidence = "low"
+
+    # Accumulation signals (priority order of evidence strength)
+    acc_signals = 0
+    acc_total = 8
+
+    if rsi is not None and rsi < 40:
+        acc_signals += 1  # oversold zone
+    elif rsi is not None and rsi < 50:
+        acc_signals += 0.5  # neutral-low
+
+    if vol_div == "bullish_divergence":
+        acc_signals += 2  # strong: volume rising while price falling
+
+    if macd_cross == "bullish_crossover":
+        acc_signals += 2  # strong: MACD crossing up
+
+    if golden_cross:
+        acc_signals += 2  # very strong: SMA20 crossing above SMA50
+
+    if rel_vol > 1.2:
+        acc_signals += 1  # above-average volume
+
+    if momentum == "BULLISH":
+        acc_signals += 1
+
+    if trend == "UPTREND":
+        acc_signals += 1
+
+    if sma_bullish and not above_sma20:
+        acc_signals += 0.5  # SMA aligned but price below — potential bounce
+
+    acc_score = acc_signals / acc_total
+
+    # Distribution signals
+    dist_signals = 0
+    dist_total = 8
+
+    if rsi is not None and rsi > 60:
+        dist_signals += 1
+    elif rsi is not None and rsi > 70:
+        dist_signals += 2  # overbought
+
+    if vol_div == "bearish_divergence":
+        dist_signals += 3  # strongest: volume falling while price rising
+
+    if macd_cross == "bearish_crossover":
+        dist_signals += 2
+
+    if death_cross:
+        dist_signals += 2
+
+    if rel_vol < 0.6:
+        dist_signals += 1  # low relative volume
+
+    if momentum == "BEARISH":
+        dist_signals += 1
+
+    if trend == "DOWNTREND":
+        dist_signals += 1
+
+    if ath_drawdown < -70:
+        dist_signals += 1  # deep loss = distribution likely happened
+
+    dist_score = dist_signals / dist_total
+
+    # Decision
+    if acc_score >= 0.5:
+        phase = "accumulation"
+        phase_confidence = "high" if acc_score >= 0.7 else "medium"
+    elif dist_score >= 0.5:
+        phase = "distribution"
+        phase_confidence = "high" if dist_score >= 0.7 else "medium"
+    elif dist_score >= 0.35 and vol_div == "bearish_divergence":
+        phase = "distribution"
+        phase_confidence = "medium"
+    elif acc_score >= 0.35 and vol_div == "bullish_divergence":
+        phase = "accumulation"
+        phase_confidence = "medium"
+    else:
+        # Fallback to trend-based
+        if trend == "UPTREND":
+            phase = "accumulation"
+        elif trend == "DOWNTREND":
+            phase = "distribution"
+        else:
+            phase = "accumulation" if rsi and rsi < 50 else "distribution"
+        phase_confidence = "low"
+
+    # ── Volume zone detection (from zone analysis — kept for phase_detector compat) ──
+    vol_trend_zone = "falling" if vol_trend == "FALLING" else ("rising" if vol_trend == "RISING" else "stable")
     flat_days = 0
-    breakout_mult = 1.0
-    vol_trend_zone = "?"
     if n >= 10:
-        # Skip launch volatility: find when price stabilizes (low daily range)
-        stable_start = 0
-        for i in range(1, n):
-            if closes[i] > 0:
-                daily_range = abs(highs[i] - lows[i]) / max(closes[i], 1e-12)
-                if daily_range < 0.5:  # <50% daily range = stabilized
-                    stable_start = i
-                    break
-        if stable_start == 0:
-            stable_start = 3  # skip first 3 candles minimum
-
-        # Find breakout: price > 3x the average of the last N stable candles
-        acc_closes = closes[stable_start:]
-        acc_vols = volumes[stable_start:]
-        m = len(acc_closes)
-
-        breakout_idx = None
-        lookback = min(7, m // 2) if m >= 4 else m
-        for i in range(lookback + 2, m):
-            baseline_avg = sum(acc_closes[i-lookback:i]) / lookback
-            if baseline_avg > 0 and acc_closes[i] > baseline_avg * 3:
-                breakout_idx = i + stable_start  # absolute index
-                break
-
-        # ── Zone analysis (flat zone = where price is now) ──
-        # Determine the current zone (last N candles within 3x range)
         zone_start = n - 1
-        current_price = closes[-1]
-        for i in range(n - 2, max(stable_start, 0), -1):
+        for i in range(n - 2, 0, -1):
             if closes[i] <= 0:
                 continue
-            if closes[i] > current_price * 3 or closes[i] < current_price / 3:
+            if closes[i] > closes[-1] * 3 or closes[i] < closes[-1] / 3:
                 zone_start = i + 1
                 break
-        if zone_start <= stable_start:
-            zone_start = stable_start
-
-        zone_len = n - zone_start
-        if zone_len >= 5:
-            flat_days = zone_len
-            seasonal_mult = _seasonal_volume_multiplier()
-            # Volume trend within zone: compare first half vs second half
-            mid = zone_start + zone_len // 2
-            vol_first = sum(volumes[zone_start:mid]) / max(mid - zone_start, 1)
-            vol_second = sum(volumes[mid:n]) / max(n - mid, 1)
-            if vol_second > vol_first * (1.3 / seasonal_mult):
-                vol_trend_zone = "rising"
-            elif vol_second < vol_first * (0.7 * seasonal_mult):
-                vol_trend_zone = "falling"
-            else:
-                vol_trend_zone = "stable"
-
-            # ALSO check RECENT volume trend (last 14 vs prior 14) — more signal-rich
-            recent_n = min(14, zone_len)
-            if n >= recent_n * 2:
-                recent_vol = sum(volumes[n-recent_n:]) / recent_n
-                prior_vol = sum(volumes[n-recent_n*2:n-recent_n]) / recent_n
-                if prior_vol > 0 and recent_vol < prior_vol * (0.6 * seasonal_mult):
-                    # Recent volume collapsing — override zone trend
-                    if vol_trend_zone != "falling":
-                        vol_trend_zone = "falling"
-
-            # Phase classification based on price trend + volume
-            zone_closes = closes[zone_start:]
-            zone_first = sum(zone_closes[:len(zone_closes)//2]) / max(len(zone_closes)//2, 1)
-            zone_last = sum(zone_closes[len(zone_closes)//2:]) / max(len(zone_closes) - len(zone_closes)//2, 1)
-
-            if breakout_idx and breakout_idx > zone_start:
-                # There was a breakout earlier — we're post-pump
-                if zone_last < zone_first * 0.85:
-                    phase = "distribution"  # falling from pump
-                    if vol_trend_zone == "falling":
-                        phase = "decay"  # volume dying = decay
-                elif vol_trend_zone == "rising" and zone_last >= zone_first:
-                    phase = "accumulation"  # re-accumulating after pump
-                elif vol_trend_zone == "falling":
-                    phase = "decay"  # flat + falling volume = dying
-                else:
-                    phase = "accumulation"  # flat + stable volume = possible base
-            elif breakout_idx and breakout_idx <= zone_start:
-                # Breakout is happening now or recently
-                post = closes[breakout_idx:]
-                if len(post) >= 2 and post[-1] > post[0]:
-                    phase = "markup"
-                elif vol_trend_zone == "falling":
-                    phase = "decay"  # post-pump, volume dying
-                else:
-                    phase = "distribution"
-            else:
-                # No breakout detected — pre-pump zone
-                if current_price < atl * 1.15 and flat_days > 14:
-                    phase = "decay"  # Flat near ATL = dead, not accumulation
-                elif vol_trend_zone == "rising":
-                    phase = "accumulation"  # quiet buying
-                elif vol_trend_zone == "falling":
-                    phase = "decay"  # bleeding out
-                else:
-                    phase = "accumulation"  # neutral flat base
-
-            if breakout_idx:
-                pre_min = min([c for c in closes[stable_start:breakout_idx] if c > 0] or [1e-12])
-                breakout_mult = closes[-1] / max(pre_min, 1e-12)
-
-        elif all(c == closes[0] for c in closes[1:]):
-            phase = "dead"
+        flat_days = n - zone_start
 
     # Days of data
     if candles:
-        first_ts = candles[0]["unixTime"]
-        last_ts = candles[-1]["unixTime"]
-        days_span = (last_ts - first_ts) / 86400
+        days_span = (candles[-1]["unixTime"] - candles[0]["unixTime"]) / 86400
     else:
         days_span = 0
+
+    # ── Signal recommendation ──
+    signal = "WAIT"
+    if phase == "accumulation" and phase_confidence in ("high", "medium"):
+        if vol_div == "bullish_divergence" and macd_cross == "bullish_crossover":
+            signal = "BUY"  # strong confluence
+        elif acc_score >= 0.6:
+            signal = "ACCUMULATE"
+        else:
+            signal = "WATCH"
+    elif phase == "distribution" and phase_confidence in ("high", "medium"):
+        if vol_div == "bearish_divergence" and macd_cross == "bearish_crossover":
+            signal = "SELL"  # strong confluence
+        elif dist_score >= 0.6:
+            signal = "REDUCE"
+        else:
+            signal = "WAIT"
+    elif phase == "distribution" and ath_drawdown < -85 and rel_vol < 0.3:
+        signal = "DEAD"
 
     return {
         "ok": True,
@@ -242,9 +500,28 @@ def analyze(address: str) -> dict:
         "trend": trend,
         "momentum": momentum,
         "volume_trend": vol_trend,
+        "relative_volume": round(rel_vol, 2),
+        # TA indicators
+        "rsi": rsi,
+        "sma20": sma20_val,
+        "sma50": sma50_val,
+        "ema12": ema12_val,
+        "ema26": ema26_val,
+        "macd": macd_val,
+        "macd_signal": macd_signal,
+        "macd_histogram": macd_hist,
+        "macd_crossover": macd_cross,
+        "volume_divergence": vol_div,
+        "support": sr.get("support"),
+        "resistance": sr.get("resistance"),
+        # Phase
         "phase": phase,
+        "phase_confidence": phase_confidence,
+        "accumulation_score": round(acc_score, 2),
+        "distribution_score": round(dist_score, 2),
+        "signal": signal,
+        # Legacy compat
         "flat_days": flat_days,
-        "breakout_mult": round(breakout_mult, 1),
         "vol_trend_zone": vol_trend_zone,
         "seasonal": {6: "summer", 7: "summer", 8: "summer", 3: "spring", 4: "spring", 5: "spring"}.get(
             datetime.now(timezone.utc).month, "normal"
@@ -256,23 +533,55 @@ def format_for_grok(result: dict) -> str:
     if not result.get("ok"):
         return "Chart: нет данных."
 
-    lines = [f"Chart ({result.get('days',0):.0f}d, {result['candles']} candles):"]
+    lines = [f"Chart ({result.get('days', 0):.0f}d, {result['candles']} candles):"]
     lines.append(f"  Цена=${result['price']} | ATH=${result['ath']} | Drawdown={result['ath_drawdown']}%")
-    lines.append(f"  Тренд: {result['trend']} | Momentum: {result['momentum']} | Vol: {result['volume_trend']}")
-    if result.get('phase') and result['phase'] != 'unknown':
-        phase_label = {
-            'accumulation': '📦 НАКОПЛЕНИЕ',
-            'markup': '🚀 РАЗГОН',
-            'distribution': '📤 РАЗДАЧА',
-            'decay': '💤 ЗАТУХАНИЕ',
-            'dead': '💀 МЁРТВ',
-        }.get(result['phase'], result['phase'])
-        lines.append(f"  Фаза: {phase_label}")
-        vol_label = {'rising': '▲', 'falling': '▼', 'stable': '—'}.get(result.get('vol_trend_zone', ''), '')
-        if vol_label:
-            lines[-1] += f" (vol {vol_label})"
-        if result.get('flat_days', 0) > 0:
-            lines.append(f"  Накопление: {result['flat_days']} дней, breakout x{result['breakout_mult']}")
+
+    # TA summary
+    indicators = []
+    if result.get("rsi") is not None:
+        rsi_label = "oversold" if result["rsi"] < 30 else ("overbought" if result["rsi"] > 70 else "neutral")
+        indicators.append(f"RSI={result['rsi']} ({rsi_label})")
+    if result.get("macd_crossover") and result["macd_crossover"] != "none":
+        cross_label = "🟢 MACD ▲" if "bullish" in result["macd_crossover"] else "🔴 MACD ▼"
+        indicators.append(cross_label)
+    if result.get("volume_divergence") and result["volume_divergence"] != "none":
+        div_label = {"bullish_divergence": "🟢 VolDiv BULLISH (acc)", "bearish_divergence": "🔴 VolDiv BEARISH (dist)"}.get(
+            result["volume_divergence"], result["volume_divergence"])
+        indicators.append(div_label)
+    if indicators:
+        lines.append(f"  Indicators: {' | '.join(indicators)}")
+
+    # Trend + MAs
+    ma_parts = []
+    if result.get("sma20") is not None:
+        ma_parts.append(f"SMA20=${result['sma20']:.6f}")
+    if result.get("sma50") is not None:
+        ma_parts.append(f"SMA50=${result['sma50']:.6f}")
+    if ma_parts:
+        lines.append(f"  {', '.join(ma_parts)}")
+
+    lines.append(f"  Trend: {result['trend']} | Mom: {result['momentum']} | Vol: {result['volume_trend']} (rel={result.get('relative_volume', 1):.1f}x)")
+
+    # Phase
+    phase_label = {
+        "accumulation": "📦 НАКОПЛЕНИЕ",
+        "distribution": "📤 РАЗДАЧА",
+        "decay": "💤 ЗАТУХАНИЕ",
+        "dead": "💀 МЁРТВ",
+        "unknown": "❓ НЕИЗВЕСТНО",
+    }.get(result.get("phase", "unknown"), result.get("phase", "?"))
+    lines.append(f"  Phase: {phase_label} (confidence: {result.get('phase_confidence', '?')}, acc={result.get('accumulation_score', 0):.2f} dist={result.get('distribution_score', 0):.2f})")
+
+    # Signal
+    signal = result.get("signal", "?")
+    signal_emoji = {"BUY": "🟢", "ACCUMULATE": "🟡", "WATCH": "🟡", "WAIT": "⏳", "REDUCE": "🟠", "SELL": "🔴", "DEAD": "💀"}.get(signal, "")
+    lines.append(f"  Signal: {signal_emoji} {signal}")
+
+    # S/R
+    if result.get("support"):
+        lines.append(f"  Support: ${result['support']['price']:.6f} ({result['support']['touches']} touches)")
+    if result.get("resistance"):
+        lines.append(f"  Resistance: ${result['resistance']['price']:.6f} ({result['resistance']['touches']} touches)")
 
     return "\n".join(lines)
 
