@@ -336,7 +336,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     except Exception:
         pass
     try:
-        import os, subprocess
+        import subprocess
         rab9_dir = os.path.dirname(os.path.abspath(__file__))
         venv_python = os.path.join(rab9_dir, "venv", "bin", "python3")
 
@@ -573,12 +573,20 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             "Контекст: трейдеру нужно понять манипуляции кабалов, стадию жизненного цикла, "
             "риски on-chain и реальный ли интерес сообщества. "
             "Внутренне применяй Stanford STORM: много перспектив → карта противоречий → синтез.\n\n"
+            "STORM STEP 0 — VERIFICATION GATE (ВЫПОЛНИ ДО ОСТАЛЬНЫХ ШАГОВ). "
+            "Проверь данные X-аккаунта токена ( АККАУНТ ТОКЕНА ниже). "
+            "ЕСЛИ у токена есть X-аккаунт с >1000 followers И живые посты имеют лайки/репосты → комьюнити РЕАЛЬНОЕ. "
+            "Vote-spam в Moonshot/FOMO — СТАНДАРТНОЕ поведение мемкоинов, НЕ признак фейка. "
+            "НЕ называй комьюнити «фейковым» если у аккаунта живой engagement. "
+            "НЕ утверждай про «посты без лайков» не проверив фактические метрики. "
+            "Если нет данных об аккаунте — так и напиши: «недостаточно данных о комьюнити».\n\n"
             "STORM STEP 1 — MULTI-PERSPECTIVE SCAN. Проанализируй данные независимо от лица 5 экспертов:\n"
             "PRACTITIONER: рыночная реальность на земле, что не видно в метриках, микро-динамика входа/выхода.\n"
             "SKEPTIC: самые сильные контраргументы, скрытые риски, почему сигнал может быть фейком.\n"
             "ECONOMIST: стимулы, power dynamics, кто зарабатывает, вторичные эффекты.\n"
             "ON-CHAIN SPECIALIST: LP risk, концентрация supply, conviction создателя, metadata/контрактные риски.\n"
-            "SENTIMENT ANALYST: реальное комьюнити против манипуляции, fake buzz, инфлюенсерские паттерны.\n\n"
+            "SENTIMENT ANALYST: реальное комьюнити против манипуляции, fake buzz, инфлюенсерские паттерны. "
+            "НО: используй VERIFICATION GATE выше — не называй комьюнити фейковым без проверки аккаунта.\n\n"
             "STORM STEP 2 — CONTRADICTION MAP. Найди, где эксперты расходятся: bullish vs bearish, "
             "сильные vs слабые доказательства, missing data. Ранжируй evidence strength внутренне.\n\n"
             "STORM STEP 3 — SYNTHESIS. Сожми вывод в 3 русских предложения для Telegram; внутренний STORM-анализ не показывай.\n\n"
@@ -589,13 +597,37 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             f"Вердикт системы: {verdict}."
         )
         if x_account_info:
-            grok_prompt += f"\n\nАККАУНТ ТОКЕНА: {x_account_info}"
+            grok_prompt = (
+                f"АККАУНТ ТОКЕНА (проверь ДО выводов о комьюнити): {x_account_info}\n\n"
+                + grok_prompt
+            )
         if radar_context:
             grok_prompt += (
                 f"\n\nДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ (радар):\n{radar_context}"
                 "\n\nИспользуй эти данные в STORM-перспективах PRACTITIONER, SKEPTIC и SENTIMENT ANALYST: "
                 "есть ли негативные сигналы (rug-pull, scam), реальная dev-активность, позитивное/негативное обсуждение."
+                "\n\nВАЖНО: 'LISTING CAMPAIGN' и vote-spam в Moonshot/FOMO — НЕ признак фейкового комьюнити, "
+                "это стандартная механика листинга мемкоинов. Оценивай комьюнити по X-аккаунту токена, не по vote-spam."
             )
+        # Community sentiment history
+        sentiment_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "community_sentiment.jsonl")
+        try:
+            if os.path.exists(sentiment_path):
+                with open(sentiment_path) as sf:
+                    sf_lines = sf.readlines()
+                if sf_lines:
+                    last_sentiment = json.loads(sf_lines[-1])
+                    sent_ts = last_sentiment.get("ts", "?")
+                    sent_label = last_sentiment.get("sentiment", "?")
+                    sent_notes = last_sentiment.get("notes", "")[:500]
+                    grok_prompt += (
+                        f"\n\nCOMMUNITY SENTIMENT TRACKER (последний снимок {sent_ts}):"
+                        f"\nsentiment={sent_label}"
+                        f"\n{ sent_notes}"
+                        "\n\nИспользуй это в SENTIMENT ANALYST: sentiment='pos' = bullish комьюнити, 'neg' = bearish, 'neutral' = без явного тренда."
+                    )
+        except Exception:
+            pass
         if onchain_context:
             grok_prompt += (
                 f"\n\nON-CHAIN АНАЛИЗ:\n{onchain_context}"

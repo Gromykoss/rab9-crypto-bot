@@ -119,7 +119,7 @@ def search_x(query: str) -> dict:
 
     # Build manipulation warnings
     if spam_count >= 5:
-        kabal_warnings.append(f"⚠️ MANIPULATION: {spam_count} vote-spam posts detected — likely bot farm coordinating listing campaign")
+        kabal_warnings.append(f"⚠️ LISTING CAMPAIGN: {spam_count} vote-spam posts detected — standard memecoin Moonshot/FOMO listing campaign. This is NORMAL for meme coins, NOT proof of fake community. Check token's OWN X account for real engagement.")
     if kb_influencers and not live_influencers:
         kabal_warnings.append("⚠️ MANIPULATION: Influencer backing is KB-HISTORICAL only — NO live posts found. Community may be manufacturing narrative.")
 
