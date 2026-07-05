@@ -4,6 +4,12 @@
 Бот: Python, Birdeye + DexScreener + xAI/Grok.
 Путь: /home/hermes-workspace/rab9/
 
+## Старт сессии
+
+1. `skill_view("hermes-self-knowledge")` — 14 паттернов харнеса
+2. Прочитай `~/hermes-vault/30_Logs/Арсенал Hermes.md` — полный арсенал
+3. Затем этот файл
+
 ## Архитектура
 
 Webhook (n8n-msf) → rab9_bot.py → Birdeye/DexScreener → Grok анализ → Telegram-сигнал
