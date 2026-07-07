@@ -1,0 +1,72 @@
+# RAB9 — Хронология
+
+## 2026-07-07 — Миграция MSF с n8n на прямую связку
+
+### Контекст
+n8n-вебхук перестал передавать сигналы из Мемов в RAB9. Порт 8089 снаружи доступен (200 OK), но POST-запросы от n8n не доходят. Пользователь потребовал исключить n8n и настроить прямую событийную модель.
+
+### Изменения
+
+**1. Удалён n8n из цепочки сигналов**
+- Старая цепочка: Мемы → @msf_rab_bot → n8n → HTTP :8089 → RAB9
+- Новая цепочка: Мемы → @msf_rab_bot → msf_listener.py → HTTP :8089 → RAB9
+
+**2. Создан `msf_listener.py`** (`/home/hermes-workspace/rab9/msf_listener.py`)
+- Событийная модель: long-poll Telegram API (getUpdates, timeout=30s)
+- Триггеры: DexScreener-ссылка ИЛИ сырой Solana-адрес (44 символа base58)
+- Форвард: POST на `localhost:8089/msf-signal` с заголовком `X-RAB9-SECRET`
+- PID: 1770538 (background, нужно перевести в systemd)
+
+**3. Обновлён `msf_poller.py`** (`/home/hermes-workspace/.hermes/scripts/msf_poller.py`)
+- Секрет читается из `.env`, а не из `/proc/<pid>/environ`
+
+**4. Обновлён `AGENTS.md`**
+- Архитектура v2: два бота (@msf_rab_bot + @rab2610bot), полный поток сигналов
+- Правила строительства v1: 8 правил (инфра-верификация, pre-deploy, cabal, wallet intel, откат, баги, self-test)
+- Инфраструктурная верификация: добавлена проверка MSF Listener
+
+**5. Канбан-доска crypto**
+- Задача `t_b65deaac`: «Починить n8n-вебхук MSF: сигналы не доходят до RAB9 (:8089)»
+- Статус: ready (n8n заменён на msf_listener.py, ожидает реальной проверки)
+
+**6. Бекапы** (`/home/hermes-workspace/rab9/backups/0707_1747/`)
+- AGENTS.md.bak, msf_listener.py.bak, msf_token.txt.bak, .env.bak
+
+### Текущее состояние
+
+| Компонент | Статус | PID |
+|-----------|--------|-----|
+| RAB9 Core (rab9_bot.py) | ✅ systemd | 1768139 |
+| MSF HTTP (:8089) | ✅ 200 OK | внутри RAB9 |
+| MSF Listener | ✅ background | 1770538 |
+| Telegram (@rab2610bot) | ✅ polling | внутри RAB9 |
+| Telegram (@msf_rab_bot) | ✅ слушает Мемы | внешний |
+| Кабал-детектор | ✅ готов | — |
+| Wallet Intel | ✅ 8 KABAL + 42 susp | — |
+
+### Ожидание
+Реальная проверка: когда кто-то кинет DexScreener-ссылку в Мемы → сигнал должен дойти до RAB9 и появиться в Песочнице.
+
+### Не сделано
+- MSF Listener не под systemd — при ребуте сервера упадёт
+- BUGS.md не создан
+- CHRONOLOGY.md создан задним числом (начиная с 07.07.2026)
+
+---
+
+## 2026-07-05 — Создание кабал-детектора
+
+- `cabal_detector.py`: детекция PUMPFUN_WHALE_AIRDROP, KOL_ACTIVATION, CABAL_EXPLOSION, FLYWHEEL_ACTIVE
+- `kol_wallets.json`: база кошельков KOL (Ansem + будет пополняться)
+- Интеграция в MSF-пайплайн: перед каждым анализом → кабал-чек → алерт
+- Паттерны $ANSEM сохранены в `data/cabal_pattern_ansem.md`
+
+## 2026-06-20 — Миграция RAB9 на hermes-user
+
+- Перенос с `/root/rab9/` → `/home/hermes-workspace/rab9/`
+- Сервис `rab9-crypto-hermes.service`
+- Три новых модуля: `trade_db.py`, `pair_trade_collector.py`, `pair_trade_analyzer.py`
+- 190 226 сделок в базе, 22 токена
+- Создан `wallet_intel.py`: кросс-референс 1354 кошельков
+- Интеграция wallet intelligence в `msf_analysis.py`
+- GitHub синхронизирован: `Gromykoss/rab9-crypto-bot`

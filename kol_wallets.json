@@ -1,0 +1,12 @@
+{
+  "_description": "Known KOL wallets for cabal pattern detection. Track >50% supply airdrops.",
+  "wallets": [
+    {
+      "address": "2QK8NvNqgSLmBZ6K2k5GZ5Gq5kqNvNqgSLmB",
+      "name": "Ansem",
+      "x_handle": "blknoiz06",
+      "followers": 1100000,
+      "note": "ANSEM token — 65% supply airdropped to this wallet"
+    }
+  ]
+}

@@ -10,9 +10,39 @@
 2. Прочитай `~/hermes-vault/30_Logs/Арсенал Hermes.md` — полный арсенал
 3. Затем этот файл
 
-## Архитектура
+## Архитектура (v2 — 07.07.2026, n8n исключён)
 
-Webhook (n8n-msf) → rab9_bot.py → Birdeye/DexScreener → Grok анализ → Telegram-сигнал
+### Поток сигналов
+
+```
+Мемы (Telegram) → @msf_rab_bot (видит сообщение)
+    → msf_listener.py (long-poll, событийная модель)
+        → HTTP POST :8089/msf-signal
+            → rab9_bot.py
+                → cabal_detector (pre-check)
+                → Birdeye/DexScreener (enrichment)
+                → wallet_intel (cross-reference KABAL)
+                → Grok анализ (xAI)
+                → loop_verifier (PASS/FLAG/FAIL)
+                → Telegram-сигнал в Песочницу
+```
+
+### Два Telegram-бота
+
+| Бот | Токен | Назначение |
+|-----|-------|-----------|
+| **@msf_rab_bot** | `msf_token.txt` | Слушает Мемы, детектит DexScreener/адреса |
+| **@rab2610bot** | `.env:TELEGRAM_BOT_TOKEN` | Анализирует, шлёт в Песочницу (`-1003979753733`) |
+
+### Компоненты
+
+| Компонент | Файл | PID/Статус |
+|-----------|------|-----------|
+| **RAB9 Core** | `rab9_bot.py` | systemd: `rab9-crypto-hermes` |
+| **MSF Listener** | `msf_listener.py` | background (потеряется при ребуте → systemd) |
+| **MSF HTTP** | `msf_http.py` :8089 | внутри rab9_bot.py |
+| **Cabal Detector** | `cabal_detector.py` | pre-check перед анализом |
+| **Wallet Intel** | `wallet_intel.py` | cross-reference KABAL (8 шт, P≥80%) |
 
 ## Компоненты
 
@@ -66,7 +96,7 @@ DeepSeek (aggregator) — синтезирует с риск-анализом, �
 
 **Цикл сигнала:**
 ```
-Trigger (n8n webhook) → Discover (Birdeye/DexScreener) → Delegate MAKER (Grok analysis)
+Trigger (@msf_rab_bot → msf_listener.py) → Discover (Birdeye/DexScreener) → Delegate MAKER (Grok analysis)
 → Verify CHECKER (DeepSeek via MoA) → Persist (log + signal) → Decide (next or STOP)
 ```
 
@@ -79,6 +109,58 @@ Trigger (n8n webhook) → Discover (Birdeye/DexScreener) → Delegate MAKER (Gro
 **LOOP_PROGRESS.md:** каждый сигнал пишет одну строку в `data/loop_progress.md` — время, токен, вердикт, модели. Читать при старте для контекста.
 
 **Maker ≠ Checker:** Grok предлагает (maker), DeepSeek проверяет (checker). Maker не объявляет себя done.
+
+## Правила строительства RAB9 v1
+
+### 1. Техзадание — сначала думать
+
+- **Диагностика перед кодом.** Прежде чем патчить — проверить инфраструктуру: порт, firewall, логи, curl снаружи.
+- **Не бежать впереди.** Никаких деплоев без проверки что сломано.
+- **Фиксировать.** Архитектурные решения — в этот файл.
+
+### 2. Инфраструктуру верифицировать при старте
+
+- RAB9 жив? `systemctl status rab9-crypto-hermes` (active)
+- MSF HTTP жив? `curl http://localhost:8089/health` (200)
+- MSF HTTP снаружи? `curl http://72.60.16.105:8089/health` (200)
+- MSF Listener жив? `ps aux | grep "[m]sf_listener"` (PID есть)
+- Сигналы идут? `journalctl -u rab9-crypto-hermes | grep "MSF analysis started" | tail -5`
+- Telegram-бот отвечает? Послать тестовый адрес в Песочницу
+- База трейдов жива? `sqlite3 data/rab9_trades.db "SELECT COUNT(*) FROM pair_trades"`
+
+### 3. Pre-deploy чеклист RAB9
+
+1. `git diff` — что меняется?
+2. `python3 -c "import ast; ast.parse(open('file.py').read())"` — синтаксис
+3. `sudo systemctl restart rab9-crypto-hermes` — рестарт
+4. `curl http://localhost:8089/health` — проверка
+5. Тестовый сигнал через Telegram — пришёл?
+
+### 4. Cabal detection — обязательный этап
+
+Каждый MSF-сигнал → сначала `cabal_detector.analyze()` → если CABAL_EXPLOSION/KOL_ACTIVATION → алерт в Песочницу ДО основного анализа.
+
+### 5. Wallet intelligence — cross-reference
+
+Каждый MSF-сигнал → `wallet_intel.cross_reference_makers()` → если KABAL-кошелёк (P≥80%) в топ-20 мейкерах → эскалация.
+
+### 6. Правило отката
+
+```bash
+git checkout HEAD~1 -- file.py
+sudo systemctl restart rab9-crypto-hermes
+```
+
+### 7. Баги → документ
+
+Каждый баг → BUGS.md в корне rab9/. Формат: ID, симптом, причина, fix, статус.
+
+### 8. Self-test перед отправкой
+
+- Локальный прогон анализа на тестовом адресе
+- Сравнить с x_search (не противоречит?)
+- Проверить формат: без кнопок, без сырых данных
+- Гэпы закрыть до отправки
 
 ## Правила Сергея
 

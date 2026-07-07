@@ -21,6 +21,29 @@ logger = logging.getLogger("rab9_crypto_intel_bot")
 
 async def send_msf_pairresolve(application: Application, address: str):
     logger.info("MSF analysis started for: %s", address)
+    
+    # ── Cabal detection (pre-analysis) ──
+    try:
+        from cabal_detector import analyze as cabal_check
+        cabal = await asyncio.to_thread(cabal_check, address)
+        if cabal.get("ok") and cabal.get("phase") in ("CABAL_EXPLOSION", "KOL_ACTIVATION", "PUMPFUN_WHALE_AIRDROP"):
+            alert_lines = [
+                f"⚠️ CABAL DETECTED: {cabal['token']} (${cabal['symbol']})",
+                f"Phase: {cabal['phase']} | Risk: {cabal['risk_level']}",
+            ]
+            for pat in cabal.get("patterns", []):
+                for s in pat.get("signals", [])[:3]:
+                    alert_lines.append(f"  • {s}")
+            alert = "\n".join(alert_lines)
+            await application.bot.send_message(
+                chat_id=TELEGRAM_GROUP_ID,
+                text=alert,
+                disable_web_page_preview=True,
+            )
+            logger.info("CABAL alert sent: %s", cabal["phase"])
+    except Exception as e:
+        logger.warning("Cabal detector error (continuing): %s", e)
+    
     text = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
     logger.info("MSF analysis complete: %d chars", len(text))
 
