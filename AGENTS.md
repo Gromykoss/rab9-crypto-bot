@@ -22,10 +22,19 @@
                 → cabal_detector (pre-check)
                 → Birdeye/DexScreener (enrichment)
                 → wallet_intel (cross-reference KABAL)
-                → Grok анализ (xAI)
+                → Hy3 295B анализ (OpenRouter, free tier, 256K ctx)
                 → loop_verifier (PASS/FLAG/FAIL)
                 → Telegram-сигнал в Песочницу
 ```
+
+### LLM Backend
+
+| Модель | Провайдер | Стоимость | Контекст | Роль |
+|--------|-----------|-----------|----------|------|
+| **Tencent Hy3 295B** | OpenRouter (free) | **$0** | 256K | Основной анализ |
+| Grok (grok-3-mini) | xAI | $0.30/1M | 32K | Fallback (`RAB9_LLM=grok`) |
+
+Переключение: `RAB9_LLM=hy3|grok` в `.env`. Hy3 даёт более структурный анализ с конкретными цифрами (Liq/MC%, Vol/MC%, b/s ratio).
 
 ### Два Telegram-бота
 
