@@ -1,4 +1,5 @@
 import json
+import os
 import requests
 
 from config import XAI_API_KEY, XAI_BASE_URL
@@ -10,6 +11,12 @@ from utils import (
     format_percent,
     format_ratio,
 )
+
+# ── Model selection ──
+# Set RAB9_LLM=hy3 in .env to use Hy3 (free, 256K ctx, better analysis)
+# Default: grok (grok-3-mini via xAI)
+RAB9_LLM = os.getenv("RAB9_LLM", "grok")
+OR_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
 
 def ask_grok(prompt: str) -> str:
@@ -66,6 +73,56 @@ def ask_grok(prompt: str) -> str:
 
     except Exception as error:
         return f"Grok request failed: {error}"
+
+
+def ask_hy3(prompt: str) -> str:
+    """Use Tencent Hy3 via OpenRouter (free tier, 256K ctx)."""
+    if not OR_KEY:
+        return "OpenRouter API key не найден (нужен OPENROUTER_API_KEY в .env)"
+
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OR_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://localhost",
+                "X-Title": "RAB9",
+            },
+            json={
+                "model": "tencent/hy3:free",
+                "max_tokens": 500,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "Ты crypto-intel аналитик. Отвечай на русском, структурно, "
+                            "с конкретными цифрами (Liq/MC%, Vol/MC%, b/s ratio). "
+                            "KOL-концентрация >50% = KABAL. sell/buy >3x = кабал сбрасывает. "
+                            "Дай вердикт с actionable-советом."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+            },
+            timeout=60,
+        )
+
+        if not response.ok:
+            return f"Hy3 API error: {response.status_code} | {response.text[:300]}"
+
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
+
+    except Exception as error:
+        return f"Hy3 request failed: {error}"
+
+
+def ask_llm(prompt: str) -> str:
+    """Dispatch to the configured LLM."""
+    if RAB9_LLM == "hy3":
+        return ask_hy3(prompt)
+    return ask_grok(prompt)
 
 
 def build_pair_grok_data(pair: dict, metrics: dict) -> str:
@@ -291,7 +348,7 @@ def build_token_intel_text(chain_id: str, token_address: str) -> str:
         f"Данные:\n{grok_data}"
     )
 
-    analysis = ask_grok(prompt)
+    analysis = ask_llm(prompt)
 
     return (
         "🧪 Token Intel v3.4\n\n"
