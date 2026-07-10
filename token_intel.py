@@ -118,11 +118,69 @@ def ask_hy3(prompt: str) -> str:
         return f"Hy3 request failed: {error}"
 
 
+def ask_deepseek(prompt: str) -> str:
+    """Use DeepSeek via OpenRouter (cheap, reliable fallback)."""
+    if not OR_KEY:
+        return "OpenRouter API key не найден"
+
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OR_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://localhost",
+                "X-Title": "RAB9",
+            },
+            json={
+                "model": "deepseek/deepseek-chat",
+                "max_tokens": 500,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "Ты crypto-intel аналитик. Отвечай на русском, структурно, "
+                            "с конкретными цифрами (Liq/MC%, Vol/MC%, b/s ratio). "
+                            "KOL-концентрация >50% = KABAL. sell/buy >3x = кабал сбрасывает. "
+                            "Дай вердикт с actionable-советом."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+            },
+            timeout=60,
+        )
+
+        if not response.ok:
+            return f"DeepSeek API error: {response.status_code}"
+
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
+
+    except Exception as error:
+        return f"DeepSeek request failed: {error}"
+
+
 def ask_llm(prompt: str) -> str:
-    """Dispatch to the configured LLM."""
+    """Dispatch to configured LLM with automatic fallback chain.
+    
+    Chain: configured model → Grok → DeepSeek.
+    Hy3 free tier expires ~20.07.2026 — after that, auto-falls-back.
+    """
+    # 1. Try the configured model first
     if RAB9_LLM == "hy3":
-        return ask_hy3(prompt)
-    return ask_grok(prompt)
+        result = ask_hy3(prompt)
+        if not result.startswith("Hy3 API error") and not result.startswith("Hy3 request failed"):
+            return result
+        # Hy3 failed — fall through to Grok
+    
+    # 2. Try Grok (xAI)
+    result = ask_grok(prompt)
+    if not result.startswith("Grok API key") and not result.startswith("Grok API error"):
+        return result
+    
+    # 3. Last resort: DeepSeek via OpenRouter
+    return ask_deepseek(prompt)
 
 
 def build_pair_grok_data(pair: dict, metrics: dict) -> str:
