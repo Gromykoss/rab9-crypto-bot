@@ -1,0 +1,124 @@
+========================================================
+   RAB9 CRYPTO INTEL — WALLET ANALYSIS REPORT
+========================================================
+   Generated: 2026-07-05 12:39 UTC
+
+OVERVIEW
+  Wallets tracked:  31,029
+  Tokens (pairs):       22
+  Total trades:     190,226
+  Trade period:     2025-01-01  →  2026-06-14
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  TOP 20 WALLETS BY TRADE VOLUME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   # Wallet                     Trades  Buy%  Tokens
+  -- ------------------------- ------- ----- -------
+   1 2tgUbS9U...rSJUvY            5050  50%      13
+   2 JD6rVaer...tUAfsG            4327  54%      11
+   3 AgmLJBMD...LJzN51            3925  61%      20
+   4 2QfBNK2W...MnWW2T            1180  54%       9
+   5 GxDC9e7S...i4pXSq            1078  55%      11
+   6 ARu4n5mF...LT5SZn            1038  35%      19
+   7 DsCJ5siu...9Jfpx9            1014  52%       7
+   8 GyocUvNq...q9DwbW             985  98%       1
+   9 HC8EWBgh...nAheLR             966  50%       7
+  10 gasTzr94...sYRpnB             799  60%      16
+  11 FireuLYd...TP9RHV             780  52%       5
+  12 3gubYnre...RGy13t             759  50%       8
+  13 6HtypQsS...9EQt2s             723   0%       1
+  14 8L2y55D1...Y2bt8j             707  45%      11
+  15 9RuCotWD...pGaHeX             641  98%       2
+  16 8TPWakvW...btUaHr             611  51%       6
+  17 8HrtjxzN...Ac2N5M             555  99%       1
+  18 MRiYA4oN...JvoCsa             549  57%       9
+  19 HzA15vYi...x9cDaZ             506  50%       9
+  20 Eko1pMVy...7fKyRB             494  50%       4
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  TOP TOKENS BY MARKET CAP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   # Token              Market Cap    Liquidity   Trades
+  -- -------------- -------------- ------------ --------
+   1 GACHA          $  5,814,955 $  208,228     9980
+   2 CUM            $  1,660,114 $  123,176    14290
+   3 CUM            $  1,216,872 $  115,823     9950
+   4 SOLANGELES     $  1,056,656 $  109,643     9996
+   5 WLM            $    279,322 $   47,544    19892
+   6 STARGRACE      $    205,189 $   34,653     9983
+   7 HOPPY          $    204,263 $   43,943     9994
+   8 YIELD          $    188,697 $   35,016    14371
+   9 PTROLL         $    174,387 $   33,308       50
+  10 REALM          $    157,124 $   29,393     9961
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  TRADE DISTRIBUTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  BUY       :  103555 ( 54.4%)
+  SELL      :   76675 ( 40.3%)
+  UNKNOWN   :    9996 (  5.3%)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  KABAL LIBRARY — Bayesian Wallet Intelligence
+  Total scored wallets: 126
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Kabal (P≥80%):             8
+  Suspicious (P=45-80%):    42
+  Infrastructure (MEV):     76
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🎯  KABAL WALLETS  (timing-verified, P ≥ 80%)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  AkCyNQ7v...tu85qq         P=93% | W=4W | trades=80 | T1×1 T2×3
+  MenuxY5y...v5LzG6         P=93% | W=4W | trades=57 | T1×1 T2×3
+  BSfQT2Am...sZ3Gz8         P=89% | W=4W | trades=101 | T1×1 T2×3
+  26ooGGTH...ycFtEb         P=89% | W=4W | trades=83 | T1×1 T2×3
+  ttcZfmd9...tPbNDq         P=83% | W=3W | trades=39 | T1×1 T2×3
+  CodeDNrx...371WbP         P=83% | W=3W | trades=21 | T1×1 T2×3
+  SupeRsFF...q1cyJy         P=83% | W=3W | trades=17 | T1×1 T2×3
+  3k5uy95f...F293a1         P=83% | W=3W | trades=12 | T1×1 T2×3
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠️  TOP 15 SUSPICIOUS WALLETS  (P = 45-80%)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  5tra33am...qtNkiy         P=75% | W=4W | trades=45 | T1×1 T2×3 | cov=100%
+  HvFdDWS3...p5jqDK         P=75% | W=4W | trades=43 | T1×1 T2×3 | cov=100%
+  3i51cKbL...j7nRKt         P=75% | W=4W | trades=10 | T1×1 T2×3 | cov=100%
+  HBTTUinM...wDkJtS         P=75% | W=4W | trades=10 | T1×1 T2×3 | cov=100%
+  35dszeQQ...ZWMvji         P=75% | W=3W | trades=180 | T1×1 T2×3 | cov=75%
+  GoGoGo6N...GCyoLD         P=75% | W=3W | trades=140 | T1×1 T2×3 | cov=75%
+  gasBidSW...gDQst6         P=65% | W=4W | trades=257 | T1×1 T2×3 | cov=100%
+  F7p3dFrj...fcgmNe         P=65% | W=4W | trades=21 | T1×1 T2×3 | cov=100%
+  freeupq4...ZVEByC         P=53% | W=4W | trades=94 | T1×1 T2×3 | cov=100%
+  HxjwdF32...xzwr6b         P=53% | W=4W | trades=59 | T1×1 T2×3 | cov=100%
+  8NQ32SyF...RveEQr         P=53% | W=4W | trades=18 | T1×1 T2×3 | cov=100%
+  Luckywzb...P5kktR         P=53% | W=4W | trades=14 | T1×1 T2×3 | cov=100%
+  5hmb519h...HonSb6         P=53% | W=4W | trades=7 | T1×1 T2×3 | cov=100%
+  56YM95f3...DYVmNm         P=53% | W=3W | trades=41 | T1×1 T2×3 | cov=75%
+  Aet81p95...jBEcst         P=53% | W=3W | trades=16 | T1×1 T2×3 | cov=75%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🤖  INFRASTRUCTURE WALLETS  (MEV/Bots) — 76 total
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  gasAx5Y9...bxVdVw         P=29% | 10 tokens | trades=31 | cov=100% | concentration=40%
+  4LeQ2gYL...E3CGE4         P=29% | 8 tokens | trades=26 | cov=100% | concentration=50%
+  A7FMMgue...g9aaVE         P=29% | 8 tokens | trades=108 | cov=75% | concentration=38%
+  B7XwXUuZ...Y7kk5R         P=29% | 8 tokens | trades=9 | cov=75% | concentration=38%
+  66wniJpX...kzCFJf         P=20% | 10 tokens | trades=40 | cov=100% | concentration=40%
+  H6EtpNNi...hiWrQS         P=20% | 9 tokens | trades=39 | cov=100% | concentration=44%
+  4YP7YJFD...K98Nyg         P=20% | 9 tokens | trades=38 | cov=100% | concentration=44%
+  ALVMJ9bn...aehgZZ         P=20% | 13 tokens | trades=11 | cov=100% | concentration=31%
+  GvyLS9WF...i5z7m1         P=20% | 8 tokens | trades=68 | cov=75% | concentration=38%
+  Em8J3gBW...sFECPF         P=13% | 16 tokens | trades=186 | cov=100% | concentration=25%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SYSTEM STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MSF HTTP API:       :8089 (active)
+  Telegram Bot API:   :8080 (active)
+  Telegram Webhook:   :8081
+  Database:           rab9_trades.db (97.5 MB)
+
+========================================================
+   END OF REPORT
+========================================================

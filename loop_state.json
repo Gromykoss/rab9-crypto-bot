@@ -63,9 +63,33 @@
       "verdict": "⚫",
       "tier": "SPECULATIVE",
       "duplicate": false
+    },
+    {
+      "address": "9cRCn9rGT8V2...",
+      "token": "ANSEM",
+      "ts": 1783448047,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "9cRCn9rGT8V2...",
+      "token": "ANSEM",
+      "ts": 1783579717,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "CGEDT9QZDvvH...",
+      "token": "BURNIE",
+      "ts": 1783907514,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
     }
   ],
   "duplicates": 0,
-  "total": 8,
-  "last_cleanup": 1782999934
+  "total": 11,
+  "last_cleanup": 1783907514
 }
