@@ -508,11 +508,11 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     except Exception:
         pass
 
-    # Community sentiment
+    # Community sentiment — only for BURNIE
     community_sentiment = "neutral"
     try:
         sentiment_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "community_sentiment.jsonl")
-        if os.path.exists(sentiment_path):
+        if os.path.exists(sentiment_path) and token_name.upper() == "BURNIE":
             with open(sentiment_path) as sf:
                 sf_lines = sf.readlines()
             if sf_lines:
@@ -603,21 +603,18 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 if verdict in downgrades:
                     verdict = downgrades[verdict]
 
-    # ── Fail gracefully if no makers ──
+    # ── Proceed even without makers (Birdeye may be down) ──
     if not makers:
-        header = f"🔍 {token_name} | MC: {token_mc} | DEX: {dex}"
-        lines = [
-            header,
-            f"Pair: {compact(pair)}",
-            "",
-            "─── Makers ───",
-            "⚠️ Мейкеры не найдены — недостаточно данных.",
-            "",
-            "─── Вердикт ───",
-            f"→ {verdict}",
-            "_Без PnL, без торговых советов._",
-        ]
-        return "\n".join(lines)
+        lines.append("")
+        lines.append("─── Makers ───")
+        lines.append("⚠️ Мейкеры не найдены (Birdeye API недоступен или нет данных).")
+        # Don't return early — continue to radars + Grok analysis
+        # Set safe defaults for maker-dependent variables
+        cabal_count = 0
+        total_matched = 0
+        infra_count = 0
+        buy_ratio = buy_heavy / max(sell_heavy, 1) if sell_heavy > 0 else 1.0
+        top5_kabal_count = 0
 
     # ── Grok analytical summary ──
     grok_summary = ""
@@ -665,10 +662,10 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 "\n\nВАЖНО: 'LISTING CAMPAIGN' и vote-spam в Moonshot/FOMO — НЕ признак фейкового комьюнити, "
                 "это стандартная механика листинга мемкоинов. Оценивай комьюнити по X-аккаунту токена, не по vote-spam."
             )
-        # Community sentiment history
+        # Community sentiment history — only for BURNIE (file is BURNIE-specific)
         sentiment_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "community_sentiment.jsonl")
         try:
-            if os.path.exists(sentiment_path):
+            if os.path.exists(sentiment_path) and token_name.upper() == "BURNIE":
                 with open(sentiment_path) as sf:
                     sf_lines = sf.readlines()
                 if sf_lines:

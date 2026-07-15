@@ -87,9 +87,41 @@
       "verdict": "?",
       "tier": "",
       "duplicate": false
+    },
+    {
+      "address": "DriFtupJYLTo...",
+      "token": "?",
+      "ts": 1784076029,
+      "verdict": "⏳",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "DriFtupJYLTo...",
+      "token": "?",
+      "ts": 1784077001,
+      "verdict": "⏳",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "2weMjPLLybRM...",
+      "token": "?",
+      "ts": 1784077926,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "DezXAZ8z7Pnr...",
+      "token": "?",
+      "ts": 1784085422,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
     }
   ],
   "duplicates": 0,
-  "total": 11,
-  "last_cleanup": 1783907514
+  "total": 15,
+  "last_cleanup": 1784076029
 }

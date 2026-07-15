@@ -12,7 +12,7 @@ from telegram.ext import Application
 
 from address_validation import is_msf_solana_address
 from config import RAB9_HTTP_HOST, RAB9_HTTP_PORT, RAB9_HTTP_SECRET, TELEGRAM_GROUP_ID
-from msf_analysis import build_msf_signal_analysis_text, build_compact_analysis_text
+from msf_analysis import build_compact_analysis_text
 from utils import split_text
 
 

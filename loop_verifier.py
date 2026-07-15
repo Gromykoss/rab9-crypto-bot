@@ -1,10 +1,15 @@
 """Loop Verifier Gate for RAB9 — validates analysis before posting.
 
-Uses a separate model (different from the one that wrote the analysis)
-to grade the output: PASS (post), FLAG (post with warning), FAIL (suppress).
+Neil XBT structured handoffs pattern (granular Judge):
+- verifier checks: number_accuracy, verdict_consistency, cabal_correctness, synthesis_quality
+- Each check returns PASS/FAIL with specific issue description
+- Overall PASS requires ALL checks PASS
+- Uses separate model (different from builder) — never let builder grade own work.
 
-Pattern: CyrilXBT loop-engineering — never let the builder grade its own work.
+Pattern: CyrilXBT loop-engineering — granular per-check verdicts instead of collapsed score.
+Backward compatible: verify_analysis() signature and return dict unchanged.
 """
+
 import json
 import sys
 import os
@@ -24,42 +29,40 @@ def _read_api_key():
 
 
 def verify_analysis(token_name: str, analysis_text: str, context: dict) -> dict:
-    """Grade the RAB9 analysis output. Returns verdict + reasons."""
+    """Grade the RAB9 analysis output using granular per-check verdicts.
+
+    Checks: number_accuracy, verdict_consistency, cabal_correctness, synthesis_quality.
+    Each returns PASS/FAIL + issue desc. Overall PASS iff ALL PASS.
+    Returns same shape as before for backward compat.
+    """
     api_key = _read_api_key()
     if not api_key:
         return {"verdict": "PASS", "note": "Verifier unavailable — passing through"}
 
-    # The full report is the ground truth
     full_report = context.get("full_report", "")
 
-    prompt = f"""You are a lenient crypto analysis verifier. Check if the AI analysis below is CONSISTENT with the full report data.
+    prompt = f"""You are a strict crypto analysis judge using Neil XBT granular verification.
 
 TOKEN: {token_name}
 
-FULL REPORT (GROUND TRUTH — all numbers here are verified):
+FULL REPORT (GROUND TRUTH):
 ```
 {full_report[:3000]}
 ```
 
-AI ANALYSIS TO GRADE (must NOT contradict the report):
+AI ANALYSIS TO GRADE:
 {analysis_text}
 
-RULES:
-1. The AI analysis is a SYNTHESIS — it may mention trends, patterns, and interpretations not literally in the report. That's OK.
-2. Only FLAG if the analysis makes a claim that DIRECTLY contradicts the report (e.g., says "bullish" when report says "sell-heavy", says "no kabals" when report says "Kabals в топ-5: 3").
-3. Numbers mentioned in the analysis should be roughly consistent with the report. Exact precision not required.
-4. Score deduction: -10 per minor inconsistency, -30 per major contradiction.
-5. FAIL (score < 40) only for severe contradictions (wrong verdict direction, fabricated MC, fake risk level).
+Perform exactly these 4 checks and return PASS/FAIL for each:
+1. number_accuracy: Are all numbers consistent with report? (no fabricated MC, volumes etc.)
+2. verdict_consistency: Does the synthesis verdict direction match report data?
+3. cabal_correctness: Are cabal/KABAL mentions accurate vs report?
+4. synthesis_quality: Is the analysis a valid synthesis without contradictions?
 
-Return ONLY a JSON object:
-{{"verdict": "PASS"|"FLAG"|"FAIL",
- "score": 0-100,
- "issues": ["issue1"],
- "fixed_text": ""}}
+Return ONLY valid JSON:
+{{"number_accuracy": "PASS|FAIL", "verdict_consistency": "PASS|FAIL", "cabal_correctness": "PASS|FAIL", "synthesis_quality": "PASS|FAIL", "issues": ["specific issue1", ...], "verdict": "PASS|FLAG|FAIL", "score": 0-100}}
 
-PASS (score >= 70): analysis consistent with report.
-FLAG (40-69): minor issues but not misleading.
-FAIL (< 40): severe contradiction, should not be posted.
+Overall verdict: PASS only if ALL 4 checks are PASS. Otherwise FLAG or FAIL based on severity.
 """
 
     try:
@@ -69,11 +72,12 @@ FAIL (< 40): severe contradiction, should not be posted.
             json={
                 "model": "grok-3-mini",
                 "messages": [
-                    {"role": "system", "content": "You are a lenient crypto verifier. Only flag direct contradictions between the analysis and the report data. Syntheses and interpretations are OK. Numbers can be approximate. Return ONLY valid JSON."},
+                    {"role": "system", "content": "You are a strict granular crypto verifier. Return ONLY the requested JSON with 4 PASS/FAIL checks."},
                     {"role": "user", "content": prompt},
                 ],
                 "temperature": 0.0,
                 "max_tokens": 400,
+                "response_format": {"type": "json_object"},
             },
             timeout=TIMEOUT,
         )
@@ -86,6 +90,10 @@ FAIL (< 40): severe contradiction, should not be posted.
             content = content.split("\n", 1)[1].rsplit("```", 1)[0]
 
         result = json.loads(content)
+        # Ensure backward compat fields
+        if "verdict" not in result:
+            all_pass = all(result.get(k, "FAIL") == "PASS" for k in ["number_accuracy", "verdict_consistency", "cabal_correctness", "synthesis_quality"])
+            result["verdict"] = "PASS" if all_pass else "FLAG"
         return result
 
     except json.JSONDecodeError:

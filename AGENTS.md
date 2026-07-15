@@ -14,16 +14,16 @@
 
 ### Поток сигналов
 
-Мемы (Telegram) → @msf_rab_bot → msf_listener.py (long-poll) → HTTP POST :8089/msf-signal → rab9_bot.py → cabal_detector (pre-check) → Birdeye/DexScreener (enrichment) → wallet_intel (cross-reference KABAL) → Hy3 295B анализ (OpenRouter, 256K) → loop_verifier (PASS/FLAG/FAIL) → Telegram-сигнал в Песочницу
+Мемы (Telegram) → @msf_rab_bot → msf_listener.py (long-poll) → HTTP POST :8089/msf-signal → rab9_bot.py → cabal_detector (pre-check) → Birdeye/DexScreener (enrichment) → wallet_intel (cross-reference KABAL) → Grok (xAI, $0.30/1M) → loop_verifier (PASS/FLAG/FAIL) → Telegram-сигнал в Песочницу
 
 ### LLM Backend
 
 | Модель | Провайдер | Стоимость | Контекст | Роль |
 |--------|-----------|-----------|----------|------|
-| **Tencent Hy3 295B** | OpenRouter (free) | **$0** | 256K | Основной анализ |
-| Grok (grok-3-mini) | xAI | $0.30/1M | 32K | Fallback (`RAB9_LLM=grok`) |
+| **Grok (grok-3-mini)** | xAI API | $0.30/1M | 32K | Основной анализ |
+| DeepSeek | OpenRouter | pay-per-token | 128K | Fallback |
 
-Переключение: `RAB9_LLM=hy3|grok` в `.env`.
+Fallback chain: Grok → DeepSeek.
 
 ### Два Telegram-бота
 
@@ -104,6 +104,21 @@ Trigger (@msf_rab_bot → msf_listener.py) → Discover (Birdeye/DexScreener) �
 4. Только потом патч
 
 Если grep не показан — патч не принят. Откат.
+
+## Agent-Driven Development Rules (Codex CLI / Grok Build)
+
+**Загрузить перед делегированием:** `skill_view('codex-grok-delegation')`
+
+При делегировании задач в Codex CLI или Grok Build:
+
+1. **Read docs first** — прочитать этот AGENTS.md + `CHRONOLOGY.md` перед любым изменением
+2. **Use build plan** — для задач >20 строк кода: Шаблон 1 из `codex-grok-delegation` (Goal Mode)
+3. **Preserve security** — НЕ байпасить cabal_detector, wallet_intel, loop_verifier. MSF-токены не логировать
+4. **Verification ladder** — `pytest -q` → MSF test signal → grep .env → `journalctl -u rab9 -n 10` → CHRONOLOGY.md
+5. **Reproducible setup** — `pip install -r requirements.txt`, использовать `RAB9_LLM=hy3|grok` из `.env`
+6. **No production without approval** — сигналы в Песочницу (`-1003979753733`) только через approval gate. Не менять systemd unit
+7. **Never expose credentials** — `msf_token.txt`, `TELEGRAM_BOT_TOKEN`, Birdeye/DexScreener ключи — не коммитить
+8. **Preserve user changes** — `git status` перед работой, не перезаписывать чужие правки
 
 ### RAB9-специфичные
 

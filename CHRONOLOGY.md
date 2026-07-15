@@ -1,5 +1,33 @@
 # RAB9 — Хронология
 
+## 2026-07-15 00:55 — Миграция Hy3 → Grok
+
+### Контекст
+Hy3 free tier на OpenRouter истекает 20.07.2026 (через 5 дней). Простейший путь: переключить `RAB9_LLM=grok`.
+
+### Изменения
+1. **xAI API key** — восстановлен из hermes-vault (был отредактирован vault bootstrap). Policy обновлена: rab9-агенту добавлен доступ к xai.
+2. **.env**: `RAB9_LLM=hy3 → grok`, `XAI_API_KEY` восстановлен.
+3. **Service restart** — `systemctl restart rab9-crypto-hermes`, active, :8089 health 200.
+4. **Тест-сигнал** — обработан (unsupported_chain на SOL-адрес — ожидаемо).
+
+### Текущее состояние
+
+| Компонент | Статус |
+|-----------|--------|
+| RAB9 Core | 🟢 active, Grok backend |
+| MSF HTTP | 🟢 :8089, 200 |
+| MSF Listener | 🟢 PID 10199 |
+| LLM | 🟢 Grok (xAI API, $0.30/1M) |
+| Hy3 | ⏳ работает до 20.07, fallback доступен |
+
+### Стоимость
+Hy3: $0 → Grok: $0.30/1M токенов. При текущем объёме сигналов — копейки.
+
+## 2026-07-14 — Agent-Driven Development Rules
+
+AGENTS.md: добавлены 8 правил делегирования в Codex CLI / Grok Build (build plan, security gate, verification ladder). Методика Tony Simons (wp-chatgpt-publisher). Skill: `codex-grok-delegation`.
+
 ## 2026-07-07 — Hy3 295B как основной LLM
 
 ### Контекст

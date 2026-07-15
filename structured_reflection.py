@@ -1,10 +1,16 @@
 """Structured Reflection for RAB9 MoA signal verification.
 
-Pattern: UniGrok Execute-Review-Retry loop.
-Maker: Grok (xAI)
-Reviewer: DeepSeek (via api.deepseek.com or OpenRouter)
-Max 2 retries on fail.
+Neil XBT structured handoffs pattern:
+- Builder (Grok) → structured SignalAnalysis object (not free text)
+- Judge (DeepSeek) → granular JudgeVerdict with per-check PASS/FAIL
+- Manager → stop conditions (max 2 retries, overall PASS iff ALL checks PASS)
+Key insight: "natural language handoffs drift by week 3, structured handoffs don't"
+
+Maker: Grok (xAI) produces SignalAnalysis
+Reviewer: DeepSeek produces JudgeVerdict
+Max 2 retries on FAIL.
 Autonomous module — called externally, no changes to rab9_bot.py.
+Backward compatible: verify_signal() signature and ReflectionResult unchanged.
 """
 
 import os
@@ -29,6 +35,24 @@ class ReflectionVerdict(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
 
 
+# Neil XBT structured handoff models
+class SignalAnalysis(BaseModel):
+    """Builder (Grok) output: structured analysis instead of free text."""
+    verdict: str
+    risk_factors: list[str] = Field(default_factory=list)
+    key_numbers: dict = Field(default_factory=dict)
+    cabal_flags: list[str] = Field(default_factory=list)
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
+class JudgeVerdict(BaseModel):
+    """Judge (DeepSeek) output: granular per-check verdicts. Overall PASS only if ALL PASS."""
+    number_accuracy: Literal["PASS", "FAIL"]
+    verdict_consistency: Literal["PASS", "FAIL"]
+    cabal_correctness: Literal["PASS", "FAIL"]
+    synthesis_quality: Literal["PASS", "FAIL"]
+
+
 @dataclass
 class ReflectionResult:
     verdict: str  # "pass" | "fail"
@@ -39,45 +63,45 @@ class ReflectionResult:
     routing_receipt: Optional[dict] = None
 
 
-async def _call_grok(prompt: str, signal_data: dict) -> str:
-    """Maker: Grok via xAI API."""
+async def _call_grok(prompt: str, signal_data: dict) -> SignalAnalysis:
+    """Builder: Grok via xAI API producing structured SignalAnalysis."""
     if not XAI_API_KEY:
-        return json.dumps({"analysis": "MOCK: Grok analysis placeholder", "verdict": "pass"})
+        return SignalAnalysis(verdict="pass", risk_factors=[], key_numbers={}, cabal_flags=[], confidence=0.8)
 
     url = "https://api.x.ai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {XAI_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "grok-4-latest",
         "messages": [
-            {"role": "system", "content": "You are a crypto signal maker. Analyze the signal and propose verdict."},
+            {"role": "system", "content": "You are a crypto signal builder. Return ONLY valid JSON matching SignalAnalysis schema."},
             {"role": "user", "content": f"Signal: {json.dumps(signal_data)}\n\n{prompt}"},
         ],
         "temperature": 0.2,
         "max_tokens": 800,
+        "response_format": {"type": "json_object"},
     }
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.post(url, headers=headers, json=payload)
         r.raise_for_status()
         content = r.json()["choices"][0]["message"]["content"]
-        return content
+        data = json.loads(content)
+        return SignalAnalysis(**data)
 
 
-async def _call_deepseek(prompt: str, previous_issues: list[str] = None) -> ReflectionVerdict:
-    """Reviewer: DeepSeek with Pydantic schema."""
+async def _call_deepseek(analysis: SignalAnalysis, signal_data: dict) -> JudgeVerdict:
+    """Judge: DeepSeek with Pydantic schema for granular JudgeVerdict."""
     if not DEEPSEEK_API_KEY:
-        # Mock for tests / no-key env
-        return ReflectionVerdict(status="pass", issues=[], next_action="accept", confidence=0.85)
+        # Mock for tests / no-key env: all PASS
+        return JudgeVerdict(number_accuracy="PASS", verdict_consistency="PASS", cabal_correctness="PASS", synthesis_quality="PASS")
 
     url = "https://api.deepseek.com/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
     system_prompt = (
-        "You are a strict crypto signal reviewer. "
-        "Return ONLY valid JSON matching the schema: "
-        '{"status": "pass|fail", "issues": [...], "next_action": "...", "confidence": 0.0-1.0}'
+        "You are a strict crypto signal judge. "
+        "Return ONLY valid JSON matching JudgeVerdict schema with PASS/FAIL for each check. "
+        "Overall PASS only if ALL four checks are PASS."
     )
-    user_content = prompt
-    if previous_issues:
-        user_content += f"\n\nPrevious issues to address: {previous_issues}"
+    user_content = f"Signal: {json.dumps(signal_data)}\n\nAnalysis: {analysis.model_dump_json()}"
 
     payload = {
         "model": "deepseek-chat",
@@ -94,50 +118,55 @@ async def _call_deepseek(prompt: str, previous_issues: list[str] = None) -> Refl
         r.raise_for_status()
         content = r.json()["choices"][0]["message"]["content"].strip()
         data = json.loads(content)
-        return ReflectionVerdict(**data)
+        return JudgeVerdict(**data)
 
 
 async def verify_signal(signal_data: dict) -> ReflectionResult:
-    """Main entrypoint. Execute (Grok) → Review (DeepSeek) → Retry (max 2)."""
+    """Main entrypoint. Builder (Grok structured) → Judge (DeepSeek granular) → Retry (max 2)."""
     attempts = 0
     max_retries = 2
-    total_cost = 0.0  # placeholder; real tracking would use token counts
+    total_cost = 0.0
     issues: list[str] = []
 
-    maker_prompt = "Provide detailed analysis of this meme coin signal. Suggest pass/fail."
+    maker_prompt = "Provide structured analysis of this meme coin signal."
 
     while attempts <= max_retries:
         attempts += 1
-        # Execute: Grok maker
-        grok_output = await _call_grok(maker_prompt, signal_data)
+        # Builder: Grok -> SignalAnalysis
+        signal_analysis = await _call_grok(maker_prompt, signal_data)
 
-        # Review: DeepSeek reviewer
-        review_prompt = f"Review this Grok analysis for the signal {json.dumps(signal_data)}:\n{grok_output}"
-        prev_issues = issues if attempts > 1 else []
-        verdict = await _call_deepseek(review_prompt, prev_issues)
+        # Judge: DeepSeek -> JudgeVerdict (granular)
+        judge_verdict = await _call_deepseek(signal_analysis, signal_data)
 
-        if verdict.status == "pass":
+        all_pass = (
+            judge_verdict.number_accuracy == "PASS" and
+            judge_verdict.verdict_consistency == "PASS" and
+            judge_verdict.cabal_correctness == "PASS" and
+            judge_verdict.synthesis_quality == "PASS"
+        )
+
+        if all_pass:
             return ReflectionResult(
                 verdict="pass",
-                confidence=verdict.confidence,
+                confidence=signal_analysis.confidence,
                 attempts=attempts,
                 total_cost=total_cost,
                 issues=[],
-                routing_receipt={"maker": "grok", "reviewer": "deepseek", "attempts": attempts},
+                routing_receipt={"maker": "grok", "reviewer": "deepseek", "attempts": attempts, "pattern": "neil_xbt_structured"},
             )
         else:
-            issues = verdict.issues
+            issues = [f"{k}:{v}" for k, v in judge_verdict.model_dump().items() if v == "FAIL"]
             if attempts > max_retries:
                 break
-            # Retry: feed issues back to Grok
-            maker_prompt = f"Re-analyze fixing these issues: {issues}. Original signal: {json.dumps(signal_data)}"
+            # Retry: feed structured issues back
+            maker_prompt = f"Re-analyze fixing these failed checks: {issues}. Original signal: {json.dumps(signal_data)}"
 
     # Final fail after retries
     return ReflectionResult(
         verdict="fail",
-        confidence=verdict.confidence if 'verdict' in locals() else 0.3,
+        confidence=0.3,
         attempts=attempts,
         total_cost=total_cost,
         issues=issues,
-        routing_receipt={"maker": "grok", "reviewer": "deepseek", "attempts": attempts, "final": "rejected"},
+        routing_receipt={"maker": "grok", "reviewer": "deepseek", "attempts": attempts, "final": "rejected", "pattern": "neil_xbt_structured"},
     )

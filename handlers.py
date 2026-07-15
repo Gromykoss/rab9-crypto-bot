@@ -40,7 +40,7 @@ from arkham import (
 from price_sources import build_price_source_text
 from swap_sources import build_wallet_swaps_text
 from maker_sources import build_maker_find_text, build_maker_trades_text, build_pair_makers_text
-from msf_analysis import build_msf_signal_analysis_text, build_compact_analysis_text
+from msf_analysis import build_compact_analysis_text
 from pair_sources import build_pair_resolve_text
 from wallet_profile import build_wallet_profile_text
 from wallet_watch import (
@@ -150,7 +150,7 @@ def extract_testsignal_address(text: str):
 async def run_testsignal_analysis(update: Update, address: str):
     logger.info("Manual testsignal triggered for %s", address)
     await update.message.reply_text("🔎 RAB9 начал анализ MSF-сигнала...")
-    text = await asyncio.to_thread(build_msf_signal_analysis_text, address)
+    text = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
     await reply_long(update, text, main_reply_keyboard())
 
 
