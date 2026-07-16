@@ -7,10 +7,10 @@
 **Status:** ✅ Resolved — now managed as `msf-listener.service` (systemd --user)
 **Details:** The MSF Listener (msf_listener.py) was running as a raw shell script with no service supervision, restart policy, or logging — just a bare Python PID. Added systemd user unit at `~/.config/systemd/user/msf-listener.service` with restart=always and log output to `/tmp/msf-listener.log`.
 
-### 2. Hy3 free tier expires ~20.07.2026
-**Severity:** Critical — expiry date approaching
-**Status:** ⏳ Monitoring
-**Details:** The Hyperbolic (Hy3) inference free tier runs out around 20 July 2026. If RAB9 relies on Hy3 for any inference tasks, this will cause a service disruption. Action required: evaluate RAB9 dependency on Hy3; migrate to an alternative provider or funded tier before expiry.
+### 2. Hy3 free tier → миграция на Grok завершена
+**Severity:** Critical — resolved
+**Status:** ✅ Closed 16.07.2026
+**Details:** Hy3 free tier закрылся 15.07. RAB9 мигрирован на Grok (xAI API) как основной LLM. Fallback: DeepSeek через OpenRouter. Hy3 больше не используется.
 
 ### 3. Signal pipeline v2 — never tested with live signal from Memes
 **Severity:** Medium — untested integration path

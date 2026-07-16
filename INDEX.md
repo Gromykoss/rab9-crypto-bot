@@ -8,7 +8,6 @@
 01. AGENTS.md — project rules, architecture, commands
 02. rab9_bot.py — main bot entry
 03. handlers.py — message handlers
-04. arkham.py — Arkham enrichment
 05. scanner.py, scoring.py — signal scanning/scoring
 06. alerts.py, alert_state.json — alert system
 07. wallet_watch.py, watchlist.py — watchlist management
@@ -27,5 +26,4 @@
 - __pycache__/
 - .git/
 - All .save* backup files
-- Old arkham backups
 - wallet_watch_before_* files

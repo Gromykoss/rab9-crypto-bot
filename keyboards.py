@@ -8,7 +8,6 @@ def main_reply_keyboard():
             ["/micro", "/degen", "/scan", "/hot"],
             ["/watchlist", "/checkwatch"],
             ["/refreshwatch", "/alertsnow"],
-            ["/arkhamstatus", "/arktoken", "/wallet"],
             ["/watchwallet", "/walletlist", "/checkwallets"],
             ["/token", "/morning", "/evening"],
         ],
@@ -63,7 +62,6 @@ def token_chain_keyboard(address: str, detected_chain: str | None = None):
                 ],
                 [
                     InlineKeyboardButton(
-                        "🕵️ Arkham Intel",
                         callback_data=f"arktoken:solana:{address}",
                     )
                 ],

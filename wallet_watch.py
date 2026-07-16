@@ -3,7 +3,6 @@ import json
 
 from config import WALLET_WATCHLIST_PATH
 from utils import utc_now_text
-from arkham import get_address_intelligence_all, format_usage
 
 
 def wallet_key(address: str):
@@ -32,7 +31,6 @@ def save_wallet_watchlist(items):
 
 
 def get_wallet_snapshot(address: str):
-    result = get_address_intelligence_all(address)
 
     if not result["ok"]:
         return None
@@ -158,7 +156,6 @@ def format_wallet_snapshot(snapshot: dict):
         )
 
     lines.append(f"Checked: {snapshot.get('checked_at', 'n/a')}")
-    lines.append(format_usage(snapshot.get("usage") or {}))
 
     return "\n".join(lines)
 

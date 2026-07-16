@@ -13,7 +13,7 @@ from telegram.ext import (
 )
 
 from address_validation import is_msf_solana_address
-from config import TELEGRAM_GROUP_ID, XAI_API_KEY, ARKHAM_API_KEY, LEGACY_WATCHLIST_ALERTS_ENABLED
+from config import TELEGRAM_GROUP_ID, XAI_API_KEY, LEGACY_WATCHLIST_ALERTS_ENABLED
 from utils import utc_now_text, split_text
 from dex import get_dex_latest_profiles
 from keyboards import main_reply_keyboard, main_inline_keyboard, token_chain_keyboard
@@ -28,15 +28,6 @@ from watchlist import (
     load_watchlist,
 )
 from alerts import build_watch_alerts_text
-from arkham import (
-    build_arkham_status_text,
-    build_ark_token_text,
-    build_wallet_text,
-    build_wallet_flow_text,
-    build_token_flow_text,
-    build_wallet_tx_text,
-    build_wallet_trade_text,
-)
 from price_sources import build_price_source_text
 from swap_sources import build_wallet_swaps_text
 from maker_sources import build_maker_find_text, build_maker_trades_text, build_pair_makers_text
@@ -88,7 +79,6 @@ def build_status_text() -> str:
         "✅ Telegram Bot: online",
         f"✅ Group Lock: {TELEGRAM_GROUP_ID}",
         "✅ XAI/Grok key: loaded" if XAI_API_KEY else "❌ XAI/Grok key: missing",
-        "✅ Arkham key: loaded" if ARKHAM_API_KEY else "❌ Arkham key: missing",
     ]
 
     dex = get_dex_latest_profiles()
@@ -244,39 +234,6 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await reply_long(update, text, main_reply_keyboard())
 
 
-async def arkhamstatus_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    await update.message.reply_text("Проверяю Arkham API...")
-    text = await asyncio.to_thread(build_arkham_status_text)
-    await reply_long(update, text, main_reply_keyboard())
-
-
-async def arktoken_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    if len(context.args) < 1:
-        await update.message.reply_text(
-            "Формат:\n"
-            "/arktoken ADDRESS\n"
-            "или:\n"
-            "/arktoken solana ADDRESS",
-            reply_markup=main_reply_keyboard(),
-        )
-        return
-
-    if len(context.args) == 1:
-        chain = "solana"
-        address = context.args[0].strip()
-    else:
-        chain = context.args[0].strip().lower()
-        address = context.args[1].strip()
-
-    await update.message.reply_text(f"Проверяю Arkham token intel: {chain} / {address}")
-    text = await asyncio.to_thread(build_ark_token_text, chain, address)
-    await reply_long(update, text, main_reply_keyboard())
 
 
 async def wallet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1137,8 +1094,6 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("menu", menu_command))
     app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CommandHandler("arkhamstatus", arkhamstatus_command))
-    app.add_handler(CommandHandler("arktoken", arktoken_command))
     app.add_handler(CommandHandler("wallet", wallet_command))
     app.add_handler(CommandHandler("walletflow", walletflow_command))
     app.add_handler(CommandHandler("tokenflow", tokenflow_command))
