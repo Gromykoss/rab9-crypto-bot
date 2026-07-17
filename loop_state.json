@@ -119,9 +119,25 @@
       "verdict": "?",
       "tier": "",
       "duplicate": false
+    },
+    {
+      "address": "So1111111111...",
+      "token": "?",
+      "ts": 1784178314,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "So1111111111...",
+      "token": "?",
+      "ts": 1784243053,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
     }
   ],
   "duplicates": 0,
-  "total": 15,
-  "last_cleanup": 1784076029
+  "total": 17,
+  "last_cleanup": 1784243053
 }

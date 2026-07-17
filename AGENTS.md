@@ -1,7 +1,7 @@
 # Crypto (ex-RAB9) — рабочая среда Hermes
 
 Проект: MSF-сигналы крипто-трейдинга с AI-анализом.
-Бот: Python, Birdeye + DexScreener + xAI/Grok.
+Бот: Python, DexScreener + xAI/Grok.
 Путь: /home/hermes-workspace/rab9/
 
 ## Старт сессии
@@ -14,7 +14,9 @@
 
 ### Поток сигналов
 
-Мемы (Telegram) → @msf_rab_bot → msf_listener.py (long-poll) → HTTP POST :8089/msf-signal → rab9_bot.py → cabal_detector (pre-check) → Birdeye/DexScreener (enrichment) → wallet_intel (cross-reference KABAL) → Grok (xAI, $0.30/1M) → loop_verifier (PASS/FLAG/FAIL) → Telegram-сигнал в Песочницу
+Мемы (Telegram) → @msf_rab_bot → msf_listener.py (long-poll) → HTTP POST :8089/msf-signal → rab9_bot.py → cabal_detector (pre-check) → DexScreener (enrichment) → wallet_intel (cross-reference KABAL) → Grok (xAI, $0.30/1M) → loop_verifier (PASS/FLAG/FAIL) → Telegram-сигнал в Песочницу
+
+Примечание: Birdeye исключён 17.07.2026 (API key suspended). DexScreener — единственный источник обогащения.
 
 ### LLM Backend
 
