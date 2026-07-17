@@ -84,6 +84,9 @@ def normalize_dex_pair(item):
         # Extract token metadata for name/MC lookup
         "token_name": base_token.get("symbol") or base_token.get("name"),
         "token_address": base_token.get("address"),
+        "marketCap": item.get("marketCap") or item.get("fdv"),
+        "fdv": item.get("fdv"),
+        "txns": item.get("txns") or {},
     }
 
 

@@ -35,7 +35,7 @@ def compact(value, left=6, right=4):
     return f"{text[:left]}...{text[-right:]}"
 
 
-from pair_sources import build_pair_resolve_text
+from pair_sources import build_pair_resolve_text, get_dexscreener_candidates
 from maker_sources import get_birdeye_pair_makers, summarize_pair_makers
 from token_intel import ask_grok
 
@@ -201,6 +201,8 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     token_name = "?"
     token_mc = "?"
     dex = "?"
+    dex_buys = 0
+    dex_sells = 0
 
     if BIRDEYE_API_KEY:
         try:
@@ -223,6 +225,31 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                         token_mc = f"${token_mc_raw}"
         except Exception:
             pass
+    else:
+        # DexScreener fallback when Birdeye key is missing
+        try:
+            dex_candidates = get_dexscreener_candidates(address)
+            for c in (dex_candidates.get("candidates") or [])[:1]:
+                if c.get("token_name") and c["token_name"] != "n/a":
+                    token_name = c["token_name"]
+                mc_raw = c.get("marketCap")
+                if mc_raw:
+                    if mc_raw >= 1_000_000:
+                        token_mc = f"${mc_raw/1_000_000:.1f}M"
+                    elif mc_raw >= 1_000:
+                        token_mc = f"${mc_raw/1_000:.0f}K"
+                    else:
+                        token_mc = f"${mc_raw}"
+                if c.get("dex") and c["dex"] != "n/a":
+                    dex = c["dex"]
+                # Extract buy/sell counts from txns
+                txns = c.get("txns") or {}
+                h24 = txns.get("h24") or {}
+                if h24.get("buys") or h24.get("sells"):
+                    dex_buys = h24.get("buys", 0)
+                    dex_sells = h24.get("sells", 0)
+        except Exception:
+            pass
 
     # ── DEX + name fallback (DexScreener for PumpSwap tokens Birdeye misses) ──
     for line in pair_resolve_text.splitlines():
@@ -239,6 +266,11 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     buy_heavy = len([m for m in makers if m.get("net_direction") == "buy-heavy"])
     sell_heavy = len([m for m in makers if m.get("net_direction") == "sell-heavy"])
     mixed = len([m for m in makers if m.get("net_direction") == "mixed"])
+
+    # If no maker data, use DexScreener txns for buy/sell display
+    if not makers and (dex_buys > 0 or dex_sells > 0):
+        buy_heavy = dex_buys
+        sell_heavy = dex_sells
 
     # ── Wallet intel ──
     cabal = _get_cabal()
