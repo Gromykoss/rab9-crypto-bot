@@ -607,7 +607,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     if not makers:
         lines.append("")
         lines.append("─── Makers ───")
-        lines.append("⚠️ Мейкеры не найдены (Birdeye API недоступен или нет данных).")
+        lines.append("⚠️ Мейкеры не найдены (нет данных от источников).")
         # Don't return early — continue to radars + Grok analysis
         # Set safe defaults for maker-dependent variables
         cabal_count = 0
