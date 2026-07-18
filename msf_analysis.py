@@ -287,24 +287,14 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
 
     # ── Build output lines ──
     lines = []
+    top5 = makers[:5]
 
     if mode == "summary":
-        # Compact one-line header
-        top5 = makers[:5]
-        ratio_str = f" ({buy_heavy}b/{sell_heavy}s)"
-        kabal_str = f"kabals:{top5_kabal_count}" if top5_kabal_count > 0 else ""
+        # Clean header — token name + MC + DEX
         header_parts = [f"🔍 {token_name} | MC: {token_mc}"]
         if dex != "?":
             header_parts.append(f"DEX: {dex}")
-        if ratio_str.strip(" ()"):
-            header_parts.append(f"{buy_heavy}b/{sell_heavy}s")
-        if kabal_str:
-            header_parts.append(kabal_str)
         lines.append(" | ".join(header_parts))
-
-        # Wallet intel — one line
-        if xref.get("summary"):
-            lines.append(f"💰 Кошельки: {total_matched}/{len(makers)} known ({cabal_count} kabal + {infra_count} infra)")
     else:
         # Full mode — header
         lines = [
@@ -336,8 +326,9 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             lines.append(xref["summary"])
             lines.append(f"Всего: {total_matched} кошельков найдено ({cabal_count} кабалов + {infra_count} инфраструктура)")
 
-    # ── Token X account lookup (from DexScreener socials) ──
+    # ── Token X account lookup (from DexScreener socials) + volume ──
     x_account_info = ""
+    dex_volume_24h = None
     try:
         import requests as req
         dr = req.get(
@@ -347,6 +338,10 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         if dr.ok:
             pairs = dr.json().get("pairs", [])
             if pairs:
+                # Extract 24h volume for key metrics
+                vol_raw = pairs[0].get("volume", {})
+                if isinstance(vol_raw, dict):
+                    dex_volume_24h = vol_raw.get("h24")
                 socials = pairs[0].get("info", {}).get("socials", [])
                 for s in socials:
                     if s.get("type") == "twitter":
@@ -753,14 +748,17 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 "on-chain risk и sentiment-price correlation."
             )
         grok_prompt += (
-            "\n\nФОРМАТ ФИНАЛА: строго 3 предложения на русском, общий лимит ≤300 символов. "
-            "Без маркдауна, без нумерации, без заголовков, без упоминания STORM или экспертов. "
-            "1) X/комьюнити — реальный интерес или манипуляция. "
-            "2) On-chain + чарт — тренд и риски. "
-            "3) Интегрированный вердикт по trading theory. "
+            "\n\nФОРМАТ ФИНАЛА: развёрнутый вывод на русском, 500–700 символов. "
+            "Структура с заголовками (не используй маркдаун, просто перевод строки и текст):\n"
+            "Что это — 1–2 строки: что за токен, какой тренд сейчас, ключевая динамика.\n"
+            "Почему интересно — 2–3 строки: что драйвит цену (нарратив, комьюнити, кабалы, чарт). Упомяни конкретные сигналы (RSI, MACD, vol divergence если есть).\n"
+            "Риски — 1–2 строки: главная угроза, красные флаги (creator продаёт, kabals сбрасывают, volume падает).\n"
+            "Что делать — 1 строка: конкретное действие для трейдера (ждать входа, набирать малыми лотами, фиксировать прибыль, пропустить).\n"
             "ПРАВИЛА: buy ratio <0.5 + kabals в топ-5 = coordinated dump. "
             "Если перспективы конфликтуют, финальный вердикт должен отражать самый сильный риск. "
-            "Не уточняй, не спрашивай — действуй по теории и дай готовый вывод."
+            "Не используй маркетинговый hype, будь сдержанным и конкретным. "
+            "Не упоминай STORM или экспертов в выводе. "
+            "Не уточняй, не спрашивай — дай готовый структурированный ответ."
         )
         raw = ask_grok(grok_prompt).strip()
         if raw and not raw.lower().startswith("grok"):
@@ -792,11 +790,33 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
 
     if grok_summary:
         if mode == "summary":
+            lines.append("")
             lines.append(f"📊 {grok_summary}")
         else:
             lines.append("")
             lines.append("─── AI-анализ ───")
             lines.append(f"📊 {grok_summary}")
+
+    # ── Key metrics (summary mode) ──
+    if mode == "summary":
+        vol_str = ""
+        if dex_volume_24h:
+            if dex_volume_24h >= 1_000_000:
+                vol_str = f"${dex_volume_24h/1_000_000:.1f}M"
+            elif dex_volume_24h >= 1_000:
+                vol_str = f"${dex_volume_24h/1_000:.0f}K"
+            else:
+                vol_str = f"${dex_volume_24h}"
+        risk_score = ""
+        if score_data and isinstance(score_data, dict):
+            risk_score = str(score_data.get("total", score_data.get("score", "?")))
+        metric_parts = [f"MC: {token_mc}"]
+        if vol_str:
+            metric_parts.append(f"Vol 24h: {vol_str}")
+        metric_parts.append(f"B/S: {buy_ratio:.1f}x")
+        if risk_score:
+            metric_parts.append(f"Score: {risk_score}/100")
+        lines.append(f"📈 {' | '.join(metric_parts)}")
 
     # ── Auto-escalation ──
     concentration = sum(m["trades"] for m in top5) / max(sum(m["trades"] for m in makers), 1)
@@ -807,11 +827,19 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         lines.append(f"⚠️ {escalate_reason}")
 
     if mode == "summary":
-        lines.append(f"{verdict}")
+        lines.append("")
+        lines.append(f"🎯 {verdict}")
     else:
         lines.append("")
         lines.append("─── Вердикт ───")
         lines.append(f"→ {verdict}")
         lines.append("_Без PnL, без торговых советов._")
+
+    # ── DexScreener link ──
+    dex_link = f"https://dexscreener.com/solana/{address}"
+    if mode == "summary":
+        lines.append(f"🔗 {dex_link}")
+    else:
+        lines.append(f"🔗 DexScreener: {dex_link}")
 
     return "\n".join(lines)

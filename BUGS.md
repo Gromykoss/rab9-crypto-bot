@@ -1,34 +1,39 @@
-# RAB9 BUGS.md — Known Issues & Technical Debt
+# RAB9 — Known Bugs & Issues
 
-## Active Issues
+> Last updated: 2026-07-18
 
-### 1. MSF Listener — ранее без systemd управлялся как сырой процесс
-**Severity:** Fixed (now remediated)
-**Status:** ✅ Resolved — now managed as `msf-listener.service` (systemd --user)
-**Details:** The MSF Listener (msf_listener.py) was running as a raw shell script with no service supervision, restart policy, or logging — just a bare Python PID. Added systemd user unit at `~/.config/systemd/user/msf-listener.service` with restart=always and log output to `/tmp/msf-listener.log`.
+## Active Bugs
 
-### 2. Hy3 free tier → миграция на Grok завершена
-**Severity:** Critical — resolved
-**Status:** ✅ Closed 16.07.2026
-**Details:** Hy3 free tier закрылся 15.07. RAB9 мигрирован на Grok (xAI API) как основной LLM. Fallback: DeepSeek через OpenRouter. Hy3 больше не используется.
+### 1. MSF Listener не под systemd
+- **Severity:** Medium
+- **Symptom:** При ребуте сервера msf_listener.py не запускается автоматически
+- **Impact:** Сигналы из Мемов не доходят до RAB9 до ручного перезапуска
+- **Fix:** Создать systemd unit `msf-listener.service`
+- **Workaround:** `cd /home/hermes-workspace/rab9 && python3 msf_listener.py &`
 
-### 3. Signal pipeline v2 — never tested with live signal from Memes
-**Severity:** Medium — untested integration path
-**Status:** ⏳ Staging / needs E2E test
-**Details:** The Signal pipeline v2 was developed but has never been tested end-to-end with a live signal from the Memes group. Unit testing was done, but the full integration path (Telegram → MSF Listener → RAB9 → signal dispatch) has not been validated in production. Risk: silent failures on first live trigger.
+### 2. BUGS.md не существовал
+- **Severity:** Info
+- **Fixed:** 2026-07-18 — создан этот файл
 
-### 4. memory-engine MCP crashes without uv
-**Severity:** Medium — crash on startup if uv missing
-**Status:** ⏳ Needs dependency hardening
-**Details:** The memory-engine MCP server crashes on launch when `uv` (the Python package/project manager) is not installed in the environment. This is a fragile dependency — `uv` is not part of the standard system image and must be present for memory operations to work. Consider fallback to `pip` or bundling `uv` with the project.
+## Resolved
 
----
+### 3. MSF Listener не запущен (P0 — 18.07.2026)
+- **Symptom:** pgrep пусто, процесс упал при перезапуске gateway
+- **Fix:** Перезапущен вручную, PID 971190
+- **Status:** ✅ Работает, ловит сигналы
 
-## Legend
+### 4. Hy3 API key истекает 20.07.2026
+- **Symptom:** Hy3 free tier на OpenRouter заканчивается
+- **Fix:** 17.07.2026 — переключено на Grok (xAI API) с DeepSeek fallback
+- **Status:** ✅ RAB9_LLM=hy3 удалён из .env, Grok primary, DeepSeek fallback через OpenRouter
 
-| Status | Meaning |
-|--------|---------|
-| 🔴 Active | Bug is currently affecting production |
-| ⏳ Monitoring / Staging | Known risk, not yet triggered or not fully validated |
-| ✅ Resolved | Fix applied |
-| 📅 Scheduled | Fix is planned with a timeline |
+### 5. Birdeye API key suspended (17.07.2026)
+- **Symptom:** API key suspended, enrichment failed
+- **Fix:** Birdeye исключён из пайплайна, DexScreener — единственный источник обогащения
+- **Status:** ✅ Код устойчив (safe_get глотает ошибки)
+
+## Infra Notes
+
+- MSF Listener нужно перевести в systemd для автозапуска при ребуте
+- CHRONOLOGY.md создан задним числом (с 07.07.2026)
+- Бэкапы: `/home/hermes-workspace/rab9/backups/`

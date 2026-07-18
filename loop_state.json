@@ -143,9 +143,49 @@
       "verdict": "?",
       "tier": "",
       "duplicate": false
+    },
+    {
+      "address": "So1111111111...",
+      "token": "?",
+      "ts": 1784329400,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "CGEDT9QZDvvH...",
+      "token": "?",
+      "ts": 1784334855,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "67ezHLk8PUkj...",
+      "token": "?",
+      "ts": 1784334868,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "9jVRLpzqYQBB...",
+      "token": "?",
+      "ts": 1784334948,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
+    },
+    {
+      "address": "5wifkqwqhhzr...",
+      "token": "?",
+      "ts": 1784334968,
+      "verdict": "?",
+      "tier": "",
+      "duplicate": false
     }
   ],
   "duplicates": 0,
-  "total": 18,
-  "last_cleanup": 1784243053
+  "total": 23,
+  "last_cleanup": 1784329400
 }
