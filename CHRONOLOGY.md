@@ -1,5 +1,31 @@
 # RAB9 — Хронология
 
+## 2026-07-20 — T-134 auto-sol study: 7 P0+P1 improvements
+
+Имплементированы улучшения MSF-сигнального пайплайна по мотивам auto-sol (@0xrichboy, errnex/auto-sol).
+
+### P0 (5 шт.)
+1. **RugCheck gate** (`rugcheck_client.py`) — проверка rugcheck.xyz перед AI-анализом. Level=high/rugged → force AVOID.
+2. **Score header** — детерминированная строка `Score X/115 TIER | liq=… vol=… risk=…` над AI-прозой. AI не может менять скор.
+3. **Template fallback** (`msf_template.py`) — структурированная карта без LLM, когда Grok+DeepSeek недоступны.
+4. **sourceTags** — provenance-строка в каждом сигнале (msf-telegram, dexscreener, rugcheck, gmgn, etc.)
+5. **24h address dedupe** (`msf_dedupe.py`) — JSON `/data/msf_dedupe.json`. Повторный пинг → "already analyzed Xh ago".
+
+### P1 (2 шт.)
+6. **GMGN smart-money** (`gmgn_client.py`) — обогащение через GMGN rank endpoint. 403/empty → silent skip.
+7. **Hard liq/MC pre-filter** — если liq < $20K или MC > $50M → skip. Настраивается через `MIN_LIQUIDITY_USD`, `MAX_MARKET_CAP_USD`.
+
+### Изменённые файлы
+- `meme_score.py` — новый pillar `score_whale()` (0-15 pts), GMGN+RugCheck входы, max=115, новые tier-пороги
+- `msf_analysis.py` — интеграция всех 7 улучшений в `build_compact_analysis_text`
+- `config.py` — новые env vars
+
+### Новые файлы
+- `rugcheck_client.py`
+- `gmgn_client.py`
+- `msf_dedupe.py`
+- `msf_template.py`
+
 ## 2026-07-17 05:10 — Birdeye исключён из пайплайна
 
 API key suspended. Код уже был устойчив — `safe_get` глотает ошибки, DexScreener подхватывает. Изменения:
