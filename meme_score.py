@@ -384,8 +384,66 @@ def score_influencers(token_name: str = "", market: dict = None) -> tuple[int, l
     return max(0, min(10, score)), notes
 
 
-def compute_score(address: str, chart_data: dict | None = None) -> dict:
-    """Main scoring function. Returns structured score."""
+def score_whale(gmgn_score: int | None, rugcheck_level: str = "unknown") -> tuple[int, list[str]]:
+    """Pillar 7: Whale / Smart-Money & RugCheck (15 pts).
+
+    New pillar from auto-sol study. Folds GMGN smart-money + RugCheck
+    into a single 0-15 dimension. RAB9 already has security (freeze/mutable)
+    in pillar 1, so this focuses on GMGN whale signals + RugCheck scoring.
+
+    Args:
+        gmgn_score: 0-15 smart-money enrichment from GMGN (None if not available).
+        rugcheck_level: One of 'low', 'medium', 'high', 'unknown'.
+    """
+    score = 7  # Neutral base
+    notes = []
+
+    # ── GMGN smart-money sub-score (0-8 pts) ──
+    if gmgn_score is not None:
+        if gmgn_score >= 12:
+            score += 5
+            notes.append(f"🐋 GMGN smart-money: {gmgn_score}/15 — strong whale signal")
+        elif gmgn_score >= 8:
+            score += 3
+            notes.append(f"🐋 GMGN smart-money: {gmgn_score}/15 — moderate")
+        elif gmgn_score >= 4:
+            score += 1
+            notes.append(f"GMGN smart-money: {gmgn_score}/15 — weak")
+        else:
+            notes.append(f"GMGN smart-money: {gmgn_score}/15 — negligible")
+    else:
+        notes.append("GMGN: no data")
+
+    # ── RugCheck sub-score (0-7 pts) ──
+    if rugcheck_level == "low":
+        score += 4
+        notes.append("🟢 RugCheck: clean")
+    elif rugcheck_level == "medium":
+        score += 1
+        notes.append("🟡 RugCheck: medium risk")
+    elif rugcheck_level == "high":
+        score -= 5
+        notes.append("🔴 RugCheck: HIGH risk")
+    else:  # unknown
+        notes.append("⚪ RugCheck: unknown")
+
+    return max(0, min(15, score)), notes
+
+
+def compute_score(
+    address: str,
+    chart_data: dict | None = None,
+    gmgn_score: int | None = None,
+    rugcheck_level: str = "unknown",
+) -> dict:
+    """Main scoring function. Returns structured score.
+
+    Args:
+        address: Solana token address.
+        chart_data: Optional chart analysis dict.
+        gmgn_score: Optional GMGN smart-money score 0-15.
+        rugcheck_level: Optional RugCheck level ('low'/'medium'/'high'/'unknown').
+    """
     onchain = fetch_onchain(address)
     market = fetch_market(address)
 
@@ -427,12 +485,17 @@ def compute_score(address: str, chart_data: dict | None = None) -> dict:
     total += s
     max_total += 10
 
-    # Tier
-    if total >= 85:
+    s, n = score_whale(gmgn_score, rugcheck_level)
+    pillars["whale_rugcheck"] = {"score": s, "max": 15, "notes": n}
+    total += s
+    max_total += 15
+
+    # Tier (scaled for 115 max: 95≈83%, 80≈70%, 55≈48%)
+    if total >= 95:
         tier = "HIGH CONVICTION"
-    elif total >= 70:
+    elif total >= 80:
         tier = "SOLID"
-    elif total >= 50:
+    elif total >= 55:
         tier = "SPECULATIVE"
     else:
         tier = "AVOID"

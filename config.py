@@ -30,6 +30,10 @@ ALERT_STATE_PATH = os.path.join(BASE_DIR, "alert_state.json")
 WALLET_WATCHLIST_PATH = os.path.join(BASE_DIR, "wallet_watchlist.json")
 
 ALERT_INTERVAL_SECONDS = int(os.getenv("ALERT_INTERVAL_SECONDS", "3600"))
+# ── RAB9 P0+P1: liq/MC pre-filter thresholds (auto-sol study) ──
+MIN_LIQUIDITY_USD = int(os.getenv("MIN_LIQUIDITY_USD", "20000"))
+MAX_MARKET_CAP_USD = int(os.getenv("MAX_MARKET_CAP_USD", "50000000"))
+
 ALERT_COOLDOWN_SECONDS = int(os.getenv("ALERT_COOLDOWN_SECONDS", "3600"))
 LEGACY_WATCHLIST_ALERTS_ENABLED = os.getenv("LEGACY_WATCHLIST_ALERTS_ENABLED", "false").lower() in {
     "1",

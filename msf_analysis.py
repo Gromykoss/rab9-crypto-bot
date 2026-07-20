@@ -37,7 +37,14 @@ def compact(value, left=6, right=4):
 
 from pair_sources import build_pair_resolve_text, get_dexscreener_candidates
 from maker_sources import get_birdeye_pair_makers, summarize_pair_makers
-from token_intel import ask_grok
+from token_intel import ask_grok, ask_deepseek
+
+# ── RAB9 P0+P1: auto-sol study improvements ──
+from config import MIN_LIQUIDITY_USD, MAX_MARKET_CAP_USD
+from rugcheck_client import check_token as rugcheck_check, format_for_grok as fmt_rugcheck
+from gmgn_client import get_smart_money_score, format_for_grok as fmt_gmgn
+from msf_dedupe import check_dedupe, record_address as dedupe_record
+from msf_template import build_template_card
 
 
 PAIR_RECOMMENDATION_RE = re.compile(r"Use this address for /makertrades:\s*(?P<pair>\S+)")
@@ -167,6 +174,11 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     import requests
     from config import BIRDEYE_API_KEY
 
+    # ── P0: 24h address deduplication ──
+    dedupe_msg = check_dedupe(address)
+    if dedupe_msg:
+        return dedupe_msg
+
     theory_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trading_theory.md")
     try:
         with open(theory_path, "r", encoding="utf-8") as f:
@@ -192,6 +204,42 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
 
     if not pair:
         return "⚠️ Не удалось определить pair для этого адреса."
+
+    # ── P1: Hard liq/MC pre-filter (before expensive scans) ──
+    # Quick DexScreener check to avoid wasting API calls on junk tokens
+    dex_liq: float | None = None
+    dex_mc: float | None = None
+    dex_vol: float | None = None
+    try:
+        dr_pre = requests.get(
+            f"https://api.dexscreener.com/latest/dex/pairs/solana/{address}",
+            timeout=10,
+        )
+        if dr_pre.ok:
+            pre_pairs = dr_pre.json().get("pairs", [])
+            if pre_pairs:
+                p0 = pre_pairs[0]
+                dex_liq = (p0.get("liquidity", {}) or {}).get("usd")
+                dex_mc = p0.get("marketCap")
+                dex_vol = (p0.get("volume", {}) or {}).get("h24")
+    except Exception:
+        pass
+
+    if dex_liq is not None and dex_mc is not None:
+        if dex_liq < MIN_LIQUIDITY_USD:
+            return (
+                f"⚫ SKIP: Liquidity too thin (${dex_liq:,.0f} < ${MIN_LIQUIDITY_USD:,})\n"
+                f"MC: {'${:,.0f}'.format(dex_mc) if dex_mc else '?'} | "
+                f"Vol 24h: {'${:,.0f}'.format(dex_vol) if dex_vol else '?'}\n"
+                f"🔗 https://dexscreener.com/solana/{address}"
+            )
+        if dex_mc > MAX_MARKET_CAP_USD:
+            return (
+                f"⚫ SKIP: MC too large (${dex_mc:,.0f} > ${MAX_MARKET_CAP_USD:,})\n"
+                f"Liq: {'${:,.0f}'.format(dex_liq) if dex_liq else '?'} | "
+                f"Vol 24h: {'${:,.0f}'.format(dex_vol) if dex_vol else '?'}\n"
+                f"🔗 https://dexscreener.com/solana/{address}"
+            )
 
     result = get_birdeye_pair_makers(pair, mode="normal")
     items = result.get("items") or []
@@ -368,6 +416,11 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     score_raw = ""
     creator_raw = ""
 
+    # ── Initialize P0+P1 variables (set defaults before enrichment) ──
+    rugcheck_report: dict = {"ok": False, "level": "unknown"}
+    rugcheck_level: str = "unknown"
+    gmgn_score: int | None = None
+
     try:
         import subprocess
         rab9_dir = os.path.dirname(os.path.abspath(__file__))
@@ -427,8 +480,21 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             chart_data_for_score = None
             if chart_raw:
                 chart_data_for_score = json.loads(chart_raw)
+
+            # ── P0: RugCheck gate (before scoring) ──
+            rugcheck_report = rugcheck_check(token_addr)
+            rugcheck_level = rugcheck_report.get("level", "unknown")
+
+            # ── P1: GMGN smart-money enrichment (optional, silent skip) ──
+            gmgn_score = get_smart_money_score(token_addr)
+
             from meme_score import compute_score, format_for_grok as fmt_score
-            score_result = compute_score(token_addr, chart_data_for_score)
+            score_result = compute_score(
+                token_addr,
+                chart_data_for_score,
+                gmgn_score=gmgn_score,
+                rugcheck_level=rugcheck_level,
+            )
             score_raw = json.dumps(score_result, ensure_ascii=False)
         except Exception as e:
             print(f"[ENRICH] meme_score in-process failed: {e}", file=sys.stderr)
@@ -721,6 +787,17 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 f"\n\nСКОРИНГ МЕМКОИНА:\n{score_context}"
                 "\n\nИспользуй скор для калибровки synthesis: HIGH CONVICTION/SOLID/SPECULATIVE/AVOID."
             )
+        # ── P0+P1: RugCheck + GMGN context ──
+        grok_prompt += f"\n\nRUGCHECK:\n{fmt_rugcheck(rugcheck_report)}"
+        grok_prompt += (
+            "\nЕсли RugCheck level=high или rugged=true — это CRITICAL RED FLAG. "
+            "Упомяни в рисках."
+        )
+        grok_prompt += f"\n\nGMGN SMART-MONEY:\n{fmt_gmgn(gmgn_score)}"
+        grok_prompt += (
+            "\nGMGN smart-money сигнал дополняет whale analysis. "
+            "Сильный сигнал (>10) = институциональный интерес."
+        )
         if phase_context:
             grok_prompt += (
                 f"\n\nPHASE DETECTOR (основной торговый сигнал):\n{phase_context}"
@@ -760,8 +837,25 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             "Не упоминай STORM или экспертов в выводе. "
             "Не уточняй, не спрашивай — дай готовый структурированный ответ."
         )
+        # ── LLM dispatch: Grok → DeepSeek → template fallback ──
         raw = ask_grok(grok_prompt).strip()
-        if raw and not raw.lower().startswith("grok"):
+        is_error = (
+            not raw
+            or raw.lower().startswith("grok")
+            or raw.lower().startswith("grok api")
+        )
+
+        # DeepSeek fallback
+        if is_error:
+            try:
+                ds_raw = ask_deepseek(grok_prompt).strip()
+                if ds_raw and not ds_raw.lower().startswith("deepseek"):
+                    raw = ds_raw
+                    is_error = False
+            except Exception:
+                pass
+
+        if not is_error and raw:
             grok_summary = raw.lstrip("•-→0123456789. )")
             try:
                 grok_log_path = os.path.join(
@@ -785,20 +879,78 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                     f.write(json.dumps(grok_log_entry, ensure_ascii=False) + "\n")
             except Exception:
                 pass
+        else:
+            # Both LLMs failed — use template fallback
+            grok_summary = None
+            print("[MSF] Both Grok and DeepSeek failed — using template fallback", file=sys.stderr)
     except Exception:
         pass
+
+    # ── P0: Score header (above AI prose, AI cannot change score) ──
+    if mode == "summary" and score_data and isinstance(score_data, dict):
+        score_val = score_data.get("score", "?")
+        score_tier = score_data.get("tier", "?")
+        score_max = score_data.get("max", 115)
+
+        # Extract key metrics for header
+        liq_str = ""
+        vol_str = ""
+        if dex_liq is not None:
+            if dex_liq >= 1_000_000:
+                liq_str = f"${dex_liq/1_000_000:.1f}M"
+            elif dex_liq >= 1_000:
+                liq_str = f"${dex_liq/1_000:.0f}K"
+            else:
+                liq_str = f"${dex_liq:.0f}"
+        if dex_vol is not None:
+            if dex_vol >= 1_000_000:
+                vol_str = f"${dex_vol/1_000_000:.1f}M"
+            elif dex_vol >= 1_000:
+                vol_str = f"${dex_vol/1_000:.0f}K"
+            else:
+                vol_str = f"${dex_vol:.0f}"
+
+        rug_emoji = {"low": "🟢", "medium": "🟡", "high": "🔴", "unknown": "⚪"}.get(
+            rugcheck_level, "⚪"
+        )
+
+        score_header = f"📊 Score {score_val}/{score_max} {score_tier}"
+        metric_bits = []
+        if liq_str:
+            metric_bits.append(f"liq={liq_str}")
+        if vol_str:
+            metric_bits.append(f"vol={vol_str}")
+        metric_bits.append(f"risk={rug_emoji}")
+        if metric_bits:
+            score_header += " | " + " ".join(metric_bits)
+        lines.append(score_header)
 
     if grok_summary:
         if mode == "summary":
             lines.append("")
-            lines.append(f"📊 {grok_summary}")
+            lines.append(f"📝 {grok_summary}")
         else:
             lines.append("")
             lines.append("─── AI-анализ ───")
             lines.append(f"📊 {grok_summary}")
+    elif mode == "summary":
+        # ── P0: Template fallback when LLMs unavailable ──
+        lines.append("")
+        template_card = build_template_card(
+            token_name=token_name,
+            address=address,
+            score=score_data,
+            liq=dex_liq,
+            vol=dex_vol,
+            mc=dex_mc,
+            rugcheck=rugcheck_report,
+            buy_ratio=buy_ratio,
+            sources=[],  # Filled below
+        )
+        lines.append(template_card)
 
-    # ── Key metrics (summary mode) ──
-    if mode == "summary":
+    # ── Key metrics (summary mode, without score header) ──
+    if mode == "summary" and grok_summary:
         vol_str = ""
         if dex_volume_24h:
             if dex_volume_24h >= 1_000_000:
@@ -809,13 +961,13 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 vol_str = f"${dex_volume_24h}"
         risk_score = ""
         if score_data and isinstance(score_data, dict):
-            risk_score = str(score_data.get("total", score_data.get("score", "?")))
+            risk_score = str(score_data.get("score", "?"))
         metric_parts = [f"MC: {token_mc}"]
         if vol_str:
             metric_parts.append(f"Vol 24h: {vol_str}")
         metric_parts.append(f"B/S: {buy_ratio:.1f}x")
         if risk_score:
-            metric_parts.append(f"Score: {risk_score}/100")
+            metric_parts.append(f"Score: {risk_score}/115")
         lines.append(f"📈 {' | '.join(metric_parts)}")
 
     # ── Auto-escalation ──
@@ -827,6 +979,9 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         lines.append(f"⚠️ {escalate_reason}")
 
     if mode == "summary":
+        # ── P0: RugCheck gate — force AVOID if high/rugged ──
+        if rugcheck_level == "high" or rugcheck_report.get("rugged"):
+            verdict = "⚠️ AVOID (RugCheck: HIGH RISK)"
         lines.append("")
         lines.append(f"🎯 {verdict}")
     else:
@@ -835,11 +990,32 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         lines.append(f"→ {verdict}")
         lines.append("_Без PnL, без торговых советов._")
 
+    # ── P0: sourceTags provenance line ──
+    source_tags = ["msf-telegram", "dexscreener"]
+    if rugcheck_report.get("ok"):
+        source_tags.append("rugcheck")
+    if gmgn_score is not None:
+        source_tags.append("gmgn")
+    if makers:
+        source_tags.append("birdeye-makers")
+    if total_matched > 0:
+        source_tags.append("cabal-xref")
+    source_line = f"📎 sources: {', '.join(source_tags)}"
+    lines.append(source_line)
+
     # ── DexScreener link ──
     dex_link = f"https://dexscreener.com/solana/{address}"
     if mode == "summary":
         lines.append(f"🔗 {dex_link}")
     else:
         lines.append(f"🔗 DexScreener: {dex_link}")
+
+    # ── P0: Record address for 24h deduplication ──
+    try:
+        score_val = score_data.get("score", 0) if score_data else 0
+        score_tier = score_data.get("tier", "?") if score_data else "?"
+        dedupe_record(address, score=score_val, tier=score_tier)
+    except Exception:
+        pass
 
     return "\n".join(lines)
