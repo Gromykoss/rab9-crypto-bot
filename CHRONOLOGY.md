@@ -147,6 +147,15 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - Интеграция в MSF-пайплайн: перед каждым анализом → кабал-чек → алерт
 - Паттерны $ANSEM сохранены в `data/cabal_pattern_ansem.md`
 
+## 2026-07-22 — AutoHedge радиолокационная находка + проект idle
+
+- **12:00** — X Hotspot Radar: обнаружен AutoHedge (@cyrilXBT) — open-source 4-agent Solana hedge fund (Director/Quant/Risk/Execution) + Orbit (KOL-tracking для ранних мемкоин-сигналов). → T-158: интеграция в RAB9 scoring/execution.
+- **22-23.07** — Проект idle. MSF Listener жив, сигналов в канале нет. Git clean (Daily Audit 23.07). Hy3 free tier истекает — Grok как основной LLM.
+
+## 2026-07-21 — Hy3 LLM миграция + Birdeye fallback
+
+- **05:10** — Hy3 free tier на OpenRouter истекает 20.07.2026. xAI API key восстановлен из hermes-vault. RAB9_LLM переключён на grok как основной провайдер.
+
 ## 2026-06-20 — Миграция RAB9 на hermes-user
 
 - Перенос с `/root/rab9/` → `/home/hermes-workspace/rab9/`
