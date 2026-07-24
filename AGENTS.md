@@ -4,6 +4,32 @@
 Бот: Python, DexScreener + xAI/Grok.
 Путь: /home/hermes-workspace/rab9/
 
+---
+
+# ⛔ CRITICAL GATES — ЧИТАЙ ПЕРВЫМ, ДО ЛЮБОГО ДЕЙСТВИЯ
+
+⚠️ DO NOT SKIP: read ALL rules in this file before acting. Самые нарушаемые правила — здесь, наверху.
+
+0. **CONTEXT GATE (MANDATORY):** перед ЛЮБЫМ действием — выбрать триггер и загрузить контекст:
+   ```bash
+   python3 ~/.hermes/scripts/context_loader.py rab9 <trigger> [--max-tokens 500]
+   ```
+   Вывод вставить в reasoning ДО действия. Триггеры:
+   - `session_start` → gates + last-3-days
+   - `code_change` → gates + chronology (код бота)
+   - `signal_analysis` → signal-flow + chronology (анализ сигналов)
+   - `audit` → chronology + bugs
+   - `default` → gates only
+
+1. **PRE-PATCH GATE (MANDATORY):** перед любым изменением кода — `grep -rn "имя" .`, показать grep пользователю, проследить логику в КАЖДОМ месте. Нет grep → патч не принят. Откат.
+2. **No production without approval:** сигналы в Песочницу (`-1003979753733`) только через approval gate. Не менять systemd unit.
+3. **REJECT default:** MoA — оба agree → PASS, расходятся → FLAG, иначе REJECT.
+4. **НЕ байпасить** cabal_detector, wallet_intel, loop_verifier.
+5. **Never expose credentials:** `msf_token.txt`, `TELEGRAM_BOT_TOKEN`, API ключи — не коммитить, не логировать.
+6. **Раздельно с Алиханом:** директории, venv, боты, БД, ключи — всё раздельно.
+
+---
+
 ## Старт сессии
 
 1. `skill_view("hermes-self-knowledge")` — 14 паттернов харнеса
@@ -92,6 +118,8 @@ Trigger (@msf_rab_bot → msf_listener.py) → Discover (Birdeye/DexScreener) �
 **LOOP_PROGRESS.md:** каждая строка — время, токен, вердикт, модели. Читать при старте.
 
 **Maker ≠ Checker:** Grok предлагает, DeepSeek проверяет.
+
+# ⚠️ DO NOT SKIP: прочитай ВСЕ правила ниже перед любым действием
 
 ## Правила строительства
 

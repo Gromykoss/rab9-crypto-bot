@@ -1,5 +1,10 @@
 # RAB9 — Хронология
 
+## 2026-07-24
+
+- CONTEXT GATE (rule #0) added to `AGENTS.md`
+- No direct code changes today
+
 ## 2026-07-20 — T-134 auto-sol study: 7 P0+P1 improvements
 
 Имплементированы улучшения MSF-сигнального пайплайна по мотивам auto-sol (@0xrichboy, errnex/auto-sol).
