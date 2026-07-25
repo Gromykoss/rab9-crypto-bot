@@ -1,5 +1,10 @@
 # RAB9 — Хронология
 
+## 25.07.2026 — Profile memory created (Operator Watch)
+
+- **15:50** — RAB9 profile memory created: `MEMORY.md` + `USER.md` в `~/.hermes/profiles/rab9/memories/`. Причина: Operator Watch обнаружил пустые memory-файлы профиля RAB9.
+- No direct code changes today.
+
 ## 2026-07-24
 
 - CONTEXT GATE (rule #0) added to `AGENTS.md`
