@@ -175,3 +175,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - Создан `wallet_intel.py`: кросс-референс 1354 кошельков
 - Интеграция wallet intelligence в `msf_analysis.py`
 - GitHub синхронизирован: `Gromykoss/rab9-crypto-bot`
+- **25.07.2026 23:06** — chronology: auto-update 25.07.2026 (`ae899ce`)
