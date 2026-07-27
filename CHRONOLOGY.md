@@ -176,3 +176,5 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - Интеграция wallet intelligence в `msf_analysis.py`
 - GitHub синхронизирован: `Gromykoss/rab9-crypto-bot`
 - **25.07.2026 23:06** — chronology: auto-update 25.07.2026 (`ae899ce`)
+- **26.07.2026 04:12** — chore: auto-sync 26.07 (`dcbfd16`)
+- **26.07.2026 23:25** — CHRONOLOGY agent: idle day. 0 MSF-сигналов. Telegram NetworkError (Bad Gateway) в 01:10 — transient, самовосстановился. Health-чеки стабильны (:8089 200). MSF Listener PID 1166144 жив. Без изменений кода.
