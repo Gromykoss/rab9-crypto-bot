@@ -180,3 +180,6 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **26.07.2026 23:25** — CHRONOLOGY agent: idle day. 0 MSF-сигналов. Telegram NetworkError (Bad Gateway) в 01:10 — transient, самовосстановился. Health-чеки стабильны (:8089 200). MSF Listener PID 1166144 жив. Без изменений кода.
 - **27.07.2026 04:07** — chore: auto-sync 27.07 (`9ed8b81`)
 - **27.07.2026 04:08** — chore: auto-sync CHRONOLOGY 27.07 (`946aedf`)
+- **27.07.2026 04:08** — chore: CHRONOLOGY final 27.07 (`0d2e5b1`)
+- **27.07.2026 04:25** — smoke test (`de127c5`)
+- **27.07.2026 23:30** — CHRONOLOGY agent: idle day. 1 токен (`6rgcQxmntX19GsUdcf79EQZVgkmDdBCiy4crPoCEFRZs`), 2 анализа (VERIFIER PASS 100 оба). Инфраструктура стабильна: RAB9 Core active (PID 3164401, 6d uptime), MSF HTTP :8089 200, MSF Listener PID 1166144 жив. 0 ошибок в логах.
