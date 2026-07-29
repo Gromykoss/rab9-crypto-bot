@@ -466,31 +466,44 @@ def load_cabal_library() -> dict:
     return build_kabal_library()
 
 
-def cross_reference_makers(makers, cabal_library=None):
-    """Cross-reference current makers against scored library."""
+def cross_reference_makers(makers, cabal_library=None, gmgn_wallet_scores=None):
+    """Cross-reference current makers against scored library.
+
+    gmgn_wallet_scores: optional dict wallet→{score,tier,winrate,tags} SUPPLEMENT.
+    Never overrides cabal classification / probability.
+    """
     if cabal_library is None:
         cabal_library = load_cabal_library() if RAB9_DB_ENABLED else {}
 
-    if not cabal_library:
+    gmgn_wallet_scores = gmgn_wallet_scores or {}
+
+    if not cabal_library and not gmgn_wallet_scores:
         return {
             "known": [], "cabal": [], "infrastructure": [],
-            "summary": "", "has_signal": False, "cabal_count": 0,
+            "gmgn": [], "summary": "", "has_signal": False, "cabal_count": 0,
         }
 
     known = []
     cabal = []
     infra = []
+    gmgn_hits = []
 
     for m in makers:
         addr = m.get("wallet", "") or m.get("maker", "")
         if addr in cabal_library:
             info = cabal_library[addr]
             entry = {**m, "intel": info}
+            # attach GMGN supplement if present (does not change classification)
+            if addr in gmgn_wallet_scores:
+                entry["gmgn"] = gmgn_wallet_scores[addr]
             if info.get("classification") == "infrastructure":
                 infra.append(entry)
             else:
                 cabal.append(entry)
             known.append(entry)
+        elif addr in gmgn_wallet_scores:
+            # GMGN-only hit — not a cabal hit
+            gmgn_hits.append({**m, "gmgn": gmgn_wallet_scores[addr]})
 
     lines = []
     if cabal:
@@ -510,14 +523,32 @@ def cross_reference_makers(makers, cabal_library=None):
                 ev_brief.append(f"⚠️ exit<6h×{i['exit_6h']}")
             ev_str = ", ".join(ev_brief) if ev_brief else "—"
 
+            extra = ""
+            g = c.get("gmgn") or {}
+            if g:
+                extra = f" | GMGN {g.get('score')}/100 {g.get('tier')}"
+
             lines.append(
                 f"  • {c['wallet'][:8]}... — P={i.get('probability',0):.0%}, "
                 f"{i.get('winner_tokens',0)}W tokens, "
-                f"[{ev_str}]"
+                f"[{ev_str}]{extra}"
             )
 
     if infra:
         lines.append(f"🤖 Infrastructure ({len(infra)}): MEV/bot wallets")
+
+    # GMGN-only high scores among makers (not in cabal lib)
+    high_gmgn = [g for g in gmgn_hits if (g.get("gmgn") or {}).get("score", 0) >= 70]
+    if high_gmgn:
+        lines.append(f"🐋 GMGN wallet-score HIGH among makers ({len(high_gmgn)}):")
+        for g in sorted(high_gmgn, key=lambda x: (x.get("gmgn") or {}).get("score", 0), reverse=True)[:5]:
+            gi = g.get("gmgn") or {}
+            addr = g.get("wallet") or g.get("maker") or ""
+            lines.append(
+                f"  • {addr[:8]}... — score={gi.get('score')}/100 ({gi.get('tier')}), "
+                f"WR={gi.get('winrate', 0):.0%}, tags={gi.get('tags')}"
+            )
+            lines.append("    ↳ SUPPLEMENT only — not cabal-classified")
 
     summary = "\n".join(lines) if lines else ""
 
@@ -525,6 +556,7 @@ def cross_reference_makers(makers, cabal_library=None):
         "known": known,
         "cabal": cabal,
         "infrastructure": infra,
+        "gmgn": gmgn_hits,
         "summary": summary,
         "has_signal": len(cabal) > 0,
         "cabal_count": len(cabal),

@@ -18,8 +18,13 @@ def _read_birdeye_key():
     if os.path.exists(env_path):
         with open(env_path) as f:
             for line in f:
+                if line.strip().startswith("#"):
+                    continue
                 if "BIRDEYE_API_KEY" in line:
-                    return line.split("=", 1)[1].strip().strip("\"'")
+                    parts = line.split("=", 1)
+                    if len(parts) < 2:
+                        return ""
+                    return parts[1].strip().strip("\"'")
     return ""
 
 
@@ -41,16 +46,33 @@ def fetch_onchain(address: str) -> dict:
 
 
 def fetch_market(address: str) -> dict:
-    """DexScreener pair data."""
+    """DexScreener pair or token data (accepts pair OR mint)."""
     try:
+        # Try as pair first
         r = requests.get(
             f"https://api.dexscreener.com/latest/dex/pairs/solana/{address}",
             timeout=TIMEOUT,
         )
         if r.ok:
             data = r.json()
-            pairs = data.get("pairs", [data] if isinstance(data, dict) else [])
-            return pairs[0] if pairs else {}
+            pairs = data.get("pairs") or []
+            if pairs:
+                return pairs[0]
+        # Fallback: token mint endpoint
+        r2 = requests.get(
+            f"https://api.dexscreener.com/latest/dex/tokens/{address}",
+            timeout=TIMEOUT,
+        )
+        if r2.ok:
+            pairs = r2.json().get("pairs") or []
+            if pairs:
+                # best by liquidity
+                pairs = sorted(
+                    pairs,
+                    key=lambda p: ((p.get("liquidity") or {}).get("usd") or 0),
+                    reverse=True,
+                )
+                return pairs[0]
     except Exception:
         pass
     return {}

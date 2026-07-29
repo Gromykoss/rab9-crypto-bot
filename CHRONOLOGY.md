@@ -1,5 +1,34 @@
 # RAB9 — Хронология
 
+## 2026-07-28 — T-182 GMGN OpenAPI cutover (read-only)
+
+- **13:15** — `gmgn_client.py` переписан с scrape `gmgn.ai/defi/quotation` → **official `gmgn-cli` OpenAPI**.
+- Enrichment: `token info` + `security` + `holders` → score 0–15 + security/tags для Grok.
+- `msf_analysis.py`: `enrich_token()`, Grok block `GMGN OPENAPI (read-only)`, source tag `gmgn-openapi`.
+- Trading **disabled** (API key Enable Trading=OFF). Swap не вызывается.
+- Self-test BURNIE: score **10/15 strong**, holders=10251, top10=18.1%, renounced mint/freeze, locked.
+- `gmgn-cli` path: `/home/hermes-workspace/.hermes/node/bin/gmgn-cli`, conf `~/.config/gmgn/.env`.
+- RAB9 restarted: `rab9-crypto-hermes` active, `:8089/health` 200.
+
+## 2026-07-28 — T-182 layer2: track SM/KOL + wallet-score
+
+- **13:30** — `track_token_flow()` + `wallet_stats_score()` / `score_wallets()` in `gmgn_client.py`.
+- `wallet_intel.cross_reference_makers(..., gmgn_wallet_scores=)` — SUPPLEMENT only, cabal P≥80% intact.
+- `msf_analysis`: GMGN TRACK + WALLET-SCORE in Grok; source tags `gmgn-track`, `gmgn-wallet`.
+- Self-test: SM wallet score 97/100 HIGH; track on live mint Smugs → distribution (26 SM hits).
+- Trading still disabled. RAB9 restart OK, health 200.
+
+
+## 2026-07-28 — Report quality fix (BURNIE path)
+
+- Safe `.env` key parsers (meme_score/cabal/chart/onchain/creator/loop_verifier) — no crash on commented Birdeye.
+- `meme_score.fetch_market`: mint fallback via DexScreener tokens endpoint.
+- Summary report always shows: Score line + GMGN block + Track + wallet intel (no empty makers spam).
+- Dedupe: junk Score 0 ignored; re-hit shows useful recap (name/MC/GMGN/verdict).
+- Self-test BURNIE: Score **96/115 HIGH CONVICTION**, GMGN 10/15, clean structure; rehit recap OK.
+- RAB9 restarted, health 200.
+
+
 ## 25.07.2026 — Profile memory created (Operator Watch)
 
 - **15:50** — RAB9 profile memory created: `MEMORY.md` + `USER.md` в `~/.hermes/profiles/rab9/memories/`. Причина: Operator Watch обнаружил пустые memory-файлы профиля RAB9.
@@ -183,3 +212,5 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **27.07.2026 04:08** — chore: CHRONOLOGY final 27.07 (`0d2e5b1`)
 - **27.07.2026 04:25** — smoke test (`de127c5`)
 - **27.07.2026 23:30** — CHRONOLOGY agent: idle day. 1 токен (`6rgcQxmntX19GsUdcf79EQZVgkmDdBCiy4crPoCEFRZs`), 2 анализа (VERIFIER PASS 100 оба). Инфраструктура стабильна: RAB9 Core active (PID 3164401, 6d uptime), MSF HTTP :8089 200, MSF Listener PID 1166144 жив. 0 ошибок в логах.
+- **28.07.2026 04:04** — chore: auto-sync 28.07 (`dd5b260`)
+- **28.07.2026 23:30** — CHRONOLOGY agent: day summary. 3 токена, 8 анализов (включая 6× `CGEDT9Q...` BURNIE). 6 CABAL_EXPLOSION алертов. 2 ошибки `meme_score` list index out of range (09:49, 13:27 — self-healed). Telegram NetworkError 01:11 (10 ошибок, transient, самовосстановился). RAB9 перезапущен в 13:49 (PID 1983572). BURNIE: 96/115 СИЛЬНЫЙ, GMGN 10/15, 10257 держателей. Инфраструктура стабильна.

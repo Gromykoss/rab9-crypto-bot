@@ -42,7 +42,15 @@ from token_intel import ask_grok, ask_deepseek
 # ── RAB9 P0+P1: auto-sol study improvements ──
 from config import MIN_LIQUIDITY_USD, MAX_MARKET_CAP_USD
 from rugcheck_client import check_token as rugcheck_check, format_for_grok as fmt_rugcheck
-from gmgn_client import get_smart_money_score, format_for_grok as fmt_gmgn
+from gmgn_client import (
+    get_smart_money_score,
+    enrich_token as gmgn_enrich_token,
+    format_for_grok as fmt_gmgn,
+    track_token_flow as gmgn_track_token_flow,
+    score_wallets as gmgn_score_wallets,
+    format_track_for_grok as fmt_gmgn_track,
+    format_wallets_for_grok as fmt_gmgn_wallets,
+)
 from msf_dedupe import check_dedupe, record_address as dedupe_record
 from msf_template import build_template_card
 
@@ -321,8 +329,31 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         sell_heavy = dex_sells
 
     # ── Wallet intel ──
+    # GMGN wallet-score first (supplement) — cabal remains authoritative
+    gmgn_score_map = {}
+    try:
+        maker_addrs = []
+        for m in makers[:8]:
+            a = m.get("wallet") or m.get("maker") or ""
+            if a:
+                maker_addrs.append(a)
+        gmgn_wallets = gmgn_score_wallets(maker_addrs, max_wallets=5)
+        if gmgn_wallets.get("ok"):
+            for w in gmgn_wallets.get("wallets") or []:
+                addr = w.get("wallet") or ""
+                if addr:
+                    gmgn_score_map[addr] = {
+                        "score": w.get("score"),
+                        "tier": w.get("tier"),
+                        "winrate": w.get("winrate"),
+                        "tags": w.get("tags"),
+                        "realized_profit_pnl": w.get("realized_profit_pnl"),
+                    }
+    except Exception as e:
+        print(f"[ENRICH] gmgn wallet-score failed: {e}", file=sys.stderr)
+
     cabal = _get_cabal()
-    xref = cross_reference_makers(makers, cabal)
+    xref = cross_reference_makers(makers, cabal, gmgn_wallet_scores=gmgn_score_map)
     cabal_count = xref.get("cabal_count", 0)
     total_matched = len(xref.get("known", []))
     infra_count = len(xref.get("infrastructure", []))
@@ -420,6 +451,9 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     rugcheck_report: dict = {"ok": False, "level": "unknown"}
     rugcheck_level: str = "unknown"
     gmgn_score: int | None = None
+    gmgn_report: dict = {"ok": False}
+    gmgn_track: dict = {"ok": False}
+    gmgn_wallets: dict = {"ok": False}
 
     try:
         import subprocess
@@ -485,8 +519,18 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             rugcheck_report = rugcheck_check(token_addr)
             rugcheck_level = rugcheck_report.get("level", "unknown")
 
-            # ── P1: GMGN smart-money enrichment (optional, silent skip) ──
-            gmgn_score = get_smart_money_score(token_addr)
+            # ── P1: GMGN OpenAPI enrichment (optional, silent skip, read-only) ──
+            gmgn_report = gmgn_enrich_token(token_addr)
+            gmgn_score = (
+                gmgn_report.get("smart_money_score")
+                if gmgn_report.get("ok")
+                else get_smart_money_score(token_addr)
+            )
+            # Live track: smartmoney + KOL flow for this mint
+            try:
+                gmgn_track = gmgn_track_token_flow(token_addr, limit=80)
+            except Exception as e:
+                print(f"[ENRICH] gmgn track failed: {e}", file=sys.stderr)
 
             from meme_score import compute_score, format_for_grok as fmt_score
             score_result = compute_score(
@@ -698,9 +742,10 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
 
     # ── Proceed even without makers (Birdeye may be down) ──
     if not makers:
-        lines.append("")
-        lines.append("─── Makers ───")
-        lines.append("⚠️ Мейкеры не найдены (нет данных от источников).")
+        if mode != "summary":
+            lines.append("")
+            lines.append("─── Makers ───")
+            lines.append("⚠️ Мейкеры не найдены (нет данных от источников).")
         # Don't return early — continue to radars + Grok analysis
         # Set safe defaults for maker-dependent variables
         cabal_count = 0
@@ -712,50 +757,26 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     # ── Grok analytical summary ──
     grok_summary = ""
     try:
-        # Fable 5 + STORM: goal + multi-perspective framework
+        # Compact plain-Russian brief for Telegram (no STORM jargon in output)
         grok_prompt = (
-            "GOAL: Быстрый STORM-анализ мемкоина для трейдера — решение вход/выход/ждать. "
-            "EFFORT: High. Используй trading theory как аналитическую рамку, не как чеклист. "
-            "Контекст: трейдеру нужно понять манипуляции кабалов, стадию жизненного цикла, "
-            "риски on-chain и реальный ли интерес сообщества. "
-            "Внутренне применяй Stanford STORM: много перспектив → карта противоречий → синтез.\n\n"
-            "STORM STEP 0 — VERIFICATION GATE (ВЫПОЛНИ ДО ОСТАЛЬНЫХ ШАГОВ). "
-            "Проверь данные X-аккаунта токена ( АККАУНТ ТОКЕНА ниже). "
-            "ЕСЛИ у токена есть X-аккаунт с >1000 followers И живые посты имеют лайки/репосты → комьюнити РЕАЛЬНОЕ. "
-            "Vote-spam в Moonshot/FOMO — СТАНДАРТНОЕ поведение мемкоинов, НЕ признак фейка. "
-            "НЕ называй комьюнити «фейковым» если у аккаунта живой engagement. "
-            "НЕ утверждай про «посты без лайков» не проверив фактические метрики. "
-            "Если нет данных об аккаунте — так и напиши: «недостаточно данных о комьюнити».\n\n"
-            "STORM STEP 1 — MULTI-PERSPECTIVE SCAN. Проанализируй данные независимо от лица 5 экспертов:\n"
-            "PRACTITIONER: рыночная реальность на земле, что не видно в метриках, микро-динамика входа/выхода.\n"
-            "SKEPTIC: самые сильные контраргументы, скрытые риски, почему сигнал может быть фейком.\n"
-            "ECONOMIST: стимулы, power dynamics, кто зарабатывает, вторичные эффекты.\n"
-            "ON-CHAIN SPECIALIST: LP risk, концентрация supply, conviction создателя, metadata/контрактные риски.\n"
-            "SENTIMENT ANALYST: реальное комьюнити против манипуляции, fake buzz, инфлюенсерские паттерны. "
-            "НО: используй VERIFICATION GATE выше — не называй комьюнити фейковым без проверки аккаунта.\n\n"
-            "STORM STEP 2 — CONTRADICTION MAP. Найди, где эксперты расходятся: bullish vs bearish, "
-            "сильные vs слабые доказательства, missing data. Ранжируй evidence strength внутренне.\n\n"
-            "STORM STEP 3 — SYNTHESIS. Сожми вывод в 3 русских предложения для Telegram; внутренний STORM-анализ не показывай.\n\n"
-            f"ДАННЫЕ: Токен {token_name}, MC {token_mc}, DEX {dex}. "
-            f"Мейкеров: {len(makers)} ({buy_heavy} buy / {sell_heavy} sell / {mixed} mix). "
-            f"Buy ratio: {buy_ratio:.1f}. "
-            f"Kabals: {total_matched} (в топ-5: {top5_kabal_count}). "
-            f"Вердикт системы: {verdict}."
+            "Ты — крипто-аналитик мемкоинов. Пиши ТОЛЬКО на русском, простыми словами. "
+            "Без английских терминов: не пиши smart-money, track, narrative, accumulation, "
+            "distribution, honeypot, renounce, engagement, sentiment=pos. "
+            "Вместо них: умные деньги, поток покупок/продаж, история/сюжет, набор позиции, "
+            "раздача, ловушка, отказ от прав, вовлечённость, позитивный настрой.\n\n"
+            f"Токен: {token_name}. Капитализация: {token_mc}. Биржа: {dex}. "
+            f"Покупки/продажи (B/S): {buy_ratio:.1f}. "
+            f"Кабалы: {total_matched} (в топ-5: {top5_kabal_count}). "
+            f"Вердикт системы: {verdict}. "
+            f"Оценка мемкоина: {meme_tier or '?'}. "
+            f"GMGN оценка: {gmgn_score if gmgn_score is not None else 'нет данных'}/15. "
+            f"Поток умных денег/KOL: {(gmgn_track or {}).get('signal', 'нет')}.\n"
         )
         if x_account_info:
-            grok_prompt = (
-                f"АККАУНТ ТОКЕНА (проверь ДО выводов о комьюнити): {x_account_info}\n\n"
-                + grok_prompt
-            )
+            grok_prompt += f"\nАккаунт токена: {x_account_info}\n"
         if radar_context:
-            grok_prompt += (
-                f"\n\nДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ (радар):\n{radar_context}"
-                "\n\nИспользуй эти данные в STORM-перспективах PRACTITIONER, SKEPTIC и SENTIMENT ANALYST: "
-                "есть ли негативные сигналы (rug-pull, scam), реальная dev-активность, позитивное/негативное обсуждение."
-                "\n\nВАЖНО: 'LISTING CAMPAIGN' и vote-spam в Moonshot/FOMO — НЕ признак фейкового комьюнити, "
-                "это стандартная механика листинга мемкоинов. Оценивай комьюнити по X-аккаунту токена, не по vote-spam."
-            )
-        # Community sentiment history — only for BURNIE (file is BURNIE-specific)
+            grok_prompt += f"\nСоцсети/X:\n{radar_context[:800]}\n"
+        # Community sentiment — BURNIE only
         sentiment_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "community_sentiment.jsonl")
         try:
             if os.path.exists(sentiment_path) and token_name.upper() == "BURNIE":
@@ -763,79 +784,38 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                     sf_lines = sf.readlines()
                 if sf_lines:
                     last_sentiment = json.loads(sf_lines[-1])
-                    sent_ts = last_sentiment.get("ts", "?")
                     sent_label = last_sentiment.get("sentiment", "?")
-                    sent_notes = last_sentiment.get("notes", "")[:500]
-                    grok_prompt += (
-                        f"\n\nCOMMUNITY SENTIMENT TRACKER (последний снимок {sent_ts}):"
-                        f"\nsentiment={sent_label}"
-                        f"\n{ sent_notes}"
-                        "\n\nИспользуй это в SENTIMENT ANALYST: sentiment='pos' = bullish комьюнити, 'neg' = bearish, 'neutral' = без явного тренда."
+                    ru_sent = {"pos": "позитивный", "neg": "негативный", "neutral": "нейтральный"}.get(
+                        sent_label, sent_label
                     )
+                    grok_prompt += f"\nНастрой сообщества: {ru_sent}. Подписчиков: {last_sentiment.get('followers', '?')}.\n"
         except Exception:
             pass
         if onchain_context:
-            grok_prompt += (
-                f"\n\nON-CHAIN АНАЛИЗ:\n{onchain_context}"
-            )
+            grok_prompt += f"\nОнчейн:\n{onchain_context[:600]}\n"
         if chart_context:
-            grok_prompt += (
-                f"\n\nДОЛГОСРОЧНЫЙ ТРЕНД:\n{chart_context}"
-            )
+            grok_prompt += f"\nГрафик:\n{chart_context[:500]}\n"
         if score_context:
-            grok_prompt += (
-                f"\n\nСКОРИНГ МЕМКОИНА:\n{score_context}"
-                "\n\nИспользуй скор для калибровки synthesis: HIGH CONVICTION/SOLID/SPECULATIVE/AVOID."
-            )
-        # ── P0+P1: RugCheck + GMGN context ──
-        grok_prompt += f"\n\nRUGCHECK:\n{fmt_rugcheck(rugcheck_report)}"
-        grok_prompt += (
-            "\nЕсли RugCheck level=high или rugged=true — это CRITICAL RED FLAG. "
-            "Упомяни в рисках."
-        )
-        grok_prompt += f"\n\nGMGN SMART-MONEY:\n{fmt_gmgn(gmgn_score)}"
-        grok_prompt += (
-            "\nGMGN smart-money сигнал дополняет whale analysis. "
-            "Сильный сигнал (>10) = институциональный интерес."
-        )
+            grok_prompt += f"\nСкоринг:\n{score_context[:500]}\n"
+        if rugcheck_report:
+            grok_prompt += f"\nRugCheck: {fmt_rugcheck(rugcheck_report)}\n"
+        if gmgn_report.get("ok") or gmgn_score is not None:
+            grok_prompt += f"\nGMGN:\n{fmt_gmgn(gmgn_report if gmgn_report.get('ok') else gmgn_score)}\n"
+        if gmgn_track.get("ok"):
+            grok_prompt += f"\nПоток умных денег:\n{fmt_gmgn_track(gmgn_track)}\n"
         if phase_context:
-            grok_prompt += (
-                f"\n\nPHASE DETECTOR (основной торговый сигнал):\n{phase_context}"
-                "\n\nЭто definitive trading signal. Согласуй свой synthesis с этим сигналом. "
-                "Если сигнал BUY — synthesis bullish. Если SELL — bearish. Если WAIT/ACCUMULATE — neutral/cautious."
-            )
-        if creator_context and "too early" not in creator_context.lower():
-            grok_prompt += (
-                f"\n\nКОШЕЛЁК СОЗДАТЕЛЯ:\n{creator_context}"
-                "\n\nУчти в ON-CHAIN SPECIALIST: conviction = НЕ продаёт >7 дней (BULLISH), "
-                "selling/dumped = продаёт (BEARISH)."
-            )
-        # Wallet intelligence: pass cross-referenced cabal data
+            grok_prompt += f"\nФаза:\n{phase_context[:400]}\n"
         wallet_intel = xref.get("summary", "")
         if wallet_intel:
-            grok_prompt += (
-                f"\n\nWALLET INTELLIGENCE (кошельки-кабалы):\n{wallet_intel}"
-                "\n\nУчти в PRACTITIONER/SKEPTIC: это кошельки, которые ранее торговали winner-токенами (MC > $500K). "
-                "SELL-heavy = кабал сбрасывает; BUY-heavy = накапливают."
-            )
-        if trading_theory:
-            grok_prompt += (
-                f"\n\nTRADING THEORY RULES:\n{trading_theory}"
-                "\n\nИспользуй эти правила как аналитическую рамку для оценки lifecycle, kabal behavior, "
-                "on-chain risk и sentiment-price correlation."
-            )
+            grok_prompt += f"\nКошельки/кабалы:\n{wallet_intel[:500]}\n"
+
         grok_prompt += (
-            "\n\nФОРМАТ ФИНАЛА: развёрнутый вывод на русском, 500–700 символов. "
-            "Структура с заголовками (не используй маркдаун, просто перевод строки и текст):\n"
-            "Что это — 1–2 строки: что за токен, какой тренд сейчас, ключевая динамика.\n"
-            "Почему интересно — 2–3 строки: что драйвит цену (нарратив, комьюнити, кабалы, чарт). Упомяни конкретные сигналы (RSI, MACD, vol divergence если есть).\n"
-            "Риски — 1–2 строки: главная угроза, красные флаги (creator продаёт, kabals сбрасывают, volume падает).\n"
-            "Что делать — 1 строка: конкретное действие для трейдера (ждать входа, набирать малыми лотами, фиксировать прибыль, пропустить).\n"
-            "ПРАВИЛА: buy ratio <0.5 + kabals в топ-5 = coordinated dump. "
-            "Если перспективы конфликтуют, финальный вердикт должен отражать самый сильный риск. "
-            "Не используй маркетинговый hype, будь сдержанным и конкретным. "
-            "Не упоминай STORM или экспертов в выводе. "
-            "Не уточняй, не спрашивай — дай готовый структурированный ответ."
+            "\n\nФОРМАТ ОТВЕТА (строго, без маркдауна ** и без английских слов):\n"
+            "Что это: 1–2 коротких предложения.\n"
+            "Почему смотреть: 1–2 предложения, только факты.\n"
+            "Риски: 1–2 предложения простыми словами.\n"
+            "Что делать: 1 предложение — ждать / смотреть / не входить / осторожно набирать.\n"
+            "Объём: 350–550 символов. Без STORM, без экспертов, без вопросов."
         )
         # ── LLM dispatch: Grok → DeepSeek → template fallback ──
         raw = ask_grok(grok_prompt).strip()
@@ -887,10 +867,11 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         pass
 
     # ── P0: Score header (above AI prose, AI cannot change score) ──
-    if mode == "summary" and score_data and isinstance(score_data, dict):
-        score_val = score_data.get("score", "?")
-        score_tier = score_data.get("tier", "?")
-        score_max = score_data.get("max", 115)
+    # Always emit useful metrics in summary — even if meme_score partially failed
+    if mode == "summary":
+        score_val = score_data.get("score", "?") if score_data else "?"
+        score_tier = score_data.get("tier", "?") if score_data else "?"
+        score_max = score_data.get("max", 115) if score_data else 115
 
         # Extract key metrics for header
         liq_str = ""
@@ -914,16 +895,80 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             rugcheck_level, "⚪"
         )
 
-        score_header = f"📊 Score {score_val}/{score_max} {score_tier}"
+        if score_data and isinstance(score_data, dict) and score_data.get("score") is not None:
+            # Russian tier labels for Telegram
+            tier_ru = {
+                "HIGH CONVICTION": "СИЛЬНЫЙ",
+                "SOLID": "ХОРОШИЙ",
+                "SPECULATIVE": "РИСКОВАННЫЙ",
+                "AVOID": "ПРОПУСК",
+            }.get(str(score_tier), str(score_tier))
+            score_header = f"📊 Оценка {score_val}/{score_max} {tier_ru}"
+        else:
+            score_header = "📊 Оценка н/д (частичные данные)"
         metric_bits = []
         if liq_str:
-            metric_bits.append(f"liq={liq_str}")
+            metric_bits.append(f"ликв={liq_str}")
         if vol_str:
-            metric_bits.append(f"vol={vol_str}")
-        metric_bits.append(f"risk={rug_emoji}")
+            metric_bits.append(f"объём={vol_str}")
+        metric_bits.append(f"риск={rug_emoji}")
+        if gmgn_score is not None:
+            metric_bits.append(f"GMGN={gmgn_score}/15")
+        if isinstance(gmgn_track, dict) and gmgn_track.get("ok"):
+            sig_map = {
+                "none": "нет",
+                "accumulation": "набор",
+                "distribution": "раздача",
+                "mixed": "смешанно",
+            }
+            sig = sig_map.get(str(gmgn_track.get("signal")), str(gmgn_track.get("signal")))
+            metric_bits.append(f"поток={sig}")
         if metric_bits:
             score_header += " | " + " ".join(metric_bits)
         lines.append(score_header)
+
+        # Compact GMGN block for Telegram (Russian labels)
+        if isinstance(gmgn_report, dict) and gmgn_report.get("ok"):
+            sec = gmgn_report.get("security") or {}
+            top10 = sec.get("top10")
+            top10_s = "?"
+            if top10 is not None:
+                try:
+                    t = float(top10)
+                    top10_s = f"{t*100:.0f}%" if t <= 1 else f"{t:.0f}%"
+                except (TypeError, ValueError):
+                    top10_s = "?"
+            hp = "да" if sec.get("honeypot") else "нет"
+            ren_m = "да" if sec.get("renounced_mint") else "нет"
+            ren_f = "да" if sec.get("renounced_freeze") else "нет"
+            locked = "да" if sec.get("locked") else "нет"
+            lines.append(
+                f"🧬 GMGN: держатели={gmgn_report.get('holder_count')} "
+                f"топ10={top10_s} ловушка={hp} "
+                f"отказ_mint/freeze={ren_m}/{ren_f} "
+                f"лок={locked}"
+            )
+        if isinstance(gmgn_track, dict) and gmgn_track.get("ok"):
+            sm = gmgn_track.get("smartmoney") or {}
+            kol = gmgn_track.get("kol") or {}
+            sig_map = {
+                "none": "нет",
+                "accumulation": "набор",
+                "distribution": "раздача",
+                "mixed": "смешанно",
+            }
+            sig = sig_map.get(str(gmgn_track.get("signal")), str(gmgn_track.get("signal")))
+            lines.append(
+                f"📡 Умные деньги: {sig} | "
+                f"SM {sm.get('hits',0)} сделок ({sm.get('buys',0)}пок/{sm.get('sells',0)}прод) "
+                f"KOL {kol.get('hits',0)}"
+            )
+        if xref.get("summary"):
+            # keep wallet intel short in summary
+            wi = xref["summary"]
+            if len(wi) > 400:
+                wi = wi[:400] + "…"
+            lines.append(wi)
 
     if grok_summary:
         if mode == "summary":
@@ -962,12 +1007,12 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         risk_score = ""
         if score_data and isinstance(score_data, dict):
             risk_score = str(score_data.get("score", "?"))
-        metric_parts = [f"MC: {token_mc}"]
+        metric_parts = [f"Кап: {token_mc}"]
         if vol_str:
-            metric_parts.append(f"Vol 24h: {vol_str}")
-        metric_parts.append(f"B/S: {buy_ratio:.1f}x")
+            metric_parts.append(f"Объём 24ч: {vol_str}")
+        metric_parts.append(f"Пок/Прод: {buy_ratio:.1f}x")
         if risk_score:
-            metric_parts.append(f"Score: {risk_score}/115")
+            metric_parts.append(f"Оценка: {risk_score}/115")
         lines.append(f"📈 {' | '.join(metric_parts)}")
 
     # ── Auto-escalation ──
@@ -994,8 +1039,15 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     source_tags = ["msf-telegram", "dexscreener"]
     if rugcheck_report.get("ok"):
         source_tags.append("rugcheck")
-    if gmgn_score is not None:
-        source_tags.append("gmgn")
+    if gmgn_score is not None or (isinstance(gmgn_report, dict) and gmgn_report.get("ok")):
+        source_tags.append("gmgn-openapi")
+    if isinstance(gmgn_track, dict) and gmgn_track.get("ok") and (
+        (gmgn_track.get("smartmoney") or {}).get("hits")
+        or (gmgn_track.get("kol") or {}).get("hits")
+    ):
+        source_tags.append("gmgn-track")
+    if isinstance(gmgn_wallets, dict) and gmgn_wallets.get("ok"):
+        source_tags.append("gmgn-wallet")
     if makers:
         source_tags.append("birdeye-makers")
     if total_matched > 0:
@@ -1010,11 +1062,29 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     else:
         lines.append(f"🔗 DexScreener: {dex_link}")
 
-    # ── P0: Record address for 24h deduplication ──
+    # ── P0: Record address for 24h deduplication (rich recap, skip junk 0-scores) ──
     try:
         score_val = score_data.get("score", 0) if score_data else 0
         score_tier = score_data.get("tier", "?") if score_data else "?"
-        dedupe_record(address, score=score_val, tier=score_tier)
+        score_max = score_data.get("max", 115) if score_data else 115
+        liq_rec = ""
+        if dex_liq is not None:
+            liq_rec = f"${dex_liq:,.0f}" if dex_liq < 1000 else (
+                f"${dex_liq/1000:.0f}K" if dex_liq < 1_000_000 else f"${dex_liq/1_000_000:.1f}M"
+            )
+        dedupe_record(
+            address,
+            score=int(score_val) if isinstance(score_val, (int, float)) else 0,
+            tier=str(score_tier),
+            max_score=int(score_max) if isinstance(score_max, (int, float)) else 115,
+            name=token_name if token_name != "?" else "",
+            symbol=token_name if token_name != "?" else "",
+            mc=str(token_mc) if token_mc != "?" else "",
+            liq=liq_rec,
+            gmgn_score=gmgn_score if isinstance(gmgn_score, int) else None,
+            verdict=str(verdict)[:120] if verdict else "",
+            failed=not bool(score_data),
+        )
     except Exception:
         pass
 

@@ -1,14 +1,14 @@
 """MSF signal deduplication by address within 24-hour window.
 
 Stores last N unique addresses in rab9/data/msf_dedupe.json.
-Second hit within 24h returns a compact "already analyzed" message.
+Second hit within 24h returns a useful compact recap (not junk Score 0).
 
 Usage:
     from msf_dedupe import check_dedupe, record_address
     deduped = check_dedupe("So111...")
     if deduped:
         return deduped  # Short message — don't re-analyze
-    record_address("So111...", score=72, tier="SOLID")
+    record_address("So111...", score=72, tier="SOLID", extra={...})
 """
 
 from __future__ import annotations
@@ -51,44 +51,98 @@ def _prune(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [e for e in entries if e.get("ts", 0) >= cutoff]
 
 
+def _is_junk(entry: dict[str, Any]) -> bool:
+    """True if prior record is useless (failed analysis / score 0 + unknown tier)."""
+    score = entry.get("score", 0) or 0
+    tier = str(entry.get("tier") or "?")
+    if score == 0 and tier in ("?", "", "unknown", "None"):
+        return True
+    # explicit failure flag
+    if entry.get("failed"):
+        return True
+    return False
+
+
 def check_dedupe(address: str) -> str | None:
     """Check if address was analyzed within last 24h.
 
-    Args:
-        address: Solana token/pair address.
-
     Returns:
-        Compact dedup message if found, None if new or expired.
+        Compact useful recap if found, None if new/expired/junk prior.
     """
     entries = _prune(_load())
     for entry in entries:
-        if entry.get("address", "").lower() == address.lower():
-            ts = entry.get("ts", 0)
-            hours_ago = (time.time() - ts) / 3600
-            score = entry.get("score", "?")
-            tier = entry.get("tier", "?")
-            return (
-                f"🔄 Already analyzed {hours_ago:.0f}h ago — "
-                f"Score: {score}/100 {tier} | {address[:6]}...{address[-4:]}"
-            )
+        if entry.get("address", "").lower() != address.lower():
+            continue
+        if _is_junk(entry):
+            # Allow re-analysis of failed prior runs
+            return None
+        ts = entry.get("ts", 0)
+        hours_ago = (time.time() - ts) / 3600
+        score = entry.get("score", "?")
+        tier = entry.get("tier", "?")
+        max_score = entry.get("max_score", 115)
+        name = entry.get("name") or entry.get("symbol") or ""
+        mc = entry.get("mc") or ""
+        gmgn = entry.get("gmgn_score")
+        verdict = entry.get("verdict") or ""
+        liq = entry.get("liq") or ""
+
+        head = f"🔄 Already analyzed {hours_ago:.0f}h ago"
+        if name:
+            head += f" — {name}"
+        lines = [head]
+        score_line = f"Score: {score}/{max_score} {tier}"
+        if mc:
+            score_line += f" | MC: {mc}"
+        if liq:
+            score_line += f" | Liq: {liq}"
+        lines.append(score_line)
+        extras = []
+        if gmgn is not None:
+            extras.append(f"GMGN {gmgn}/15")
+        if verdict:
+            extras.append(str(verdict)[:80])
+        if extras:
+            lines.append(" | ".join(extras))
+        lines.append(f"🔗 https://dexscreener.com/solana/{address}")
+        lines.append("_Re-run skipped (24h dedupe). Send again after window or /force._")
+        return "\n".join(lines)
     return None
 
 
-def record_address(address: str, score: int = 0, tier: str = "?") -> None:
-    """Record address analysis in dedupe store.
-
-    Args:
-        address: Solana token/pair address.
-        score: Meme score 0–100.
-        tier: Score tier (HIGH CONVICTION/SOLID/SPECULATIVE/AVOID).
-    """
+def record_address(
+    address: str,
+    score: int = 0,
+    tier: str = "?",
+    *,
+    max_score: int = 115,
+    name: str = "",
+    symbol: str = "",
+    mc: str = "",
+    liq: str = "",
+    gmgn_score: int | None = None,
+    verdict: str = "",
+    failed: bool = False,
+    extra: dict[str, Any] | None = None,
+) -> None:
+    """Record address analysis in dedupe store."""
     entries = _prune(_load())
-    entry = {
+    entry: dict[str, Any] = {
         "address": address,
         "ts": time.time(),
         "score": score,
         "tier": tier,
+        "max_score": max_score,
+        "name": name or symbol,
+        "symbol": symbol,
+        "mc": mc,
+        "liq": liq,
+        "gmgn_score": gmgn_score,
+        "verdict": verdict,
+        "failed": failed or (score == 0 and tier in ("?", "", "unknown")),
     }
+    if extra:
+        entry.update(extra)
     # Update existing or append
     found = False
     for i, e in enumerate(entries):

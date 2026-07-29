@@ -35,8 +35,13 @@ def _birdeye_key():
     if os.path.exists(env_path):
         with open(env_path) as f:
             for line in f:
+                if line.strip().startswith("#"):
+                    continue
                 if "BIRDEYE_KEY" in line or "BIRDEYE_API_KEY" in line:
-                    return line.split("=", 1)[1].strip().strip("\"'")
+                    parts = line.split("=", 1)
+                    if len(parts) < 2:
+                        return ""
+                    return parts[1].strip().strip("\"'")
     return ""
 
 def birdeye_token_security(address):

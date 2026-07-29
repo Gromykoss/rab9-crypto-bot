@@ -21,15 +21,44 @@ logger = logging.getLogger("rab9_crypto_intel_bot")
 
 async def send_msf_pairresolve(application: Application, address: str):
     logger.info("MSF analysis started for: %s", address)
-    
+
+    # ── Cooldown check FIRST — avoid expensive re-analysis ──
+    from loop_memory import should_skip, record_analysis
+    from msf_dedupe import check_dedupe
+
+    if should_skip(address, cooldown_minutes=15):
+        # Prefer rich 24h recap over silent drop
+        recap = check_dedupe(address)
+        if recap:
+            logger.info("COOLDOWN recap sent for %s", address[:12])
+            for chunk in split_text(recap):
+                await application.bot.send_message(
+                    chat_id=TELEGRAM_GROUP_ID,
+                    text=chunk,
+                    disable_web_page_preview=True,
+                )
+        else:
+            msg = (
+                f"🔄 Уже смотрел этот токен <15 мин назад.\n"
+                f"Адрес: `{address[:8]}…{address[-4:]}`\n"
+                f"🔗 https://dexscreener.com/solana/{address}"
+            )
+            logger.info("COOLDOWN short notice for %s", address[:12])
+            await application.bot.send_message(
+                chat_id=TELEGRAM_GROUP_ID,
+                text=msg,
+                disable_web_page_preview=True,
+            )
+        return
+
     # ── Cabal detection (pre-analysis) ──
     try:
         from cabal_detector import analyze as cabal_check
         cabal = await asyncio.to_thread(cabal_check, address)
         if cabal.get("ok") and cabal.get("phase") in ("CABAL_EXPLOSION", "KOL_ACTIVATION", "PUMPFUN_WHALE_AIRDROP"):
             alert_lines = [
-                f"⚠️ CABAL DETECTED: {cabal['token']} (${cabal['symbol']})",
-                f"Phase: {cabal['phase']} | Risk: {cabal['risk_level']}",
+                f"⚠️ КАБАЛ: {cabal.get('token', '?')} (${cabal.get('symbol', '?')})",
+                f"Фаза: {cabal['phase']} | Риск: {cabal.get('risk_level', '?')}",
             ]
             for pat in cabal.get("patterns", []):
                 for s in pat.get("signals", [])[:3]:
@@ -43,42 +72,32 @@ async def send_msf_pairresolve(application: Application, address: str):
             logger.info("CABAL alert sent: %s", cabal["phase"])
     except Exception as e:
         logger.warning("Cabal detector error (continuing): %s", e)
-    
+
     text = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
     logger.info("MSF analysis complete: %d chars", len(text))
 
-    # ── Loop Memory: skip duplicates, record results ──
-    from loop_memory import should_skip, record_analysis
-    if should_skip(address, cooldown_minutes=15):
-        logger.info("SKIP: token %s analyzed recently (<15min cooldown)", address[:12])
-        return  # Skip duplicate within cooldown
-    
-    # Extract tier from text for memory
+    # Extract tier / verdict for memory
     tier = ""
     import re
-    tier_match = re.search(r'(HIGH CONVICTION|SOLID|SPECULATIVE|AVOID)', text)
+    tier_match = re.search(r"(HIGH CONVICTION|SOLID|SPECULATIVE|AVOID|СИЛЬНЫЙ|СРЕДНИЙ|СЛАБЫЙ|ПРОПУСК)", text)
     if tier_match:
         tier = tier_match.group(1)
-    
-    verdict_match = re.search(r'→ (\S+)', text)
-    token_match = re.search(r'🔍 (\S+)', text)
-    verdict = verdict_match.group(1) if verdict_match else "?"
+
+    verdict_match = re.search(r"🎯\s*(.+)", text)
+    token_match = re.search(r"🔍\s*(\S+)", text)
+    verdict = verdict_match.group(1).strip() if verdict_match else "?"
     token_name = token_match.group(1) if token_match else "?"
-    
+
     mem = record_analysis(address, token_name, verdict, tier)
     if mem["duplicate"]:
         logger.info("DUPLICATE: token %s — %d duplicates total", address[:12], mem["duplicates"])
+
     try:
         from loop_verifier import verify_analysis
-        import re
 
-        token_match = re.search(r'🔍 (\S+)', text)
-        token_name = token_match.group(1) if token_match else "?"
-        # AI text: in full mode has "📊 " prefix, in summary mode also has it
-        ai_match = re.search(r'📊 (.+)', text)
-        ai_text = ai_match.group(1) if ai_match else text
-
-        # Pass the FULL report as ground truth for the verifier
+        # AI text: line after 📝 if present
+        ai_match = re.search(r"📝\s*(.+?)(?:\n📈|\n🎯|\n📎|\Z)", text, re.DOTALL)
+        ai_text = ai_match.group(1).strip() if ai_match else text
         context = {"full_report": text}
 
         verification = verify_analysis(token_name, ai_text, context)
@@ -92,24 +111,25 @@ async def send_msf_pairresolve(application: Application, address: str):
         elif v == "FLAG":
             logger.info("VERIFIER FLAG (score=%d): %s", score, verification.get("issues", []))
             fixed = verification.get("fixed_text", "")
-            if fixed:
-                # Replace AI analysis with corrected version
-                if ai_match:
-                    text = text.replace(ai_match.group(1), fixed)
+            if fixed and ai_match:
+                text = text.replace(ai_match.group(1), fixed)
         else:
             logger.info("VERIFIER PASS (score=%d)", score)
     except Exception as e:
         logger.warning("Verifier error (passing through): %s", e)
+
     for line in text.splitlines():
-        if any(kw in line for kw in ["Кабалы", "Инфраструктура", "⚠️"]):
+        if any(kw in line for kw in ["Кабал", "Кабалы", "Инфраструктура", "⚠️", "GMGN"]):
             logger.info("INTEL: %s", line.strip())
 
+    # ALWAYS send the report (no silent drop after analysis)
     for chunk in split_text(text):
         await application.bot.send_message(
             chat_id=TELEGRAM_GROUP_ID,
             text=chunk,
             disable_web_page_preview=True,
         )
+    logger.info("MSF report delivered to %s (%d chars)", TELEGRAM_GROUP_ID, len(text))
 
 
 def start_msf_http_server(application: Application, loop: asyncio.AbstractEventLoop):
