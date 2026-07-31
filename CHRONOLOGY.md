@@ -217,3 +217,6 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **29.07.2026 04:07** — chore: auto-sync 29.07 (`f6ee381`)
 - **29.07.2026 12:59** — MSF Listener перезапущен (новый PID 2365196). Причина: watchdog или ручной рестарт.
 - **29.07.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов за весь день — только health-check'и :8089 каждые 15 мин. Инфраструктура стабильна: RAB9 Core active (PID 1983572, 1d+ uptime), MSF HTTP :8089 200, MSF Listener PID 2365196 жив. dedupe: только BURNIE (96/115). Контекст за день: удаление opencodex из всех профилей (включая rab9), перевод rab9 на DeepSeek. X API credits на нуле — BURNIE sentiment tracker не обновляется. GMGN OpenAPI read-only, trading disabled.
+- **30.07.2026 04:04** — chore: auto-sync 30.07 (`2f4668a`)
+- **30.07.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов за весь день — только health-check'и :8089 каждые 15 мин. Инфраструктура стабильна: RAB9 Core active (PID 1983572, 2d+ uptime), MSF HTTP :8089 200, MSF Listener PID 2365196 жив (1d+). Ошибки: 4× NetworkError Bad Gateway в 01:11 (transient, самовосстановился). dedupe: только BURNIE (96/115). X API credits на нуле с 27.07 — BURNIE sentiment tracker не обновляется. GMGN OpenAPI read-only, trading disabled. GitHub: 1 коммит за день (auto-sync).
+- **31.07.2026 03:33** — security: add backups/ to .gitignore (`c926900`)
