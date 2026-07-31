@@ -19,3 +19,4 @@ community_sentiment.jsonl
 data/
 .hermes/
 msf_offset.txt
+backups/
