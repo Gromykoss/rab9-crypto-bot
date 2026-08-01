@@ -1,7 +1,7 @@
 # Crypto (ex-RAB9) — рабочая среда Hermes
 
 Проект: MSF-сигналы крипто-трейдинга с AI-анализом.
-Бот: Python, DexScreener + xAI/Grok.
+Бот: Python, DexScreener + DeepSeek (primary) + Grok (X-радар).
 Путь: /home/hermes-workspace/rab9/
 
 ---
@@ -42,7 +42,7 @@
 
 ### Поток сигналов
 
-Мемы (Telegram) → @msf_rab_bot → msf_listener.py (long-poll) → HTTP POST :8089/msf-signal → rab9_bot.py → cabal_detector (pre-check) → DexScreener (enrichment) → wallet_intel (cross-reference KABAL) → Grok (xAI, $0.30/1M) → loop_verifier (PASS/FLAG/FAIL) → Telegram-сигнал в Песочницу
+Мемы (Telegram) → @msf_rab_bot → msf_listener.py (long-poll) → HTTP POST :8089/msf-signal → rab9_bot.py → cabal_detector (pre-check) → DexScreener (enrichment) → wallet_intel (cross-reference KABAL) → DeepSeek (primary, 128K) → loop_verifier (PASS/FLAG/FAIL) → Telegram-сигнал в Песочницу
 
 Примечание: Birdeye исключён 17.07.2026 (API key suspended). DexScreener — единственный источник обогащения.
 
@@ -50,10 +50,10 @@
 
 | Модель | Провайдер | Стоимость | Контекст | Роль |
 |--------|-----------|-----------|----------|------|
-| **Grok (grok-3-mini)** | xAI API | $0.30/1M | 32K | Основной анализ |
-| DeepSeek | OpenRouter | pay-per-token | 128K | Fallback |
+| **DeepSeek** | deepseek-v4-pro | — | 128K | Основной анализ |
+| Grok (grok-3-mini) | xAI API | $0.30/1M | 32K | Research / X-радар |
 
-Fallback chain: Grok → DeepSeek.
+Primary: DeepSeek.
 
 ### Два Telegram-бота
 
@@ -99,17 +99,17 @@ BURNIE sentiment tracker: script-first only (`python3 burnie_sentiment_tracker.p
 
 При ручном анализе: `/moa deepseek-xai`
 
-Grok (reference) — мемкоин-радар, тренды X.
-DeepSeek (aggregator) — риск-анализ, supply, onchain.
+DeepSeek (reference) — риск-анализ, supply, onchain.
+Grok (aggregator) — мемкоин-радар, тренды X.
 
 Порог: оба agree → PASS. Расходятся → FLAG. REJECT default.
 
-Для cron: «Use /moa deepseek-xai preset to verify this signal with Grok + DeepSeek consensus.»
+Для cron: «Use /moa deepseek-xai preset to verify this signal with DeepSeek + Grok consensus.»
 
 ## Loop Engineering (v0.18)
 
 **Цикл сигнала:**
-Trigger (@msf_rab_bot → msf_listener.py) → Discover (Birdeye/DexScreener) → Delegate MAKER (Grok) → Verify CHECKER (DeepSeek via MoA) → Persist (log + signal) → Decide (next or STOP)
+Trigger (@msf_rab_bot → msf_listener.py) → Discover (DexScreener) → Delegate MAKER (DeepSeek) → Verify CHECKER (Grok via MoA) → Persist (log + signal) → Decide (next or STOP)
 
 **Стоп-условия (loop brakes):**
 - goal met: PASS от обоих в MoA
@@ -119,23 +119,13 @@ Trigger (@msf_rab_bot → msf_listener.py) → Discover (Birdeye/DexScreener) �
 
 **LOOP_PROGRESS.md:** каждая строка — время, токен, вердикт, модели. Читать при старте.
 
-**Maker ≠ Checker:** Grok предлагает, DeepSeek проверяет.
+**Maker ≠ Checker:** DeepSeek предлагает, Grok проверяет.
 
 # ⚠️ DO NOT SKIP: прочитай ВСЕ правила ниже перед любым действием
 
 ## Правила строительства
 
 **Общие правила (все проекты):** `skill_view('build')`
-
-### ⛔ PRE-PATCH GATE (MANDATORY — все проекты)
-
-Перед любым изменением кода:
-1. `grep -rn "имя" .` — все места использования функции/переменной
-2. Показать grep в ответе пользователю
-3. Проследить логику в КАЖДОМ найденном месте
-4. Только потом патч
-
-Если grep не показан — патч не принят. Откат.
 
 ## Agent-Driven Development Rules (Codex CLI / Grok Build)
 

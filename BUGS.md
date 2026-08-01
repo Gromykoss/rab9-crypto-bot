@@ -4,12 +4,16 @@
 
 ## Active Bugs
 
+None currently.
+
+## Resolved
+
 ### 1. MSF Listener не под systemd
 - **Severity:** Medium
 - **Symptom:** При ребуте сервера msf_listener.py не запускается автоматически
 - **Impact:** Сигналы из Мемов не доходят до RAB9 до ручного перезапуска
-- **Fix:** Создать systemd unit `msf-listener.service`
-- **Workaround:** `cd /home/hermes-workspace/rab9 && python3 msf_listener.py &`
+- **Fix:** Создан systemd unit `msf-listener.service`
+- **Status:** ✅ Исправлен — msf-listener.service работает
 
 ### 2. BUGS.md не существовал
 - **Severity:** Info
@@ -34,6 +38,5 @@
 
 ## Infra Notes
 
-- MSF Listener нужно перевести в systemd для автозапуска при ребуте
 - CHRONOLOGY.md создан задним числом (с 07.07.2026)
 - Бэкапы: `/home/hermes-workspace/rab9/backups/`

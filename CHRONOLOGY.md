@@ -220,3 +220,8 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **30.07.2026 04:04** — chore: auto-sync 30.07 (`2f4668a`)
 - **30.07.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов за весь день — только health-check'и :8089 каждые 15 мин. Инфраструктура стабильна: RAB9 Core active (PID 1983572, 2d+ uptime), MSF HTTP :8089 200, MSF Listener PID 2365196 жив (1d+). Ошибки: 4× NetworkError Bad Gateway в 01:11 (transient, самовосстановился). dedupe: только BURNIE (96/115). X API credits на нуле с 27.07 — BURNIE sentiment tracker не обновляется. GMGN OpenAPI read-only, trading disabled. GitHub: 1 коммит за день (auto-sync).
 - **31.07.2026 03:33** — security: add backups/ to .gitignore (`c926900`)
+- **31.07.2026 04:04** — chore: auto-sync 31.07 (`5ebaba2`)
+- **31.07.2026 11:20** — Circulation Graph добавлен в AGENTS.md: CAUSED/FIXED_BY/RESULTED_IN/LEARNED_FROM/APPLIED_TO edges. CIRCULATION_GRAPH.md скопирован из robot-man во все проекты включая RAB9.
+- **31.07.2026 12:14** — Daily Audit: DeepSeek $8.10, 40 cron джоб 0 error, 0 MSF-сигналов за день. X API credits на нуле — BURNIE sentiment tracker не получает новые данные.
+- **31.07.2026 18:02** — BURNIE sentiment tracker: pos, 19058 followers (−2), toly=3, голосование за листинг активно. Сентимент стабильно bullish, strong_negative=0.
+- **31.07.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — только health-check'и :8089. MSF Listener перезапущен (новый PID 3432372, uptime 3 мин). Telegram NetworkError в 13:26 (httpx.ReadError — transient). RAB9 Core active (PID 1983572, 3d+ uptime). dedupe: только BURNIE (96/115). X API credits на нуле с 27.07. GMGN OpenAPI read-only, trading disabled.
