@@ -10,11 +10,13 @@ Usage: python3 chart_analysis.py "token_address"
 """
 
 import json
+import subprocess
 import sys
 import os
 import time
 import requests
 from datetime import datetime, timezone
+from pathlib import Path
 
 
 TIMEOUT = 10
@@ -221,23 +223,119 @@ def _read_birdeye_key():
 
 
 def fetch_ohlcv(address: str, tf: str = "1D", days: int = 90) -> list[dict]:
+    """Fetch OHLCV candles. Birdeye → GMGN kline (free) → local archive."""
+    # 1. Birdeye (legacy, key often suspended)
     key = _read_birdeye_key()
-    if not key:
-        return []
-    now = int(time.time())
-    since = now - days * 86400
+    if key:
+        now = int(time.time())
+        since = now - days * 86400
+        try:
+            r = requests.get(
+                "https://public-api.birdeye.so/defi/ohlcv",
+                params={"address": address, "type": tf, "time_from": since, "time_to": now},
+                headers={"X-API-KEY": key, "x-chain": "solana", "accept": "application/json"},
+                timeout=TIMEOUT,
+            )
+            if r.ok:
+                items = r.json().get("data", {}).get("items", [])
+                if items:
+                    return items
+        except Exception:
+            pass
+    # 2. GMGN kline — free, 100+ days, no key
+    candles = fetch_ohlcv_gmgn(address, tf=tf, days=days)
+    if candles:
+        return candles
+    # 3. Local archive (accumulated snapshots) — grows over time
+    return _load_local_ohlcv(address, days)
+
+
+def fetch_ohlcv_gmgn(address: str, tf: str = "1D", days: int = 90) -> list[dict]:
+    """Fetch OHLCV via gmgn-cli market kline (free, no API key).
+
+    Returns candles in Birdeye format: {"unixTime", "o", "h", "l", "c", "v"}.
+    Also appends new candles to the local archive (data/ohlcv_archive/{address}.jsonl)
+    so the archive grows beyond the provider window.
+    """
+    resolution = {"1D": "1d", "4H": "4h", "1H": "1h"}.get(tf, "1d")
+    since = int(time.time()) - days * 86400
+    cmd = [
+        "gmgn-cli", "market", "kline",
+        "--chain", "sol", "--address", address,
+        "--resolution", resolution,
+        "--from", str(since),
+    ]
     try:
-        r = requests.get(
-            "https://public-api.birdeye.so/defi/ohlcv",
-            params={"address": address, "type": tf, "time_from": since, "time_to": now},
-            headers={"X-API-KEY": key, "x-chain": "solana", "accept": "application/json"},
-            timeout=TIMEOUT,
-        )
-        if r.ok:
-            return r.json().get("data", {}).get("items", [])
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        payload = json.loads(proc.stdout or "{}")
+        rows = payload.get("list") or []
+    except Exception:
+        rows = []
+    candles = []
+    for r in rows:
+        try:
+            candles.append(
+                {
+                    "unixTime": int(r["time"]) // 1000,
+                    "o": float(r["open"]),
+                    "h": float(r["high"]),
+                    "l": float(r["low"]),
+                    "c": float(r["close"]),
+                    "v": float(r["volume"]),
+                }
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    candles.sort(key=lambda x: x["unixTime"])
+    if candles:
+        _append_local_ohlcv(address, candles)
+    return candles
+
+
+def _archive_path(address: str) -> Path:
+    return Path(__file__).resolve().parent / "data" / "ohlcv_archive" / f"{address}.jsonl"
+
+
+def _append_local_ohlcv(address: str, candles: list[dict]) -> None:
+    """Append new candles to local archive (dedupe by unixTime)."""
+    try:
+        path = _archive_path(address)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        seen: set[int] = set()
+        if path.exists():
+            for line in path.read_text().splitlines():
+                try:
+                    seen.add(int(json.loads(line)["unixTime"]))
+                except Exception:
+                    continue
+        with path.open("a") as fh:
+            for c in candles:
+                if int(c["unixTime"]) not in seen:
+                    fh.write(json.dumps(c, separators=(",", ":")) + "\n")
+                    seen.add(int(c["unixTime"]))
     except Exception:
         pass
-    return []
+
+
+def _load_local_ohlcv(address: str, days: int) -> list[dict]:
+    """Read accumulated candles from local archive, newest first capped to days."""
+    try:
+        path = _archive_path(address)
+        if not path.exists():
+            return []
+        candles = []
+        cutoff = int(time.time()) - days * 86400
+        for line in path.read_text().splitlines():
+            try:
+                c = json.loads(line)
+                if int(c["unixTime"]) >= cutoff:
+                    candles.append(c)
+            except Exception:
+                continue
+        candles.sort(key=lambda x: int(x["unixTime"]))
+        return candles
+    except Exception:
+        return []
 
 
 # ── Main analysis ──
@@ -447,9 +545,14 @@ def analyze(address: str) -> dict:
         phase = "accumulation"
         phase_confidence = "medium"
     else:
-        # Fallback to trend-based
+        # Fallback to trend-based — BUT post-pump tokens at deep ATH drawdown
+        # are NOT distribution (that was the "садись 2" lesson). Deep loss +
+        # neutral RSI + flat price = decay (post-pump base), which for
+        # event-driven tokens is pre-catalyst accumulation zone.
         if trend == "UPTREND":
             phase = "accumulation"
+        elif ath_drawdown < -70 and rsi is not None and rsi < 50:
+            phase = "decay"  # post-pump bottom, not distribution
         elif trend == "DOWNTREND":
             phase = "distribution"
         else:

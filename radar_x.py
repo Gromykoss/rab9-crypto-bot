@@ -74,13 +74,15 @@ def search_x(query: str) -> dict:
     ]
 
     try:
+        # user.fields: public_metrics (followers) + verified — вес аккаунта для KOL/catalyst
+        # tweet.fields: referenced_tweets — RT/quote/reply к офиц. аккаунту
         r = requests.get(
             "https://api.x.com/2/tweets/search/recent",
             params={
                 "query": clean_query, "max_results": MAX_RESULTS,
-                "tweet.fields": "created_at,author_id,public_metrics",
-                "expansions": "author_id",
-                "user.fields": "username,public_metrics",
+                "tweet.fields": "created_at,author_id,public_metrics,referenced_tweets,in_reply_to_user_id",
+                "expansions": "author_id,referenced_tweets.id",
+                "user.fields": "username,public_metrics,verified,verified_type",
             },
             auth=auth, timeout=TIMEOUT,
         )
