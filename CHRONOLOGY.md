@@ -231,3 +231,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **01.08.2026 18:02** — BURNIE sentiment tracker: 🟢 BULLISH. pos=20/neg=1. Фолловеры: 19,067 (±0). MC: $1.4M, Price: $0.001412 (+0.9%). Рынок flat — накопление. Вердикт: СЛЕДИТЬ (69/100). X API credits на нуле — search-слой заглушен, данные не обновляются.
 - **01.08.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов. Инфраструктура стабильна: RAB9 Core 4d+, MSF HTTP :8089 200. 0 ошибок кроме ночного NetworkError. GitHub: 0 коммитов кроме auto-sync. X API credits на нуле с 27.07 — 6-й день. GMGN OpenAPI read-only, trading disabled. dedupe: только BURNIE.
 - **02.08.2026 00:29** — chore: auto-sync 02.08 — burnie tracker, chart analysis, strategy (`337db8b`)
+- **02.08.2026 04:21** — chore: auto-sync 02.08 (`5092e9d`)

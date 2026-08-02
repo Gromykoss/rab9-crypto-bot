@@ -29,6 +29,7 @@
 4. **НЕ байпасить** cabal_detector, wallet_intel, loop_verifier.
 5. **Never expose credentials:** `msf_token.txt`, `TELEGRAM_BOT_TOKEN`, API ключи — не коммитить, не логировать.
 6. **Раздельно с Алиханом:** директории, venv, боты, БД, ключи — всё раздельно.
+7. **⛔ X/Twitter WRITE-ОПЕРАЦИИ — ЗАПРЕЩЕНЫ (02.08.2026):** xurl reply/post/like/retweet/follow — не зона Rab9. Rab9 = крипто-анализ, не управление X-аккаунтами. Единственное исключение: `xurl --app my-app --auth oauth2 /2/...` в read-only режиме для X-радара (radar_x.py). Публикация постов — только через robot-man профиль. Нарушение привело к багу 01.08.2026: xurl reply с голым tweet ID вместо текста.
 
 ---
 
