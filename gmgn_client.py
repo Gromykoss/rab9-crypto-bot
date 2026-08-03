@@ -49,6 +49,28 @@ _SMART_TAGS = frozenset(
 _QUALITY_TAGS = frozenset({"smart", "smart_degen", "smart_money", "smartmoney", "kol", "whale", "vc"})
 _RISK_TAGS = frozenset({"bundler", "sniper", "rat_trader", "bot", "sandwich"})
 
+# LP / market-maker / insider — исключать из top-holder анализа (rugradar-паттерн)
+# Иначе пул (addr_type=2, exchange=pump_amm) считается «самым большим холдером».
+_LP_MM_TAGS = frozenset(
+    {
+        "pool",
+        "lp",
+        "liquidity",
+        "liquidity_pool",
+        "amm",
+        "market_maker",
+        "mm",
+        "bonding_curve",
+        "vault",
+        "program",
+        "router",
+        "dex",
+    }
+)
+_INSIDER_TAGS = frozenset({"creator", "dev_team", "team", "insider", "deployer"})
+# addr_type: 0=wallet, 2=pool/contract (наблюдение GMGN BURNIE)
+_POOL_ADDR_TYPES = frozenset({2, "2"})
+
 
 def _cli_path() -> str | None:
     for c in _GMGN_CLI_CANDIDATES:
@@ -144,6 +166,87 @@ def _collect_tags(item: dict[str, Any]) -> set[str]:
     return tags
 
 
+def _is_excluded_holder(h: dict[str, Any], exclude_insiders: bool = True) -> bool:
+    """True если адрес — LP-пул / MM / (опционально) insider.
+
+    Эвристики (без копирования чужого кода):
+      - addr_type in {2} — pool/contract
+      - non-empty exchange field (pump_amm, meteora_dlmm, …)
+      - tags: pool/lp/mm/…
+      - tags: creator/dev_team если exclude_insiders
+    """
+    if not isinstance(h, dict):
+        return True
+    if h.get("addr_type") in _POOL_ADDR_TYPES:
+        return True
+    ex = h.get("exchange")
+    if isinstance(ex, str) and ex.strip():
+        return True
+    tags = _collect_tags(h)
+    if tags & _LP_MM_TAGS:
+        return True
+    if exclude_insiders and (tags & _INSIDER_TAGS):
+        return True
+    return False
+
+
+def filter_organic_holders(
+    holders: list[dict[str, Any]],
+    *,
+    exclude_insiders: bool = True,
+    top_n: int = 10,
+) -> dict[str, Any]:
+    """Отфильтровать LP/MM/insider из списка holders.
+
+    Returns:
+        organic: list holders (filtered)
+        excluded: list of {address, reason, pct}
+        top10_organic_pct: float 0–100 (сумма amount_percentage топ-N organic)
+        excluded_count: int
+    """
+    organic: list[dict[str, Any]] = []
+    excluded: list[dict[str, Any]] = []
+    for h in holders:
+        if _is_excluded_holder(h, exclude_insiders=exclude_insiders):
+            tags = _collect_tags(h)
+            reason = "pool/lp"
+            if h.get("addr_type") in _POOL_ADDR_TYPES:
+                reason = "addr_type_pool"
+            elif isinstance(h.get("exchange"), str) and h.get("exchange").strip():
+                reason = f"exchange:{h.get('exchange')}"
+            elif tags & _INSIDER_TAGS:
+                reason = "insider"
+            elif tags & _LP_MM_TAGS:
+                reason = "lp_mm_tag"
+            pct = _f(h.get("amount_percentage"))
+            if pct <= 1:
+                pct *= 100
+            excluded.append(
+                {
+                    "address": (h.get("address") or "")[:16],
+                    "reason": reason,
+                    "pct": round(pct, 2),
+                }
+            )
+        else:
+            organic.append(h)
+
+    top_pct = 0.0
+    for h in organic[: max(1, top_n)]:
+        p = _f(h.get("amount_percentage"))
+        if p <= 1:
+            p *= 100
+        top_pct += p
+
+    return {
+        "organic": organic,
+        "excluded": excluded,
+        "top10_organic_pct": round(top_pct, 2),
+        "excluded_count": len(excluded),
+        "organic_count": len(organic),
+    }
+
+
 def _score_from_enrichment(
     info: dict[str, Any] | None,
     security: dict[str, Any] | None,
@@ -186,11 +289,13 @@ def _score_from_enrichment(
     if isinstance(lock, dict) and lock.get("is_locked"):
         score += 1
 
-    # ── Holder tag signals ──
+    # ── Holder tag signals (только organic: без LP/пулов) ──
+    filtered = filter_organic_holders(holders, exclude_insiders=False, top_n=50)
+    organic = filtered["organic"]
     quality_hits = 0
     risk_hits = 0
     suspicious = 0
-    for h in holders[:50]:
+    for h in organic[:50]:
         tags = _collect_tags(h)
         if tags & _QUALITY_TAGS:
             quality_hits += 1
@@ -253,28 +358,40 @@ def enrich_token(mint: str, chain: str = DEFAULT_CHAIN) -> dict[str, Any]:
         holders,
     )
 
-    # Compact holder risk summary
+    # ── Top-holder filter: LP / MM / insider ──
+    # exclude_insiders=True для organic top10; tag_counts считает и insiders из raw
+    filtered = filter_organic_holders(holders, exclude_insiders=True, top_n=10)
+    organic = filtered["organic"]
+
+    # Compact holder risk summary (organic + помечаем excluded)
     tag_counts: dict[str, int] = {}
     for h in holders[:50]:
         for t in _collect_tags(h):
             if t in _QUALITY_TAGS or t in _RISK_TAGS or t in {"creator", "dev_team", "top_holder"}:
                 tag_counts[t] = tag_counts.get(t, 0) + 1
 
-    top_holders = []
-    for h in holders[:5]:
-        top_holders.append(
-            {
-                "address": (h.get("address") or "")[:12],
-                "usd": round(_f(h.get("usd_value")), 0),
-                "pct": round(_f(h.get("amount_percentage")) * 100, 2)
-                if _f(h.get("amount_percentage")) <= 1
-                else round(_f(h.get("amount_percentage")), 2),
-                "tags": sorted(_collect_tags(h))[:6],
-            }
-        )
+    def _holder_row(h: dict[str, Any]) -> dict[str, Any]:
+        pct_raw = _f(h.get("amount_percentage"))
+        return {
+            "address": (h.get("address") or "")[:12],
+            "usd": round(_f(h.get("usd_value")), 0),
+            "pct": round(pct_raw * 100, 2) if pct_raw <= 1 else round(pct_raw, 2),
+            "tags": sorted(_collect_tags(h))[:6],
+        }
+
+    # top_holders = organic only (не пул, не creator)
+    top_holders = [_holder_row(h) for h in organic[:5]]
+    # raw_top для отладки: первые 5 без фильтра (чтобы видеть пул)
+    raw_top_holders = [_holder_row(h) for h in holders[:5]]
 
     sec = security if isinstance(security, dict) else {}
     inf = info if isinstance(info, dict) else {}
+
+    # Organic top10 override для security.top10 если GMGN rate включает пулы
+    top10_raw = _f(sec.get("top_10_holder_rate"))
+    top10_organic = filtered["top10_organic_pct"]
+    # GMGN rate fraction 0–1 → percent for comparison
+    top10_raw_pct = top10_raw * 100 if 0 < top10_raw <= 1 else top10_raw
 
     return {
         "ok": True,
@@ -290,7 +407,8 @@ def enrich_token(mint: str, chain: str = DEFAULT_CHAIN) -> dict[str, Any]:
         "security": {
             "honeypot": bool(sec.get("is_honeypot") or sec.get("honeypot") in (1, True, "1")),
             "alert": bool(sec.get("is_show_alert")),
-            "top10": _f(sec.get("top_10_holder_rate")),
+            "top10": top10_raw,
+            "top10_organic_pct": top10_organic,  # без LP/MM/insider
             "renounced_mint": sec.get("renounced_mint"),
             "renounced_freeze": sec.get("renounced_freeze_account"),
             "burn_status": sec.get("burn_status"),
@@ -302,6 +420,14 @@ def enrich_token(mint: str, chain: str = DEFAULT_CHAIN) -> dict[str, Any]:
         },
         "tag_counts": tag_counts,
         "top_holders": top_holders,
+        "raw_top_holders": raw_top_holders,
+        "holders_filter": {
+            "excluded_count": filtered["excluded_count"],
+            "organic_count": filtered["organic_count"],
+            "top10_organic_pct": top10_organic,
+            "top10_raw_pct": round(top10_raw_pct, 2) if top10_raw_pct else None,
+            "excluded_sample": filtered["excluded"][:5],
+        },
     }
 
 
@@ -590,7 +716,17 @@ def format_for_grok(score_or_report: int | dict[str, Any] | None) -> str:
             parts.append(
                 f"{t.get('address')}… ${t.get('usd'):,.0f} ({t.get('pct')}%) tags={t.get('tags')}"
             )
-        lines.append("Top holders: " + " | ".join(parts))
+        lines.append("Top holders (organic, no LP/MM/insider): " + " | ".join(parts))
+    hf = score_or_report.get("holders_filter") or {}
+    if hf.get("excluded_count"):
+        lines.append(
+            f"Holders filter: excluded={hf.get('excluded_count')} "
+            f"top10_organic={hf.get('top10_organic_pct')}% "
+            f"(raw={hf.get('top10_raw_pct')}%)"
+        )
+    # organic top10 in security block if present
+    if sec.get("top10_organic_pct") is not None:
+        lines.append(f"top10 organic (no LP/insider): {sec.get('top10_organic_pct')}%")
     lines.append("NOTE: read-only enrichment. No swap/trade executed.")
     return "\n".join(lines)
 

@@ -37,7 +37,7 @@ def compact(value, left=6, right=4):
 
 from pair_sources import build_pair_resolve_text, get_dexscreener_candidates
 from maker_sources import get_birdeye_pair_makers, summarize_pair_makers
-from token_intel import ask_grok, ask_deepseek
+from token_intel import ask_llm
 
 # ── RAB9 P0+P1: auto-sol study improvements ──
 from config import MIN_LIQUIDITY_USD, MAX_MARKET_CAP_USD
@@ -532,12 +532,38 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             except Exception as e:
                 print(f"[ENRICH] gmgn track failed: {e}", file=sys.stderr)
 
+            # security_hints для hard-gates (GMGN + RugCheck) — optional, backward-compat
+            security_hints: dict = {}
+            if isinstance(gmgn_report, dict) and gmgn_report.get("ok"):
+                sec = gmgn_report.get("security") or {}
+                # renounced_freeze True → freeze_open False
+                if sec.get("renounced_freeze") is not None:
+                    security_hints["freeze_open"] = not bool(sec.get("renounced_freeze"))
+                if sec.get("renounced_mint") is not None:
+                    security_hints["mint_open"] = not bool(sec.get("renounced_mint"))
+                if sec.get("locked") is not None:
+                    security_hints["lp_locked"] = bool(sec.get("locked"))
+                if sec.get("honeypot") is True:
+                    security_hints["honeypot"] = True  # static GMGN; live Jupiter overrides
+                # organic top10 after LP filter
+                if sec.get("top10_organic_pct") is not None:
+                    security_hints["top10_pct"] = sec.get("top10_organic_pct")
+                elif gmgn_report.get("holders_filter", {}).get("top10_organic_pct") is not None:
+                    security_hints["top10_pct"] = gmgn_report["holders_filter"]["top10_organic_pct"]
+            if isinstance(rugcheck_report, dict) and rugcheck_report.get("ok"):
+                # mint/freeze authority presence → open
+                if rugcheck_report.get("freeze_authority") and "freeze_open" not in security_hints:
+                    security_hints["freeze_open"] = True
+                if rugcheck_report.get("mint_authority") and "mint_open" not in security_hints:
+                    security_hints["mint_open"] = True
+
             from meme_score import compute_score, format_for_grok as fmt_score
             score_result = compute_score(
                 token_addr,
                 chart_data_for_score,
                 gmgn_score=gmgn_score,
                 rugcheck_level=rugcheck_level,
+                security_hints=security_hints or None,
             )
             score_raw = json.dumps(score_result, ensure_ascii=False)
         except Exception as e:
@@ -817,25 +843,11 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             "Что делать: 1 предложение — ждать / смотреть / не входить / осторожно набирать.\n"
             "Объём: 350–550 символов. Без STORM, без экспертов, без вопросов."
         )
-        # ── LLM dispatch: Grok → DeepSeek → template fallback ──
-        raw = ask_grok(grok_prompt).strip()
-        is_error = (
-            not raw
-            or raw.lower().startswith("grok")
-            or raw.lower().startswith("grok api")
-        )
+        # ── T-134 LLM chain: primary (RAB9_LLM) → fallback → template ──
+        # ask_llm: оба отказа → "" (не «OpenRouter API key…» как success — дыра закрыта)
+        raw = (ask_llm(grok_prompt) or "").strip()
 
-        # DeepSeek fallback
-        if is_error:
-            try:
-                ds_raw = ask_deepseek(grok_prompt).strip()
-                if ds_raw and not ds_raw.lower().startswith("deepseek"):
-                    raw = ds_raw
-                    is_error = False
-            except Exception:
-                pass
-
-        if not is_error and raw:
+        if raw:
             grok_summary = raw.lstrip("•-→0123456789. )")
             try:
                 grok_log_path = os.path.join(
@@ -860,11 +872,16 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             except Exception:
                 pass
         else:
-            # Both LLMs failed — use template fallback
+            # Оба LLM отказали — ниже build_template_card на live-данных
             grok_summary = None
-            print("[MSF] Both Grok and DeepSeek failed — using template fallback", file=sys.stderr)
-    except Exception:
-        pass
+            print(
+                "[MSF] Both LLMs failed — template fallback (live metrics)",
+                file=sys.stderr,
+            )
+    except Exception as llm_err:
+        # Не глотать молча: template-путь всё равно сработает (grok_summary falsy)
+        grok_summary = None
+        print(f"[MSF] LLM block error → template: {llm_err}", file=sys.stderr)
 
     # ── P0: Score header (above AI prose, AI cannot change score) ──
     # Always emit useful metrics in summary — even if meme_score partially failed
@@ -978,8 +995,8 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             lines.append("")
             lines.append("─── AI-анализ ───")
             lines.append(f"📊 {grok_summary}")
-    elif mode == "summary":
-        # ── P0: Template fallback when LLMs unavailable ──
+    else:
+        # T-134: оба LLM отказали — template на live-данных (любой mode, не дыра)
         lines.append("")
         template_card = build_template_card(
             token_name=token_name,

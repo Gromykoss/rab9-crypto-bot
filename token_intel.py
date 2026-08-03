@@ -12,10 +12,48 @@ from utils import (
     format_ratio,
 )
 
-# ── Model selection ──
-# Primary: Grok (grok-3-mini via xAI API, $0.30/1M)
-# Fallback: DeepSeek via OpenRouter
+# ── Model selection (T-134 multi-LLM chain) ──
+# Primary: RAB9_LLM=deepseek|grok (default: deepseek per AGENTS.md)
+# Fallback: the other provider
+# Terminal: template (build_template_card / decision_layer) — live data only, no inventing
+# RAB9 = analytics only. No trade execution.
+#
+# ROADMAP (trading safety — NOT implemented: no execution layer):
+#   - confirm-code before live orders
+#   - kill switch (global halt)
+#   - position / daily loss limits
+#   - paper-mode default until human approval
 OR_KEY = os.getenv("OPENROUTER_API_KEY", "")
+
+
+def _is_llm_error(text: str, provider: str) -> bool:
+    """True если ответ — ошибка/пустой, а не нормальный анализ.
+
+    Ловит дыру: «OpenRouter API key не найден» раньше считался success
+    (не startswith 'deepseek').
+    """
+    if not text or not str(text).strip():
+        return True
+    t = str(text).strip().lower()
+    # Явные префиксы ошибок провайдеров
+    markers = (
+        f"{provider} api",
+        f"{provider} request failed",
+        f"{provider} api key",
+        f"{provider} api error",
+        "api key не найден",
+        "api key not found",
+        "openrouter api key",
+        "openrouter api error",
+        "xai api key",
+    )
+    head = t[:120]
+    if any(m in head for m in markers):
+        return True
+    # Короткий ответ только с именем провайдера / error-кодом
+    if t.startswith(provider) and ("error" in t or "failed" in t or "key" in t):
+        return True
+    return False
 
 
 def ask_grok(prompt: str) -> str:
@@ -117,15 +155,73 @@ def ask_deepseek(prompt: str) -> str:
         return f"DeepSeek request failed: {error}"
 
 
-def ask_llm(prompt: str) -> str:
-    """Dispatch to Grok with DeepSeek fallback."""
-    # 1. Try Grok (xAI)
-    result = ask_grok(prompt)
-    if not result.startswith("Grok API key") and not result.startswith("Grok API error"):
-        return result
-    
-    # 2. Fallback: DeepSeek via OpenRouter
-    return ask_deepseek(prompt)
+def _resolve_llm_order(primary: str | None = None) -> list[str]:
+    """Порядок провайдеров: primary → fallback. hy3 трактуем как deepseek."""
+    raw = (primary or os.getenv("RAB9_LLM", "deepseek") or "deepseek").strip().lower()
+    if raw in ("deepseek", "ds", "hy3", "deepseek-chat"):
+        return ["deepseek", "grok"]
+    return ["grok", "deepseek"]
+
+
+def ask_llm(prompt: str, primary: str | None = None) -> str:
+    """Цепочка T-134: primary → fallback.
+
+    primary: 'deepseek'|'grok' или RAB9_LLM из .env (default deepseek).
+    При отказе ОБОИХ — пустая строка (caller обязан отдать template
+    на live-данных, не «AI недоступен» без метрик).
+
+    Returns:
+        Текст анализа или "" если оба LLM отказали.
+    """
+    order = _resolve_llm_order(primary)
+    for name in order:
+        try:
+            result = ask_deepseek(prompt) if name == "deepseek" else ask_grok(prompt)
+        except Exception as err:
+            result = f"{name} request failed: {err}"
+        if not _is_llm_error(result, name):
+            return result
+    return ""
+
+
+def ask_llm_with_template(
+    prompt: str,
+    *,
+    primary: str | None = None,
+    template_kwargs: dict | None = None,
+    live_fallback_text: str | None = None,
+) -> tuple[str, str]:
+    """Полная цепочка: primary → fallback → template/live.
+
+    Args:
+        prompt: Промпт для LLM.
+        primary: Override RAB9_LLM.
+        template_kwargs: kwargs для msf_template.build_template_card (live-данные).
+        live_fallback_text: Готовый текст из live-метрик, если template_kwargs нет.
+
+    Returns:
+        (text, source) где source ∈ {'deepseek','grok','template','live','none'}.
+    """
+    order = _resolve_llm_order(primary)
+    for name in order:
+        try:
+            result = ask_deepseek(prompt) if name == "deepseek" else ask_grok(prompt)
+        except Exception as err:
+            result = f"{name} request failed: {err}"
+        if not _is_llm_error(result, name):
+            return result, name
+
+    # Оба LLM мертвы — template на реальных данных (не выдумывать)
+    if template_kwargs is not None:
+        try:
+            from msf_template import build_template_card
+
+            return build_template_card(**template_kwargs), "template"
+        except Exception:
+            pass
+    if live_fallback_text and str(live_fallback_text).strip():
+        return str(live_fallback_text).strip(), "live"
+    return "", "none"
 
 
 def build_pair_grok_data(pair: dict, metrics: dict) -> str:
@@ -351,12 +447,23 @@ def build_token_intel_text(chain_id: str, token_address: str) -> str:
         f"Данные:\n{grok_data}"
     )
 
-    analysis = ask_llm(prompt)
+    # T-134: primary → fallback → live decision_layer (не пустая строка)
+    analysis, src = ask_llm_with_template(
+        prompt,
+        live_fallback_text=(
+            "⚠️ AI analysis unavailable — template по live-данным (Decision Layer).\n"
+            f"{decision_layer}"
+        ),
+    )
+    if not analysis:
+        analysis = decision_layer
+        src = "live"
 
+    src_tag = f" [{src}]" if src not in ("deepseek", "grok") else ""
     return (
         "🧪 Token Intel v3.4\n\n"
         f"{decision_layer}\n\n"
-        "🧠 Analysis:\n"
+        f"🧠 Analysis{src_tag}:\n"
         f"{analysis}\n\n"
         f"URL: {best_pair.get('url', 'n/a')}"
     )

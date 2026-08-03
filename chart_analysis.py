@@ -338,6 +338,82 @@ def _load_local_ohlcv(address: str, days: int) -> list[dict]:
         return []
 
 
+# ── Wash-trading detect (rugradar-паттерн) ──
+
+WASH_VOL_FDV_RATIO = 15.0  # vol24/FDV > 15x на bonding-curve = подозрение
+_BONDING_DEX = frozenset({"pumpfun", "pumpswap", "pump", "raydium-launchlab", "launchlab", "moonshot", "letsbonk"})
+
+
+def _fetch_market_snapshot(address: str) -> dict:
+    """Лёгкий DexScreener snapshot для wash-detect (vol24, fdv, dex). Fail-open."""
+    try:
+        r = requests.get(
+            f"https://api.dexscreener.com/latest/dex/tokens/{address}",
+            timeout=TIMEOUT,
+        )
+        if not r.ok:
+            return {}
+        pairs = r.json().get("pairs") or []
+        if not pairs:
+            return {}
+        pairs = sorted(
+            pairs,
+            key=lambda p: ((p.get("liquidity") or {}).get("usd") or 0),
+            reverse=True,
+        )
+        p = pairs[0]
+        vol24 = float((p.get("volume") or {}).get("h24") or 0)
+        fdv = float(p.get("fdv") or p.get("marketCap") or 0)
+        dex = str(p.get("dexId") or "").lower()
+        labels = [str(x).lower() for x in (p.get("labels") or [])]
+        return {
+            "vol24": vol24,
+            "fdv": fdv,
+            "dex": dex,
+            "labels": labels,
+            "pair": p.get("pairAddress"),
+        }
+    except Exception:
+        return {}
+
+
+def detect_wash_trading(market: dict | None = None, address: str | None = None) -> dict:
+    """Метка wash-торговли: vol24/FDV > 15x на bonding-curve.
+
+    Не hard-gate — только флаг/метка для downstream.
+    """
+    snap = market or (_fetch_market_snapshot(address) if address else {})
+    vol24 = float(snap.get("vol24") or 0)
+    fdv = float(snap.get("fdv") or 0)
+    dex = str(snap.get("dex") or "").lower()
+    labels = [str(x).lower() for x in (snap.get("labels") or [])]
+
+    is_bonding = (
+        dex in _BONDING_DEX
+        or any("bond" in lb or "pump" in lb or "launch" in lb for lb in labels)
+        or "pump" in dex
+    )
+    ratio = (vol24 / fdv) if fdv > 0 else 0.0
+    suspicious = bool(is_bonding and fdv > 0 and ratio > WASH_VOL_FDV_RATIO)
+
+    return {
+        "wash_suspicious": suspicious,
+        "wash_ratio": round(ratio, 2),
+        "wash_threshold": WASH_VOL_FDV_RATIO,
+        "is_bonding_curve": is_bonding,
+        "vol24": round(vol24, 2),
+        "fdv": round(fdv, 2),
+        "dex": dex or None,
+        "note": (
+            f"⚠️ WASH-SUSPECT: vol24/FDV={ratio:.1f}x > {WASH_VOL_FDV_RATIO:.0f}x (bonding-curve)"
+            if suspicious
+            else (
+                f"vol24/FDV={ratio:.2f}x (ok)" if fdv > 0 else "wash: no FDV data"
+            )
+        ),
+    }
+
+
 # ── Main analysis ──
 
 def analyze(address: str) -> dict:
@@ -597,6 +673,9 @@ def analyze(address: str) -> dict:
     elif phase == "distribution" and ath_drawdown < -85 and rel_vol < 0.3:
         signal = "DEAD"
 
+    # ── Wash-trading label (не гейт) ──
+    wash = detect_wash_trading(address=address)
+
     return {
         "ok": True,
         "candles": n,
@@ -628,6 +707,11 @@ def analyze(address: str) -> dict:
         "accumulation_score": round(acc_score, 2),
         "distribution_score": round(dist_score, 2),
         "signal": signal,
+        # Wash (метка)
+        "wash_suspicious": wash.get("wash_suspicious", False),
+        "wash_ratio": wash.get("wash_ratio"),
+        "wash_note": wash.get("note"),
+        "is_bonding_curve": wash.get("is_bonding_curve"),
         # Legacy compat
         "flat_days": flat_days,
         "vol_trend_zone": vol_trend_zone,
@@ -684,6 +768,12 @@ def format_for_grok(result: dict) -> str:
     signal = result.get("signal", "?")
     signal_emoji = {"BUY": "🟢", "ACCUMULATE": "🟡", "WATCH": "🟡", "WAIT": "⏳", "REDUCE": "🟠", "SELL": "🔴", "DEAD": "💀"}.get(signal, "")
     lines.append(f"  Signal: {signal_emoji} {signal}")
+
+    # Wash label
+    if result.get("wash_suspicious"):
+        lines.append(f"  ⚠️ WASH: {result.get('wash_note', 'vol24/FDV high on bonding-curve')}")
+    elif result.get("wash_note"):
+        lines.append(f"  Wash: {result.get('wash_note')}")
 
     # S/R
     if result.get("support"):
