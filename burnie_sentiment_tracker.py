@@ -957,7 +957,12 @@ def build_snapshot() -> tuple[dict[str, Any], list[str]]:
             errors.append(err)
 
     user_data = user_payload.get("data") if isinstance(user_payload, dict) else {}
+    if not isinstance(user_data, dict):
+        # X API мог вернуть ошибку/rate limit вместо data — не роняем прогон.
+        user_data = {}
     user_metrics = user_data.get("public_metrics") if isinstance(user_data, dict) else {}
+    if not isinstance(user_metrics, dict):
+        user_metrics = {}
     followers = int(user_metrics.get("followers_count") or 0)
     tweet_count = int(user_metrics.get("tweet_count") or 0)
     user_id = user_data.get("id")

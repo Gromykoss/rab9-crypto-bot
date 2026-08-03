@@ -234,3 +234,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **02.08.2026 04:21** — chore: auto-sync 02.08 (`5092e9d`)
 - **02.08.2026 07:42** — fix: ban X write operations in Rab9 profile (caused rogue reply 01.08.2026) (`ee49ad6`)
 - **02.08.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — 7-й день без сигналов (27.07-02.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core active (PID 1983572), MSF HTTP :8089 200, MSF Listener PID 3432372 (20h+ uptime). 0 ошибок в логах. BURNIE: 0 свежих X-взаимодействий (X API credits на нуле). dedupe: только BURNIE (96/115). GMGN OpenAPI read-only, trading disabled. GitHub: 1 коммит за день (ban X write ops).
+- **03.08.2026 00:19** — chore: auto-sync 02.08 night — chart, gmgn, meme_score, msf, onchain, token_intel + honeypot_check + llm_fallback test (`c79ef34`)
