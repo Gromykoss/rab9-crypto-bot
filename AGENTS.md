@@ -21,7 +21,9 @@
    - `audit` → chronology + bugs
    - `default` → gates only
 
-0. **CNC-ПРАВИЛО — Codex/Grok = ИНЖЕНЕРЫ, НЕ ОТВЁРТКА (26.07.2026):** Codex и Grok Build — станки с ЧПУ. Делегируй ЦЕЛЬ, не инструкцию. ❌ «В rab9_bot.py, строка 42, замени X на Y» → ✅ «BURNIE показал памп на 40%. Разберись в rab9_bot.py и DexScreener. Пойми паттерн. Предложи фильтр.» Codex читает код, анализирует, ПОНИМАЕТ. Ты проверяешь результат. **Обязательное чтение:** `~/.hermes/docs/graph-harness-principles.md`.
+0. **CNC-ПРАВИЛО — Codex/Grok = ИНЖЕНЕРЫ, НЕ ОТВЁРТКА (26.07.2026):** Codex и Grok Build — станки с ЧПУ. Делегируй ЦЕЛЬ, не инструкцию. ❌ «В rab9_bot.py, строка 42, замени X на Y» → ✅ «BURNIE показал памп на 40%. Разберись в rab9_bot.py и DexScreener. Пойми паттерн. Предложи фильтр.» Codex читает код, анализирует, ПОНИМАЕТ. Ты проверяешь результат. **Обязательное чтение:** `~/.hermes/docs/graph-harness-principles.md`. **MoA Auto:** `skill_view('moa-auto')`.
+   **⛔ НИКОГДА `delegate_task` без `acp_command`** — spawn default-сабагента (DeepSeek-клон), пустая трата токенов.
+   **Правильные вызовы:** Codex = `delegate_task(acp_command='codex', goal=..., context=...)`, Grok = `delegate_task(acp_command='grok', acp_args=['agent', 'stdio'], goal=..., context=...)`.
 
 1. **PRE-PATCH GATE (MANDATORY):** перед любым изменением кода — `grep -rn "имя" .`, показать grep пользователю, проследить логику в КАЖДОМ месте. Нет grep → патч не принят. Откат.
 2. **No production without approval:** сигналы в Песочницу (`-1003979753733`) только через approval gate. Не менять systemd unit.

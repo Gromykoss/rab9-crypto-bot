@@ -1196,6 +1196,8 @@ def build_snapshot() -> tuple[dict[str, Any], list[str]]:
         "kol_mentions": kol_mentions,
         "kol_engagement": kol_engagement,
         "notes": "; ".join(notes),
+        # X API сбой (rate-limit/ошибка) — чтобы main не молчал, а слал деградированный отчёт.
+        "x_api_errors": list(errors),
     }
     return snapshot, strong_negative
 
@@ -2375,8 +2377,8 @@ def format_alert(snapshot: dict[str, Any]) -> str:
                 lines.append(f"   ⚡ {c.get('text','')[:100]}")
             else:
                 lines.append(f"   @{user_s} ({fol:,} fol{v_mark}{pol_mark}) — {tr}")
-                if c.get("url"):
-                    lines.append(f"   🔗 {c['url']}")
+            if c.get("url"):
+                lines.append(f"   🔗 {c['url']}")
     else:
         kol = snapshot.get("kol_mentions") or []
         if kol:
@@ -2477,6 +2479,40 @@ def format_alert(snapshot: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def format_degraded(snapshot: dict[str, Any]) -> str:
+    """Отчёт при сбое X API: не молчим, показываем, что трекер жив, но данных X нет.
+
+    Event-first остаётся: без hard_alert полный отчёт не шлём, но при ошибке
+    X-вызовов печатаем короткий деградированный отчёт с доступными DEX-метриками.
+    """
+    errors = snapshot.get("x_api_errors") or []
+    lines = [
+        "⚠️ BURNIE — трекер жив, но X API недоступен",
+        "",
+        "Не удалось получить данные X (сентимент/фолловеры/катализаторы):",
+    ]
+    for e in errors[:3]:
+        lines.append(f"  • {e}")
+    if len(errors) > 3:
+        lines.append(f"  • …и ещё {len(errors) - 3} ошибок")
+    lines.append("")
+    mc = snapshot.get("market_cap")
+    price = snapshot.get("price_usd")
+    chg = snapshot.get("change_24h")
+    vol = snapshot.get("volume_24h")
+    if mc is not None:
+        mc_s = f"${float(mc)/1e6:.1f}M" if float(mc) >= 1e6 else f"${float(mc):,.0f}"
+    else:
+        mc_s = "N/A"
+    price_s = f"${float(price):.6f}" if price is not None else "N/A"
+    chg_s = f"{float(chg):+.1f}%" if chg is not None else "?"
+    vol_s = f"${float(vol)/1e3:.0f}K" if vol is not None else "N/A"
+    lines.append(f"💵 Рынок (DexScreener, без X): MC {mc_s} | Цена {price_s} | 24ч {chg_s} | Объём {vol_s}")
+    lines.append("")
+    lines.append("📌 Вердикт: данных X нет — сентимент/катализаторы неизвестны. Следующий прогон 18:00.")
+    return "\n".join(lines)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true", help="print snapshot without writing JSONL")
@@ -2552,12 +2588,13 @@ def main() -> int:
         return 0
 
     append_jsonl(OUTFILE, snapshot)
-    # Хард-пуш (stdout → cron) только при hard_alert.
+    # Отчёт приходит ВСЕГДА в штатных прогонах (06:00/18:00), даже без hard_alert.
     # send_telegram() не вызываем из main — крон доставляет stdout сам.
-    if snapshot.get("hard_alert"):
-        print(format_alert(snapshot))
+    if snapshot.get("x_api_errors"):
+        # X API упал/rate-limit — не молчим и не врём: деградированный отчёт.
+        print(format_degraded(snapshot))
     else:
-        print("[SILENT]")
+        print(format_alert(snapshot))
     return 0
 
 
