@@ -272,3 +272,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - Платформенные изменения (Hermes infra, код RAB9 не менялся): новый memory-слой NexusOS, разделение очередей bridge, buzz-каналы в конфигах. RAB9-профиль работает штатно.
 - **security:** `.env.bak*` добавлен в `.gitignore` — не коммитить бэкапы с секретами (обнаружен незакоммиченный `.env.bak.0808_0748`).
 - **08.08.2026 12:38** — chore: CHRONOLOGY 08.08 — VPS hardening (localhost-only ports) + security: .env.bak* in .gitignore (`6f04a53`)
+- **08.08.2026 12:40** — chore: CHRONOLOGY 08.08 — VPS hardening, NexusOS memory layer, bridge queues, buzz configs (`86d3dc8`)
