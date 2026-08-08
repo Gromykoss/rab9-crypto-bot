@@ -213,17 +213,17 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **27.07.2026 04:25** — smoke test (`de127c5`)
 - **27.07.2026 23:30** — CHRONOLOGY agent: idle day. 1 токен (`6rgcQxmntX19GsUdcf79EQZVgkmDdBCiy4crPoCEFRZs`), 2 анализа (VERIFIER PASS 100 оба). Инфраструктура стабильна: RAB9 Core active (PID 3164401, 6d uptime), MSF HTTP :8089 200, MSF Listener PID 1166144 жив. 0 ошибок в логах.
 - **28.07.2026 04:04** — chore: auto-sync 28.07 (`dd5b260`)
-- **28.07.2026 23:30** — CHRONOLOGY agent: day summary. 3 токена, 8 анализов (включая 6× `CGEDT9Q...` BURNIE). 6 CABAL_EXPLOSION алертов. 2 ошибки `meme_score` list index out of range (09:49, 13:27 — self-healed). Telegram NetworkError 01:11 (10 ошибок, transient, самовосстановился). RAB9 перезапущен в 13:49 (PID 1983572). BURNIE: 96/115 СИЛЬНЫЙ, GMGN 10/15, 10257 держателей. Инфраструктура стабильна.
+- **28.07.2026 23:30** — CHRONOLOGY agent: day summary. 3 токена, 8 анализов (включая 6x `CGEDT9Q...` BURNIE). 6 CABAL_EXPLOSION алертов. 2 ошибки `meme_score` list index out of range (09:49, 13:27 — self-healed). Telegram NetworkError 01:11 (10 ошибок, transient, самовосстановился). RAB9 перезапущен в 13:49 (PID 1983572). BURNIE: 96/115 СИЛЬНЫЙ, GMGN 10/15, 10257 держателей. Инфраструктура стабильна.
 - **29.07.2026 04:07** — chore: auto-sync 29.07 (`f6ee381`)
 - **29.07.2026 12:59** — MSF Listener перезапущен (новый PID 2365196). Причина: watchdog или ручной рестарт.
 - **29.07.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов за весь день — только health-check'и :8089 каждые 15 мин. Инфраструктура стабильна: RAB9 Core active (PID 1983572, 1d+ uptime), MSF HTTP :8089 200, MSF Listener PID 2365196 жив. dedupe: только BURNIE (96/115). Контекст за день: удаление opencodex из всех профилей (включая rab9), перевод rab9 на DeepSeek. X API credits на нуле — BURNIE sentiment tracker не обновляется. GMGN OpenAPI read-only, trading disabled.
 - **30.07.2026 04:04** — chore: auto-sync 30.07 (`2f4668a`)
-- **30.07.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов за весь день — только health-check'и :8089 каждые 15 мин. Инфраструктура стабильна: RAB9 Core active (PID 1983572, 2d+ uptime), MSF HTTP :8089 200, MSF Listener PID 2365196 жив (1d+). Ошибки: 4× NetworkError Bad Gateway в 01:11 (transient, самовосстановился). dedupe: только BURNIE (96/115). X API credits на нуле с 27.07 — BURNIE sentiment tracker не обновляется. GMGN OpenAPI read-only, trading disabled. GitHub: 1 коммит за день (auto-sync).
+- **30.07.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов за весь день — только health-check'и :8089 каждые 15 мин. Инфраструктура стабильна: RAB9 Core active (PID 1983572, 2d+ uptime), MSF HTTP :8089 200, MSF Listener PID 2365196 жив (1d+). Ошибки: 4x NetworkError Bad Gateway в 01:11 (transient, самовосстановился). dedupe: только BURNIE (96/115). X API credits на нуле с 27.07 — BURNIE sentiment tracker не обновляется. GMGN OpenAPI read-only, trading disabled. GitHub: 1 коммит за день (auto-sync).
 - **31.07.2026 03:33** — security: add backups/ to .gitignore (`c926900`)
 - **31.07.2026 04:04** — chore: auto-sync 31.07 (`5ebaba2`)
 - **31.07.2026 11:20** — Circulation Graph добавлен в AGENTS.md: CAUSED/FIXED_BY/RESULTED_IN/LEARNED_FROM/APPLIED_TO edges. CIRCULATION_GRAPH.md скопирован из robot-man во все проекты включая RAB9.
 - **31.07.2026 12:14** — Daily Audit: DeepSeek $8.10, 40 cron джоб 0 error, 0 MSF-сигналов за день. X API credits на нуле — BURNIE sentiment tracker не получает новые данные.
-- **31.07.2026 18:02** — BURNIE sentiment tracker: pos, 19058 followers (−2), toly=3, голосование за листинг активно. Сентимент стабильно bullish, strong_negative=0.
+- **31.07.2026 18:02** — BURNIE sentiment tracker: pos, 19058 followers (-2), toly=3, голосование за листинг активно. Сентимент стабильно bullish, strong_negative=0.
 - **31.07.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — только health-check'и :8089. MSF Listener перезапущен (новый PID 3432372, uptime 3 мин). Telegram NetworkError в 13:26 (httpx.ReadError — transient). RAB9 Core active (PID 1983572, 3d+ uptime). dedupe: только BURNIE (96/115). X API credits на нуле с 27.07. GMGN OpenAPI read-only, trading disabled.
 - **01.08.2026 04:04** — chore: auto-sync 01.08 (`6bb8645`)
 - **01.08.2026 10:00-23:59** — Шестой день без MSF-сигналов (27.07-01.08). Мемы молчат. Только health-check'и :8089 каждые ~15 мин. RAB9 Core active (PID 1983572, 4d+ uptime). MSF Listener PID 3432372 жив (20h+ uptime).
@@ -251,3 +251,23 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **05.08.2026 11:29** — Buzz-брифинг: BURNIE bullish, 19,133 подписчиков. 9-й день без MSF-сигналов. RAB9 в брифинге: «всё штатно».
 - **05.08.2026 12:07** — Daily Audit: rab9 0 cron-джоб, git clean (только CHRONOLOGY + AGENTS.md staged). CHRONOLOGY свежесть 8h.
 - **05.08.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — 10-й день без сигналов (27.07-05.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 802 (16h uptime), MSF HTTP :8089 200, MSF Listener PID 804. 0 ошибок в логах. BURNIE: X API жив, трекер в полном режиме. dedupe: только BURNIE (96/115). GMGN OpenAPI read-only, trading disabled.
+- **06.08.2026 04:03** — chore: auto-sync 06.08 (`df5a517`)
+- **06.08.2026 23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — 11-й день без сигналов (27.07-06.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 802 (1d 16h uptime), MSF HTTP :8089 200, MSF Listener PID 804 под systemd. 3 ошибки: ночной NetworkError (01:11, 2x) + Conflict (04:50, getUpdates race — transient). BURNIE: dedupe 96/115, X API жив (трекер в полном режиме). GMGN OpenAPI read-only, trading disabled. GitHub: 0 коммитов кроме auto-sync. Рабочее дерево чистое.
+
+## 07.08.2026 — xAI key fix + agent-bus escalation rules
+
+- **08:21** — Buzz agent-bus: всем профилям (включая RAB9) добавлена директива «ДОКЛАД HERMES В AGENT-BUS» в SOUL.md. Обнаружил проблему → напиши @Hermes в agent-bus.
+- **10:19** — xAI API key восстановлен. radar_x тестовый скан BURNIE: ok=True, 10 постов. Инцидент #005 закрыт. X-радар RAB9 полностью функционален.
+- **14:10** — RAB9 Core перезапущен: PID 802 → 3927992. Причина неясна (возможно, VPS reboot). MSF Listener перезапущен вместе с ним.
+- **15:15** — Ещё один рестарт RAB9 Core: PID 3927992 → 78799. MSF Listener → PID 78800. Оба под systemd.
+- **01:11** — Telegram NetworkError (Bad Gateway) — transient, стандартное окно обслуживания.
+- **05:49** — Telegram NetworkError (httpx.ReadError) — transient, самовосстановился.
+- **23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — 12-й день без сигналов (27.07-07.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 78799 (8h uptime), MSF HTTP :8089 200, MSF Listener PID 78800. 2 ошибки (оба NetworkError — transient). BURNIE: dedupe 96/115, X API жив. GMGN OpenAPI read-only, trading disabled. GitHub: 0 коммитов кроме auto-sync.
+
+## 08.08.2026 — VPS hardening: localhost-only порты + платформенные изменения
+
+- **07:45–07:48** — Харденинг VPS: все сервисы перезапущены, порты закрыты на localhost. RAB9 Core PID 14391, MSF Listener PID 14392 (offset 892536603 сохранён — апдейты не потеряны). `:8089/health` **200**, порт 8089 теперь слушает только `127.0.0.1`.
+- Пост-харденинг проверка: **0 ошибок**/exception за 30 мин, исходящие живы (Telegram API 302, DexScreener 200). У RAB9 нет входящих публичных портов — localhost-связка listener→core не затронута.
+- Замечено: на `127.0.0.1:8099` висит `python3` PID 1072 — **НЕ RAB9** (чужой процесс, не трогал).
+- Платформенные изменения (Hermes infra, код RAB9 не менялся): новый memory-слой NexusOS, разделение очередей bridge, buzz-каналы в конфигах. RAB9-профиль работает штатно.
+- **security:** `.env.bak*` добавлен в `.gitignore` — не коммитить бэкапы с секретами (обнаружен незакоммиченный `.env.bak.0808_0748`).
