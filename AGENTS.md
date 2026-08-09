@@ -125,6 +125,60 @@ Primary: DeepSeek.
 - Verifier: loop-verifier (PASS/FLAG/FAIL), REJECT default
 - Loop engineering: trigger → process → verification → stop
 
+## Архитектура и инфраструктура
+
+### Сервер
+| Параметр | Значение |
+|----------|----------|
+| **Хост** | VPS Hostinger |
+| **IP** | 72.60.16.105 |
+| **ОС** | Ubuntu 24.04 |
+| **RAM** | 15 GB |
+| **Диск** | 72/193 GB (37%) |
+
+### Сервисы (systemd)
+| Сервис | Файл | Назначение |
+|--------|------|-----------|
+| **rab9-crypto-hermes** | `rab9_bot.py` | Основной бот, HTTP :8089, анализ сигналов |
+| **msf-listener** | `msf_listener.py` | Long-poll @msf_rab_bot, приём мемов |
+
+### База данных
+| Параметр | Значение |
+|----------|----------|
+| **Тип** | SQLite |
+| **Файл** | `data/rab9_trades.db` |
+| **Проверка** | `sqlite3 data/rab9_trades.db ".tables"` |
+
+### Внешние API
+| API | Назначение | Доступ |
+|-----|-----------|--------|
+| **DexScreener** | Обогащение токенов (цена, ликвидность, volume) | Публичный |
+| **X API (xurl)** | X-радар (radar_x.py) | OAuth2, read-only |
+| **DeepSeek API** | Primary LLM-анализ (128K контекст) | API key |
+| **Grok (xAI)** | MoA-верификация, research | API key |
+
+### Секреты и зависимости
+| Файл | Содержание |
+|------|-----------|
+| `msf_token.txt` | Токен @msf_rab_bot |
+| `.env` | `TELEGRAM_BOT_TOKEN`, API-ключи |
+
+### Data Flow (полный цикл)
+```
+Мемы (Telegram)
+  → @msf_rab_bot (приём)
+    → msf_listener.py (long-poll)
+      → HTTP POST :8089/msf-signal
+        → rab9_bot.py (оркестратор)
+          → cabal_detector (pre-check: cabal/не cabal)
+            → DexScreener (обогащение: цена, ликвидность)
+              → wallet_intel (cross-reference KABAL, P≥80%)
+                → DeepSeek (primary analysis, 128K)
+                  → loop_verifier (PASS/FLAG/FAIL)
+                    → @rab2610bot (отправка)
+                      → Песочница (-1003979753733)
+```
+
 ## Мемкоины
 
 - MC 1M+ = mid
