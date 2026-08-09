@@ -2,6 +2,9 @@
 
 ## 2026-07-28 — T-182 GMGN OpenAPI cutover (read-only)
 
+## 2026-08-09
+- AGENTS.md: добавлена секция «Архитектура и инфраструктура» (сервер, сервисы, БД, API, data flow)
+
 - **13:15** — `gmgn_client.py` переписан с scrape `gmgn.ai/defi/quotation` → **official `gmgn-cli` OpenAPI**.
 - Enrichment: `token info` + `security` + `holders` → score 0–15 + security/tags для Grok.
 - `msf_analysis.py`: `enrich_token()`, Grok block `GMGN OPENAPI (read-only)`, source tag `gmgn-openapi`.
@@ -280,3 +283,6 @@ n8n-вебхук перестал передавать сигналы из Ме�
 
 - **04:06** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — 13-й день без сигналов (27.07-09.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 (поднят вместе с RAB9 после харденинга). 6 health-check'ов за смену, 0 ошибок. dedupe: только BURNIE (96/115). GMGN OpenAPI read-only, trading disabled. GitHub: 0 коммитов кроме авто-синков CHRONOLOGY. Платформенные изменения (buzz-каналы, NexusOS, bridge queues) не затронули RAB9.
 - **09.08.2026 00:32** — chrono: 2026-08-09 (`1440bf7`)
+- **09.08.2026 06:13** — docs: секция «Архитектура и инфраструктура» (Сервер, Сервисы, БД, API, Data Flow) (`091331b`)
+- **09.08.2026 10:00** — AGENTS.md: добавлено правило #0 «ЯЗЫК» — все reasoning/ответы/обсуждения ТОЛЬКО на русском. Без исключений.
+- **09.08.2026 ~23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **14-й день без сигналов** (27.07-09.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (1d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. 2 ошибки: ночной NetworkError Bad Gateway 01:10 (transient, стандартное окно). dedupe: только BURNIE (96/115). GMGN OpenAPI read-only, trading disabled. AGENTS.md изменён (языковое правило). Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md.
