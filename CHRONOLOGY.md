@@ -286,3 +286,8 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.08.2026 06:13** — docs: секция «Архитектура и инфраструктура» (Сервер, Сервисы, БД, API, Data Flow) (`091331b`)
 - **09.08.2026 10:00** — AGENTS.md: добавлено правило #0 «ЯЗЫК» — все reasoning/ответы/обсуждения ТОЛЬКО на русском. Без исключений.
 - **09.08.2026 ~23:30** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **14-й день без сигналов** (27.07-09.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (1d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. 2 ошибки: ночной NetworkError Bad Gateway 01:10 (transient, стандартное окно). dedupe: только BURNIE (96/115). GMGN OpenAPI read-only, trading disabled. AGENTS.md изменён (языковое правило). Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md.
+- **09.08.2026 23:15** — chrono: 2026-08-09 evening — 14-й день без сигналов (`fcb6ff2`)
+
+## 10.08.2026 — 15-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **15-й день без сигналов** (27.07-10.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (2d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. 1 ошибка: ночной NetworkError Bad Gateway 01:10 (transient, стандартное окно обслуживания Telegram). dedupe: только BURNIE (96/115). GMGN OpenAPI read-only, trading disabled. AGENTS.md: правило #0 «ЯЗЫК» staged (добавлено 09.08, не закоммичено). GitHub: 0 коммитов за день. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged).
