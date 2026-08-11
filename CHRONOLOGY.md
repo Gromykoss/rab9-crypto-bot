@@ -291,3 +291,8 @@ n8n-вебхук перестал передавать сигналы из Ме�
 ## 10.08.2026 — 15-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **15-й день без сигналов** (27.07-10.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (2d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. 1 ошибка: ночной NetworkError Bad Gateway 01:10 (transient, стандартное окно обслуживания Telegram). dedupe: только BURNIE (96/115). GMGN OpenAPI read-only, trading disabled. AGENTS.md: правило #0 «ЯЗЫК» staged (добавлено 09.08, не закоммичено). GitHub: 0 коммитов за день. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged).
+- **10.08.2026 23:16** — chrono: 2026-08-10 — 15-й день без сигналов (`8b36b74`)
+
+## 11.08.2026 — 16-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **16-й день без сигналов** (27.07–11.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (3d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. 6 ошибок: NetworkError httpx.ReadError в 14:25 (transient, самовосстановился). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. AGENTS.md и CHRONOLOGY.md staged (незакоммичены). Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md, ?? briefings/.
