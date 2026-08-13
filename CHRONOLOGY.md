@@ -301,3 +301,10 @@ n8n-вебхук перестал передавать сигналы из Ме�
 ## 12.08.2026 — 17-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **17-й день без сигналов** (27.07–12.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (4d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. 6 NetworkError (httpx.ReadError в 01:22 — transient, стандартное окно обслуживания Telegram, самовосстановился). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. GitHub: 0 коммитов за день (кроме авто-синка CHRONOLOGY). Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md, ?? briefings/.
+- **12.08.2026 23:15** — chrono: 2026-08-12 (`9d41709`)
+
+## 13.08.2026 — 18-й день без MSF-сигналов + секреты в vault
+
+- **12:14–12:16** — Секреты MSF Listener вынесены в vault: `msf_listener.py` переписан на `SECRETS_DIR = ~/.hermes/secrets/rab9/` (`msf_offset.txt` + `msf_token.txt`). Файлы перемещены (`msf_token.txt` удалён из корня репо, `msf_offset.txt` в корне остался — туда пишет running-процесс). ⚠️ Листенер не рестартован после правки кода — PID 14392 работает на старом пути (offset в корне обновляется 23:14), новый путь активируется только после restart.
+- **21:43** — `AGENTS.md`: подтверждено правило #0 «ЯЗЫК» (русский, без исключений) + новое правило #5 «CHRONOLOGY АВТОМАТИЧЕСКИ» (сдвиг нумерации 5→9). Не закоммичено.
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **18-й день без сигналов** (27.07–13.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (5d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. Ошибки листенера — только штатный long-poll timeout (`read operation timed out`, 7x за день) + 1x ночной 502 Bad Gateway 01:10 (transient). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md, M msf_listener.py, ?? briefings/.
