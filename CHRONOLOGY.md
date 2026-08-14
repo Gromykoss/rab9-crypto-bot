@@ -1,5 +1,63 @@
 # RAB9 — Хронология
 
+## 20.07.2026 — Доставка отчётов: Песочница → Cryptanalyst
+
+- Решение Сергея: боевой группы нет; Песочница (`-1003979753733`) — тестовая прослойка, не боевой контур. Команда: «применяй».
+- `.env`: `TELEGRAM_GROUP_ID` → **`-1004425561477`** (группа Cryptanalyst).
+- `rab9-crypto-hermes` перезапущен: PID **3164401**, `:8089` 200.
+- При рестарте `msf_listener.py` упал — поднят вручную, PID **3164468**.
+- Сергей: оба бота (`@msf_rab_bot`, `@rab2610bot`) добавлены в Cryptanalyst.
+- Конвейер после переноса: Мемы → `@msf_rab_bot` → `msf_listener` → `:8089` → `rab9_bot` → **Cryptanalyst**.
+
+## 26.07.2026 — MSF Listener мёртв с ~21.07 + перевод в systemd
+
+- Сигнал в Мемах не подхвачен. Диагноз: `msf_listener.py` нет в процессах; входящих POST нет (только health); offset застрял на **21 июля**.
+- Причина: ручной процесс не поднялся после ребута (с ~21.07). Всё между 21 и 26 июля — потеряно.
+- Поднят вручную (PID 1164800), затем заведён **`msf-listener.service`**: `Restart=always` (10 с), `enabled`, ждёт `rab9-crypto-hermes`. В строю systemd-PID **1166144**. Старый ручной процесс убит штатно (SIGTERM 143).
+- Первый прогон после починки: `6rgcqxm…frzs` — VERIFIER PASS 100 → ⚫ SKIP (liq **$11 315 < $20 000**, MC $24 344, Vol 24h $52 246). Лог: сигнал пришёл из **Cryptanalyst**, не догнался из Мемов.
+- Урок (закрывает «Не сделано» от 07.07): listener без systemd не переживает ребут.
+
+## 26.07.2026 — X API 402 credits depleted → пополнение
+
+- Gap после инфры: BURNIE/`xurl` → **402**, `credits depleted`. Это не бот.
+- Не путать биллинги: SuperGrok / opencodex `:10100` ≠ X API (`xurl` / OAuth1).
+- Сергей пополнил. Проверка: `xurl search` 200, OAuth1 `radar_x` 200, BURNIE tracker **BULLISH**.
+- Снимок: followers **18 991**, sentiment **pos**, bullish pos=21 / toly=7, recent 10: 427♥ / 238↻.
+
+## 26.07–31.07.2026 — n8n ворует getUpdates @msf_rab_bot (две волны)
+
+**Волна 1 (26.07):** тест-ссылка в Мемах. 409 Conflict на `getUpdates` — n8n workflow `MSF - Telegram AI Filter MVP` active, конкурирует с `msf_listener`. Workflow выключен, listener restart. Отработана 1 ссылка: `asvm3zu5hmmg…` → SKIP (liq **$7 121 < $20k**). Вторая ссылка — `dexscreener.com/robinhood/…` (**CIAO** / `c1a0`): listener игнорирует — только `dexscreener.com/solana/<addr>` или raw Solana base58.
+
+**Волна 2 (~29–31.07):** снова пропуски; 2 суток **0 сигналов**, 409 нет — хуже: апдейты съедаются без конфликта. Root cause: Docker **`n8n-msf`** (PID 2251, порт **5688**) + `node …/n8n` — ~2 недели, **ни одного сигнала в RAB9 с 29 июля**. `docker stop n8n-msf`, `RestartPolicy: no`, `systemctl restart msf-listener`.
+
+- Урок: 409 = видимый конфликт; тихий steal = 100% потеря без ошибки в логах RAB9.
+
+## 28.07–02.08.2026 — BURNIE tracker: кредиты, один крон, vote-spam
+
+- Аудит X: трекер **5 вызовов / 4 ч = 30/день**. Оптимизация: убраны пустой `search sentiment` и дубль `from:ACCOUNT` → **3 вызова / 12 ч = 6/день (−80%)**.
+- Дубли кронов: `cbc130e06a9f` (профиль rab9) + `59d37ee6a323` + мёртвый weekly `9399c1b08b31` (default). Сведено в **один**: `59d37ee6a323` (default), **06:00 / 18:00 UTC** → Cryptanalyst. `monitor_burnie.py` мёртв (Birdeye off).
+- DexScreener через urllib без User-Agent → **403**; с UA: MC $1.44M, price $0.001489, 24h −2.04%, vol $56K, liq $192K.
+- Отчёт врал из‑за **vote-spam** («New Listing Around the Corner»). Фильтр: pos **12–13 → 7**, vote_spam=3 отдельно. Moonshot-голосование: топчемся месяц (02.07: 185→150 … 06.07 минимум **56**).
+- Решение Сергея: катализаторы — **ноябрьские выборы (PolitiFi)** + накопление на кошельках, не Moonshot.
+
+## 28.07–02.08.2026 — BURNIE: TA/OHLCV, фаза decay, крупные аккаунты
+
+- Фаза: накопление у дна. DexScreener: $0.001492, MC **$1.45M**, liq $193K, vol $52K. История: **$25M MC → $1.4M (−94% ATH)**.
+- Ошибка порога: «пробой 10%» для мемкоина — не сигнал.
+- OHLCV бесплатно: **GMGN `market kline` — 100 дней** (с 24.04) + GeckoTerminal ~45 свечей/запрос; локальный архив `data/ohlcv_archive/` — **90 свечей**. Окно 45 копить.
+- Баг фазы: acc **0.12** / dist **0.38** (оба < 0.5) + fallback `trend=DOWNTREND` (−94% ATH) → «раздача». Факт: `flat_days: 43`, RSI **39.3** → **decay**, не distribution.
+- Бесплатные поля в отчёт: buy/sell **0.9** (249b/274s); холдеры **10 174**, bundler'ы **3 (7.0%)**; RugCheck низкий.
+- Драйвер ≠ «buy/pump»: мелкие @ClipsByDough (128) / @NickLor04939359 — шум; пропущен ретвит **@AlphaAgentcall** из‑за `-is:retweet`. Солидный аккаунт: достаточно двусмысленного «BURNIE» / RT/лайк офиц. @BurnieSendersX.
+- Grok Build: оператор **`retweets_of:BurnieSendersX`**. Пойман **@DangerousThinkg (129 530)** — RT офиц. поста (13 мин, 10♥ / 6 RT / 505 просм.). Вердикт впервые **СЛЕДИТЬ (69/100)** с катализатором.
+- Бюджет X: **3 → до 6** вызовов (timeline офиц. + `retweeted_by`). `liking_users`: OAuth2 **403**, OAuth1 пусто даже при 271 лайке. Замена: **`like_count` spike** + quotes; окно свежести **3ч → 12ч**. `quote_fresh`: @Benji_Yugi (6 336) + @elonmusk.
+- Крон в LLM-режиме обходил `[SILENT]`: агент читал JSONL и сам сочинял отчёт. Переведён на **script-first / no_agent**.
+
+## 03.08.2026 — Отчёты BURNIE: тишина event-first + слоты Бишкек
+
+- За день 0 отчётов. Крон в 06:00 UTC отработал, stdout **silent**. Снимки: **fol/pos/neg = 0** (вчера 18:03: fol **19 082**, pos 21). X API жив (`followers_count: 19 091`); пустой снимок + event-first → `[SILENT]`.
+- Сергей: отчёт **всегда** в 06:00 и 18:00 по местному; катализаторы — со ссылками.
+- Местное = **Бишкек UTC+6** → cron `0 6,18` UTC заменён на **`0 0,12 * * *`** (06:00/18:00 Бишкек). Event-first остался только внутри текста (подсветка драйвера).
+
 ## 2026-07-28 — T-182 GMGN OpenAPI cutover (read-only)
 
 ## 2026-08-09
@@ -308,3 +366,8 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **12:14–12:16** — Секреты MSF Listener вынесены в vault: `msf_listener.py` переписан на `SECRETS_DIR = ~/.hermes/secrets/rab9/` (`msf_offset.txt` + `msf_token.txt`). Файлы перемещены (`msf_token.txt` удалён из корня репо, `msf_offset.txt` в корне остался — туда пишет running-процесс). ⚠️ Листенер не рестартован после правки кода — PID 14392 работает на старом пути (offset в корне обновляется 23:14), новый путь активируется только после restart.
 - **21:43** — `AGENTS.md`: подтверждено правило #0 «ЯЗЫК» (русский, без исключений) + новое правило #5 «CHRONOLOGY АВТОМАТИЧЕСКИ» (сдвиг нумерации 5→9). Не закоммичено.
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **18-й день без сигналов** (27.07–13.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (5d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. Ошибки листенера — только штатный long-poll timeout (`read operation timed out`, 7x за день) + 1x ночной 502 Bad Gateway 01:10 (transient). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md, M msf_listener.py, ?? briefings/.
+- **13.08.2026 23:16** — chrono: 2026-08-13 (`22be26f`)
+
+## 14.08.2026 — 19-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **19-й день без сигналов** (27.07–14.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (6d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. Ошибки листенера — только штатный long-poll timeout (`read operation timed out`, 9x за день) + 1x SSL handshake timeout (21:53, transient). Core — 0 ошибок. dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. Рабочее дерево: M AGENTS.md, MM CHRONOLOGY.md, M msf_listener.py, ?? briefings/.
