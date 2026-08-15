@@ -16,12 +16,15 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from operators import Verdict, check_destination
 
 ROOT = Path(__file__).resolve().parent
 RAB9_DIR = Path("/home/hermes-workspace/rab9")
@@ -1642,6 +1645,10 @@ def send_telegram(text: str) -> bool:
                 elif line.startswith("TELEGRAM_GROUP_ID="):
                     chat_id = line.split("=", 1)[1].strip().strip("\"'")
         if not token or not chat_id:
+            return False
+        destination = check_destination(chat_id)
+        if destination.verdict != Verdict.ALLOW:
+            print(f"[telegram] destination blocked: {chat_id} ({destination.reason})", file=sys.stderr)
             return False
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         payload = urllib.parse.urlencode(

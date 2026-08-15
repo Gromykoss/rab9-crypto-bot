@@ -42,7 +42,7 @@ def verify_analysis(token_name: str, analysis_text: str, context: dict) -> dict:
     """
     api_key = _read_api_key()
     if not api_key:
-        return {"verdict": "PASS", "note": "Verifier unavailable — passing through"}
+        return {"verdict": "REJECT", "note": "Verifier unavailable"}
 
     full_report = context.get("full_report", "")
 
@@ -88,23 +88,21 @@ Overall verdict: PASS only if ALL 4 checks are PASS. Otherwise FLAG or FAIL base
         )
 
         if not r.ok:
-            return {"verdict": "PASS", "note": f"Verifier API error {r.status_code}"}
+            return {"verdict": "REJECT", "note": f"Verifier API error {r.status_code}"}
 
         content = r.json()["choices"][0]["message"]["content"].strip()
         if content.startswith("```"):
             content = content.split("\n", 1)[1].rsplit("```", 1)[0]
 
         result = json.loads(content)
-        # Ensure backward compat fields
-        if "verdict" not in result:
-            all_pass = all(result.get(k, "FAIL") == "PASS" for k in ["number_accuracy", "verdict_consistency", "cabal_correctness", "synthesis_quality"])
-            result["verdict"] = "PASS" if all_pass else "FLAG"
+        if not str(result.get("verdict") or "").strip():
+            return {"verdict": "REJECT", "note": "Verifier verdict missing"}
         return result
 
     except json.JSONDecodeError:
-        return {"verdict": "PASS", "note": "Verifier format error — passing through"}
+        return {"verdict": "REJECT", "note": "Verifier format error"}
     except Exception as e:
-        return {"verdict": "PASS", "note": f"Verifier error: {str(e)[:100]}"}
+        return {"verdict": "REJECT", "note": f"Verifier error: {str(e)[:100]}"}
 
 
 if __name__ == "__main__":

@@ -1,5 +1,68 @@
 # RAB9 — Хронология
 
+## 15.08.2026 — Enforced-слой: финальный точечный проход safety/verifier/dedupe
+
+- Причина: финальный Maker-проход по 4 дефектам enforced-слоя: `phase=dead` давал hard `DROP`, warning `INCONCLUSIVE` попадал в verifier context, ручные handlers не помечали `INCONCLUSIVE`, а dedupe-recap мог обходить safety-drop при повторе.
+- Что исправлено:
+  - `operators/operator_safety.py`: hard `DROP` оставлен только для `honeypot in {fail,true,1}` и `rugcheck=rugged`; `phase=dead` теперь `INCONCLUSIVE`, включая `honeypot=pass` + `rugcheck=low/medium`.
+  - `msf_http.py`: `SAFETY_INCONCLUSIVE_WARNING` больше не добавляется до verifier; verifier получает чистый `full_report`, warning добавляется после возможного `fixed_text` replace и перед отправкой.
+  - `handlers.py`: `/testsignal`, `RAB9_SIGNAL` и сырой Solana-адрес добавляют warning при `INCONCLUSIVE` после `DROP`-проверки.
+  - `msf_analysis.py` + `msf_dedupe.py`: dedupe-запись сохраняет `safety_flags`, а `check_dedupe` считает запись junk, если эти флаги сейчас дают `DROP`; повтор `honeypot/rugged` не возвращает recap мимо safety.
+- Проверка: `venv/bin/python -m unittest operators.tests.test_operators -v` → 30/30 OK; `venv/bin/python -m py_compile operators/operator_safety.py operators/tests/test_operators.py msf_http.py handlers.py msf_analysis.py msf_dedupe.py` → чисто; прямые вызовы `check_safety("pass","low","DEAD")` → `INCONCLUSIVE`, `check_safety("fail","","BUY")` → `DROP`.
+
+## 15.08.2026 — Enforced-слой: третий проход Maker закрыл N1-N7
+
+- Причина: независимый Checker второго прохода подтвердил прошлые 8 фиксов, но нашёл новые дефекты N1-N7: `rugcheck=high` дропал свежие мемкоины, `unknown` safety fail-open уходил как ALLOW, safety-факты собирались вторым API-прогоном, ручные входы обходили safety, а `FLAG` с `fixed_text` без маркера `📝` мог отправить сырой текст.
+- Что исправлено:
+  - `operators/operator_safety.py`: `DROP` только для `honeypot in {fail,true,1}`, `rugcheck=rugged`, `phase=dead`; `ALLOW` только при `honeypot=pass` и `rugcheck in {low,medium}`; всё остальное (`unknown`, `high`, пустые/непонятные значения) → `INCONCLUSIVE`.
+  - `msf_analysis.py`: `build_compact_analysis_text(address, mode)` теперь возвращает `(text, safety_flags)`; `safety_flags` берутся из того же прогона (`onchain_data`, `rugcheck_report/rugcheck_level`, `phase_signal`); удалён дубль `collect_safety_flags`.
+  - `msf_http.py`: убран второй safety-прогон; `INCONCLUSIVE` добавляет предупреждение в текст перед отправкой, `DROP` возвращает `dropped_safety`; `FLAG` с пустым `fixed_text` или без маркера `📝` → `hold_flag`.
+  - `handlers.py`: `/testsignal`, `RAB9_SIGNAL` и сырой Solana-адрес распаковывают `(text, safety_flags)` и применяют safety-gate; при `DROP` отправляют короткое «⛔ сигнал отклонён safety-гейтом».
+  - `operators/tests/test_operators.py`: добавлены регрессии для `unknown/high/rugged/pass+low/pass+medium`, int destination и blank `fixed_text`.
+- Проверка: `venv/bin/python -m unittest operators.tests.test_operators -v` → 31/31 OK; `venv/bin/python -m py_compile $(rg --files -g '*.py' -g '!venv/**' -g '!_archive/**' -g '!magpie/**' -g '!loop_stops.py' -g '!structured_reflection.py')` → чисто; `rg -n "collect_safety_flags" *.py` → пусто; `rg -n "from telegram|from config|import dotenv" operators/` → пусто.
+
+## 15.08.2026 — Enforced-слой: закрыт второй проход Checker по 8 дефектам
+
+- Причина: независимый Checker нашёл fail-open и неполную интеграцию operator-layer после первого прохода.
+- Что исправлено:
+  - `operator_verdict_gate.py`: `FLAG` без `fixed_text` теперь `HOLD`, `FLAG` с непустым `fixed_text` → `ALLOW`.
+  - `operator_safety.py`: входы нормализуются через `str(...).strip().lower()`, `honeypot=True/"true"/"1"/"fail"` → `DROP`, `phase=dead` case-insensitive.
+  - `operator_config_guard.py`: пустой/None action → `BLOCK`, blank approval-token на mutating action → `HOLD`.
+  - `loop_verifier.py`: отсутствующий/пустой `verdict` в JSON verifier → `REJECT` с note `Verifier verdict missing`.
+  - `msf_http.py`: `send_msf_pairresolve` возвращает реальные статусы (`sent`, `blocked_destination`, `suppressed_verifier`, `hold_flag`, `dropped_safety`), HTTP `ok=true` только для `sent`; добавлен вызов `check_safety` после сборки анализа и до отправки.
+  - `msf_analysis.py`: добавлен `collect_safety_flags(address)` без изменения сигнатуры `build_compact_analysis_text`; факты берутся из `onchain_check`, `rugcheck_client`, `chart_analysis`/`meme_score`/`phase_detector`, недоступные значения остаются пустыми.
+  - `handlers.py`, `alerts.py`, `burnie_sentiment_tracker.py`: добавлен второй слой `check_destination` на обходных Telegram-отправках.
+- Mutation-gate: реальных Python-точек `systemd_edit/env_edit/config_edit/deploy/restart_service` в живом RAB9 runtime не найдено; фиктивные хуки не добавлялись. Мутирующий shell `scripts/deploy.sh` не трогался по запрету на systemd/deploy.
+- Проверка: `venv/bin/python -m unittest operators.tests.test_operators -v` → 25/25 OK; `find . -path './venv' -prune -o -name '*.py' -print0 | xargs -0 venv/bin/python -B -m py_compile` → чисто; `grep -rn "from telegram\|from config\|import dotenv" operators/` → пусто.
+
+## 15.08.2026 — Детерминирование профиля: enforced-оператор-слой `operators/`
+
+- Запуск по цепочке Operator Layer (Hermes GPT): Hermes оркестрировал, Grok строил read-only карту, Codex = Maker писал код, Hermes+Grok = Checker.
+- Мандат Сергея: **автопилот** — сигналы шлются без approval-токена на каждое событие (24/7 монитор мемов); approval нужен **только на смену конфига / деплой**. DESTINATION_LOCK allowlist = **оба** чата: Cryptanalyst `-1004425561477` + Песочница `-1003979753733`.
+- Создан enforced-слой `operators/` (7 файлов, 232 строки, stdlib-only, enum `Verdict`+`CheckResult`, fail-closed, `__all__`, без side-effects при import):
+  - `verdict.py` — `Verdict(ALLOW/BLOCK/HOLD/DROP/REJECT/INCONCLUSIVE)` + `CheckResult`.
+  - `operator_destination.py` — `DESTINATION_LOCK` (allowlist 2 чата).
+  - `operator_safety.py` — `SAFETY_GATES` (honeypot=fail / rugcheck high|rugged / phase=DEAD → DROP).
+  - `operator_verdict_gate.py` — `REJECT_DEFAULT` (fail-closed verifier).
+  - `operator_config_guard.py` — `APPROVAL_REQUIRED` на mutating (systemd_edit/env_edit/config_edit/deploy/restart_service).
+  - `tests/test_operators.py` — 18 юнит-тестов, все зелёные (`venv/bin/python -m unittest`).
+- Интеграция в боевой код (точечно):
+  - `msf_http.py`: ранний `DESTINATION_LOCK` в начале `send_msf_pairresolve` + verifier-gate fail-closed (`except → suppress`, было `passing through`); default verdict `PASS` → `REJECT`.
+  - `loop_verifier.py`: fail-open `PASS` → `REJECT` в 3 ветках (no api_key / API error / format error / exception). Закрыта главная дыра «нет ключа → публикуем без проверки».
+  - `handlers.py`: `send_long_to_chat` получил destination-check.
+- **Техдолг (решено Сергей, вариант B):** оператор `operator_safety` написан и протестирован, но **НЕ вшит** в `send_msf_pairresolve` — вердикт «AVOID» при rugcheck/honeypot/DEAD пока формируется текстом внутри `msf_analysis`, структуры `safety` наружу нет. Подключить при рефакторинге `msf_analysis.build_compact_analysis_text` (1108 строк, сердце анализа, меняется в T-132/T-134) — не ломать живой контур.
+- Проверка Checker (Hermes+Grok adversarial): 18/18 тестов, py_compile чисто, запрещённых импортов нет, `import operators` без side-effects.
+
+## 15.08.2026 (2-я половина) — Детерминирование rab9: проход 2 + 3 (закрытие багов Checker)
+
+- **Checker проход 1** (Grok adversarial) нашёл 8 багов: FLAG→ALLOW (fail-open), loop_verifier missing verdict → FLAG, HTTP 200 «sent» после заглушки, `check_safety` не вызван, `check_mutation` мёртв, destination-lock на 1 пути из 5, case/bool fail-open в safety+mutation.
+- **Проход 2 Maker** закрыл все 8: FLAG с `fixed_text`→ALLOW / без→HOLD; missing verdict→REJECT; status-возврат `msf_http` (`ok=status=="sent"`); `collect_safety_flags` + `check_safety` в поток; destination-lock во все 5 путей (helper `destination_allowed`); нормализация case/bool. Итог: 25 тестов.
+- **Checker проход 2** подтвердил 8/8 закрыто, но нашёл 7 новых (N1-N7). Критичный **N1**: `rugcheck_client` ставит `level="high"` при ЛЮБОМ mint/freeze authority (норма для свежих мемов), а `check_safety` дропал `high` → автопилот переставал слать сигналы. **N4**: `unknown` honeypot/rugcheck → ALLOW (fail-open).
+- **Решение Сергея (15.08):** N1 — `rugged` (подтверждённый) → DROP, `high` → предупреждение в тексте, НЕ DROP; N4 — `unknown` → INCONCLUSIVE + пометка «⚠️ safety не подтверждена» в тексте; N2+N3 — единый прогон (`build_compact_analysis_text` возвращает `(text, safety_flags)`, убрать дубль `collect_safety_flags`); N5 — NO_BYPASS (safety на `/testsignal` + сырой адрес); N6 — FLAG+fixed без маркера → HOLD; N7 — тесты.
+- **Проход 3 Maker** закрыл N1-N7: N1 `rugged`→DROP/`high`→INCONCLUSIVE; N4 `unknown`→INCONCLUSIVE+пометка; N2+N3 `build_compact_analysis_text`→`(text, safety_flags)` из того же прогона (убран `collect_safety_flags`); N5 safety-gate в `run_testsignal_analysis`+`plain_text_handler`; N6 FLAG+fixed без `📝`→HOLD; N7 тесты (31). Checker подтвердил N1-N7, нашёл остаточные: DEAD как hard DROP (ложный DROP на тихих micro-cap), warning до verifier, handlers INCONCLUSIVE без пометки, dedupe-обход DROP.
+- **Проход 4 Maker (финал)** закрыл остаточные: (1) `phase=DEAD` → INCONCLUSIVE (не DROP) — hard DROP остались только `honeypot=fail`+`rugcheck=rugged`; (2) предупреждение INCONCLUSIVE вшивается ПОСЛЕ verifier (не ломает FLAG/FAIL); (3) handlers 3 ручных анализа помечают INCONCLUSIVE; (4) `msf_dedupe` пишет `safety_flags`, `_is_junk` режет recap при DROP. Итог: 30 тестов.
+- **Финальный Checker (4-й):** 4 правки CLOSED, 8 регрессий чистые, DROP-регрессии нет. Детерминированный DROP = ровно 2 scam-факта. Автопилот НЕ молчит на `dead`/`high`/`unknown`. **Детерминирование завершено.**
+
 ## 20.07.2026 — Доставка отчётов: Песочница → Cryptanalyst
 
 - Решение Сергея: боевой группы нет; Песочница (`-1003979753733`) — тестовая прослойка, не боевой контур. Команда: «применяй».
@@ -371,3 +434,8 @@ n8n-вебхук перестал передавать сигналы из Ме�
 ## 14.08.2026 — 19-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **19-й день без сигналов** (27.07–14.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (6d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. Ошибки листенера — только штатный long-poll timeout (`read operation timed out`, 9x за день) + 1x SSL handshake timeout (21:53, transient). Core — 0 ошибок. dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. Рабочее дерево: M AGENTS.md, MM CHRONOLOGY.md, M msf_listener.py, ?? briefings/.
+- **14.08.2026 23:15** — chrono: 2026-08-14 (`bb41c60`)
+
+## 15.08.2026 — enforced-оператор-слой RAB9
+
+- **code_change** — Добавлен чистый stdlib-only слой `operators/` с `Verdict`/`CheckResult` и операторами destination, safety, verifier gate, config guard. Интеграция точечная: `msf_http.py` блокирует неразрешённый `TELEGRAM_GROUP_ID` до анализа и suppress при недоступном/REJECT verifier; `handlers.py/send_long_to_chat` блокирует произвольные chat_id; `loop_verifier.py` переведён с fail-open PASS на fail-closed REJECT в ветках unavailable/API error/format error/exception. Проверка: `/home/hermes-workspace/rab9/venv/bin/python -m py_compile ...` чисто; `/home/hermes-workspace/rab9/venv/bin/python -m unittest operators.tests.test_operators` — 18 tests OK. Systemd, `.env`, `config.py`, `magpie/`, `_archive/`, `loop_stops.py`, `structured_reflection.py` не трогались.

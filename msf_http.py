@@ -13,14 +13,37 @@ from telegram.ext import Application
 from address_validation import is_msf_solana_address
 from config import RAB9_HTTP_HOST, RAB9_HTTP_PORT, RAB9_HTTP_SECRET, TELEGRAM_GROUP_ID
 from msf_analysis import build_compact_analysis_text
+from operators import DEFAULT_VERDICT, Verdict, check_destination, check_safety, check_verifier
 from utils import split_text
 
 
 logger = logging.getLogger("rab9_crypto_intel_bot")
+SAFETY_INCONCLUSIVE_WARNING = (
+    "⚠️ Safety не подтверждена (honeypot/rugcheck недоступны или неоднозначны) — "
+    "ручная проверка обязательна."
+)
+
+
+def _verifier_available(verification: dict | None) -> bool:
+    if not verification:
+        return False
+
+    note = str(verification.get("note") or "").lower()
+    unavailable_markers = (
+        "verifier unavailable",
+        "verifier api error",
+        "verifier format error",
+        "verifier error",
+    )
+    return not any(marker in note for marker in unavailable_markers)
 
 
 async def send_msf_pairresolve(application: Application, address: str):
     logger.info("MSF analysis started for: %s", address)
+    destination = check_destination(TELEGRAM_GROUP_ID)
+    if destination.verdict != Verdict.ALLOW:
+        logger.error("DESTINATION LOCK: send blocked for %s (%s)", TELEGRAM_GROUP_ID, destination.reason)
+        return "blocked_destination"
 
     # ── Cooldown check FIRST — avoid expensive re-analysis ──
     from loop_memory import should_skip, record_analysis
@@ -49,7 +72,7 @@ async def send_msf_pairresolve(application: Application, address: str):
                 text=msg,
                 disable_web_page_preview=True,
             )
-        return
+        return "sent"
 
     # ── Cabal detection (pre-analysis) ──
     try:
@@ -73,8 +96,20 @@ async def send_msf_pairresolve(application: Application, address: str):
     except Exception as e:
         logger.warning("Cabal detector error (continuing): %s", e)
 
-    text = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
+    text, safety_flags = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
     logger.info("MSF analysis complete: %d chars", len(text))
+
+    safety_gate = check_safety(
+        safety_flags.get("honeypot"),
+        safety_flags.get("rugcheck"),
+        safety_flags.get("phase"),
+    )
+    if safety_gate.verdict == Verdict.DROP:
+        logger.warning("SAFETY DROP: suppressing analysis for %s (%s)", address[:12], safety_gate.reason)
+        return "dropped_safety"
+    safety_inconclusive = safety_gate.verdict == Verdict.INCONCLUSIVE
+    if safety_gate.verdict == Verdict.INCONCLUSIVE:
+        logger.info("SAFETY INCONCLUSIVE for %s: %s", address[:12], safety_flags)
 
     # Extract tier / verdict for memory
     tier = ""
@@ -98,25 +133,46 @@ async def send_msf_pairresolve(application: Application, address: str):
         # AI text: line after 📝 if present
         ai_match = re.search(r"📝\s*(.+?)(?:\n📈|\n🎯|\n📎|\Z)", text, re.DOTALL)
         ai_text = ai_match.group(1).strip() if ai_match else text
-        context = {"full_report": text}
+        verifier_context_text = text
+        context = {"full_report": verifier_context_text}
 
         verification = verify_analysis(token_name, ai_text, context)
-        v = verification.get("verdict", "PASS")
-        score = verification.get("score", 0)
+        v = str(verification.get("verdict", DEFAULT_VERDICT)).upper() if verification else DEFAULT_VERDICT
+        score = verification.get("score", 0) if verification else 0
+        fixed = verification.get("fixed_text", "") if verification else ""
+        issues = verification.get("issues", []) if verification else []
+        verifier_gate = check_verifier(v, available=_verifier_available(verification), fixed_text=fixed)
 
-        if v == "FAIL":
-            logger.warning("VERIFIER FAIL (score=%d): suppressing analysis for %s", score, token_name)
-            logger.warning("Issues: %s", verification.get("issues", []))
-            return  # Suppress — don't send
-        elif v == "FLAG":
-            logger.info("VERIFIER FLAG (score=%d): %s", score, verification.get("issues", []))
-            fixed = verification.get("fixed_text", "")
-            if fixed and ai_match:
-                text = text.replace(ai_match.group(1), fixed)
+        if verifier_gate.verdict == Verdict.REJECT:
+            logger.warning("VERIFIER REJECT (score=%d): suppressing analysis for %s (%s)", score, token_name, verifier_gate.reason)
+            logger.warning("Issues: %s", issues)
+            return "suppressed_verifier"
+
+        if verifier_gate.verdict == Verdict.HOLD:
+            logger.warning("VERIFIER HOLD (score=%d): holding analysis for %s (%s)", score, token_name, verifier_gate.reason)
+            logger.warning("Issues: %s", issues)
+            return "hold_flag"
+
+        if v == "FLAG":
+            logger.info("VERIFIER FLAG (score=%d): %s", score, issues)
+            if not fixed.strip() or not ai_match:
+                logger.warning(
+                    "VERIFIER HOLD (score=%d): FLAG fixed_text cannot be applied for %s (fixed=%s ai_marker=%s)",
+                    score,
+                    token_name,
+                    bool(fixed.strip()),
+                    bool(ai_match),
+                )
+                return "hold_flag"
+            text = text.replace(ai_match.group(1), fixed)
         else:
             logger.info("VERIFIER PASS (score=%d)", score)
     except Exception as e:
-        logger.warning("Verifier error (passing through): %s", e)
+        logger.warning("Verifier error (suppressing): %s", e)
+        return "suppressed_verifier"
+
+    if safety_inconclusive:
+        text = f"{text}\n{SAFETY_INCONCLUSIVE_WARNING}"
 
     for line in text.splitlines():
         if any(kw in line for kw in ["Кабал", "Кабалы", "Инфраструктура", "⚠️", "GMGN"]):
@@ -130,6 +186,7 @@ async def send_msf_pairresolve(application: Application, address: str):
             disable_web_page_preview=True,
         )
     logger.info("MSF report delivered to %s (%d chars)", TELEGRAM_GROUP_ID, len(text))
+    return "sent"
 
 
 def start_msf_http_server(application: Application, loop: asyncio.AbstractEventLoop):
@@ -189,13 +246,14 @@ def start_msf_http_server(application: Application, loop: asyncio.AbstractEventL
             )
 
             try:
-                future.result(timeout=90)
+                status = future.result(timeout=90)
             except Exception as error:
                 logger.exception("MSF signal processing failed: %s", error)
                 self.send_json(500, {"ok": False, "error": "processing_failed"})
                 return
 
-            self.send_json(200, {"ok": True, "status": "sent"})
+            status = status or "error"
+            self.send_json(200, {"ok": status == "sent", "status": status})
 
     server = ReuseThreadingHTTPServer((RAB9_HTTP_HOST, RAB9_HTTP_PORT), MsfSignalHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True, name="rab9-msf-http")

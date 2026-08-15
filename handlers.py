@@ -14,6 +14,7 @@ from telegram.ext import (
 
 from address_validation import is_msf_solana_address
 from config import TELEGRAM_GROUP_ID, XAI_API_KEY, LEGACY_WATCHLIST_ALERTS_ENABLED
+from operators import Verdict, check_destination, check_safety
 from utils import utc_now_text, split_text
 from dex import get_dex_latest_profiles
 from keyboards import main_reply_keyboard, main_inline_keyboard, token_chain_keyboard
@@ -52,15 +53,29 @@ RAB9_SIGNAL_RE = re.compile(
 TESTSIGNAL_PENDING = set()
 ALLOWED_FLOW_PERIODS = {"1h", "6h", "12h", "24h", "7d", "30d"}
 FLOW_PERIOD_HINT = "Допустимый период: 1h, 6h, 12h, 24h, 7d, 30d"
+SAFETY_INCONCLUSIVE_WARNING = (
+    "⚠️ Safety не подтверждена (honeypot/rugcheck недоступны или неоднозначны) — "
+    "ручная проверка обязательна."
+)
 
 
 def is_allowed_chat_id(chat_id) -> bool:
     return str(chat_id) == str(TELEGRAM_GROUP_ID)
 
 
+def destination_allowed(chat_id, action: str) -> bool:
+    destination = check_destination(chat_id)
+    if destination.verdict != Verdict.ALLOW:
+        logger.warning("DESTINATION LOCK: %s blocked for %s (%s)", action, chat_id, destination.reason)
+        return False
+    return True
+
+
 async def deny_if_wrong_group(update: Update) -> bool:
     if update.message and update.effective_chat:
         if not is_allowed_chat_id(update.effective_chat.id):
+            if not destination_allowed(update.effective_chat.id, "deny_if_wrong_group"):
+                return True
             await update.message.reply_text("⛔ Этот бот работает только в разрешённой группе.")
             return True
 
@@ -95,6 +110,10 @@ def build_status_text() -> str:
 
 
 async def reply_long(update: Update, text: str, reply_markup=None):
+    chat_id = update.effective_chat.id if update.effective_chat else None
+    if not destination_allowed(chat_id, "reply_long"):
+        return
+
     chunks = split_text(text)
 
     for idx, chunk in enumerate(chunks):
@@ -139,8 +158,22 @@ def extract_testsignal_address(text: str):
 
 async def run_testsignal_analysis(update: Update, address: str):
     logger.info("Manual testsignal triggered for %s", address)
+    chat_id = update.effective_chat.id if update.effective_chat else None
+    if not destination_allowed(chat_id, "run_testsignal_analysis"):
+        return
     await update.message.reply_text("🔎 RAB9 начал анализ MSF-сигнала...")
-    text = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
+    text, safety_flags = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
+    safety_gate = check_safety(
+        safety_flags.get("honeypot"),
+        safety_flags.get("rugcheck"),
+        safety_flags.get("phase"),
+    )
+    if safety_gate.verdict == Verdict.DROP:
+        logger.warning("SAFETY DROP: manual testsignal suppressed for %s (%s)", address[:12], safety_gate.reason)
+        await update.message.reply_text("⛔ сигнал отклонён safety-гейтом", reply_markup=main_reply_keyboard())
+        return
+    if safety_gate.verdict == Verdict.INCONCLUSIVE:
+        text = f"{text}\n{SAFETY_INCONCLUSIVE_WARNING}"
     await reply_long(update, text, main_reply_keyboard())
 
 
@@ -193,6 +226,11 @@ async def reply_walletswaps_report(update: Update, text: str, reply_markup=None)
 
 
 async def send_long_to_chat(context: ContextTypes.DEFAULT_TYPE, chat_id, text: str):
+    destination = check_destination(chat_id)
+    if destination.verdict != Verdict.ALLOW:
+        logger.warning("DESTINATION LOCK: send_long_to_chat blocked for %s (%s)", chat_id, destination.reason)
+        return
+
     for chunk in split_text(text):
         await context.bot.send_message(
             chat_id=chat_id,
@@ -1034,6 +1072,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if await deny_if_wrong_group(update):
         return
+    chat_id = update.effective_chat.id if update.effective_chat else None
+    if not destination_allowed(chat_id, "plain_text_handler"):
+        return
 
     text = (update.message.text or "").strip()
     key = pending_key(update)
@@ -1046,7 +1087,18 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         address = rab9_signal_match.group("address")
         logger.info("RAB9_SIGNAL received: %s from chat %s", address, update.effective_chat.id)
         await update.message.reply_text("🔎 Анализирую...")
-        result = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
+        result, safety_flags = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
+        safety_gate = check_safety(
+            safety_flags.get("honeypot"),
+            safety_flags.get("rugcheck"),
+            safety_flags.get("phase"),
+        )
+        if safety_gate.verdict == Verdict.DROP:
+            logger.warning("SAFETY DROP: RAB9_SIGNAL suppressed for %s (%s)", address[:12], safety_gate.reason)
+            await update.message.reply_text("⛔ сигнал отклонён safety-гейтом", reply_markup=ReplyKeyboardRemove())
+            return
+        if safety_gate.verdict == Verdict.INCONCLUSIVE:
+            result = f"{result}\n{SAFETY_INCONCLUSIVE_WARNING}"
         for line in result.splitlines():
             if any(kw in line for kw in ["Кабалы", "Инфраструктура", "⚠️"]):
                 logger.info("INTEL: %s", line.strip())
@@ -1078,7 +1130,18 @@ async def plain_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         address = sol_match.group(0)
         logger.info("Solana address detected: %s from chat %s", address, update.effective_chat.id)
         await update.message.reply_text("🔎 Анализирую...")
-        result = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
+        result, safety_flags = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
+        safety_gate = check_safety(
+            safety_flags.get("honeypot"),
+            safety_flags.get("rugcheck"),
+            safety_flags.get("phase"),
+        )
+        if safety_gate.verdict == Verdict.DROP:
+            logger.warning("SAFETY DROP: plain Solana signal suppressed for %s (%s)", address[:12], safety_gate.reason)
+            await update.message.reply_text("⛔ сигнал отклонён safety-гейтом", reply_markup=ReplyKeyboardRemove())
+            return
+        if safety_gate.verdict == Verdict.INCONCLUSIVE:
+            result = f"{result}\n{SAFETY_INCONCLUSIVE_WARNING}"
         for line in result.splitlines():
             if any(kw in line for kw in ["Кабалы", "Инфраструктура", "⚠️"]):
                 logger.info("INTEL: %s", line.strip())

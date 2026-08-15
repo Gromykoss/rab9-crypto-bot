@@ -58,6 +58,10 @@ from msf_template import build_template_card
 PAIR_RECOMMENDATION_RE = re.compile(r"Use this address for /makertrades:\s*(?P<pair>\S+)")
 
 
+def empty_safety_flags() -> dict:
+    return {"honeypot": "", "rugcheck": "", "phase": ""}
+
+
 def extract_recommended_pair(pair_resolve_text: str):
     match = PAIR_RECOMMENDATION_RE.search(pair_resolve_text or "")
     if not match:
@@ -182,10 +186,12 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     import requests
     from config import BIRDEYE_API_KEY
 
+    safety_flags = empty_safety_flags()
+
     # ── P0: 24h address deduplication ──
     dedupe_msg = check_dedupe(address)
     if dedupe_msg:
-        return dedupe_msg
+        return dedupe_msg, safety_flags
 
     theory_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trading_theory.md")
     try:
@@ -211,7 +217,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         pair = address  # fallback: use input as pair (may work with Birdeye pair trades)
 
     if not pair:
-        return "⚠️ Не удалось определить pair для этого адреса."
+        return "⚠️ Не удалось определить pair для этого адреса.", safety_flags
 
     # ── P1: Hard liq/MC pre-filter (before expensive scans) ──
     # Quick DexScreener check to avoid wasting API calls on junk tokens
@@ -240,14 +246,14 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 f"MC: {'${:,.0f}'.format(dex_mc) if dex_mc else '?'} | "
                 f"Vol 24h: {'${:,.0f}'.format(dex_vol) if dex_vol else '?'}\n"
                 f"🔗 https://dexscreener.com/solana/{address}"
-            )
+            ), safety_flags
         if dex_mc > MAX_MARKET_CAP_USD:
             return (
                 f"⚫ SKIP: MC too large (${dex_mc:,.0f} > ${MAX_MARKET_CAP_USD:,})\n"
                 f"Liq: {'${:,.0f}'.format(dex_liq) if dex_liq else '?'} | "
                 f"Vol 24h: {'${:,.0f}'.format(dex_vol) if dex_vol else '?'}\n"
                 f"🔗 https://dexscreener.com/solana/{address}"
-            )
+            ), safety_flags
 
     result = get_birdeye_pair_makers(pair, mode="normal")
     items = result.get("items") or []
@@ -1079,6 +1085,16 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     else:
         lines.append(f"🔗 DexScreener: {dex_link}")
 
+    safety_flags = {
+        "honeypot": (
+            (onchain_data or {}).get("honeypot_status")
+            or ((onchain_data or {}).get("honeypot") or {}).get("status")
+            or ""
+        ),
+        "rugcheck": "rugged" if rugcheck_report.get("rugged") else rugcheck_level,
+        "phase": phase_signal.get("signal", "") if phase_signal else "",
+    }
+
     # ── P0: Record address for 24h deduplication (rich recap, skip junk 0-scores) ──
     try:
         score_val = score_data.get("score", 0) if score_data else 0
@@ -1101,8 +1117,9 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             gmgn_score=gmgn_score if isinstance(gmgn_score, int) else None,
             verdict=str(verdict)[:120] if verdict else "",
             failed=not bool(score_data),
+            extra={"safety_flags": safety_flags},
         )
     except Exception:
         pass
 
-    return "\n".join(lines)
+    return "\n".join(lines), safety_flags

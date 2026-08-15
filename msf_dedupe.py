@@ -18,6 +18,8 @@ import os
 import time
 from typing import Any
 
+from operators import Verdict, check_safety
+
 
 DEDUPE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "data", "msf_dedupe.json"
@@ -53,6 +55,15 @@ def _prune(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _is_junk(entry: dict[str, Any]) -> bool:
     """True if prior record is useless (failed analysis / score 0 + unknown tier)."""
+    safety_flags = entry.get("safety_flags") or {}
+    safety_gate = check_safety(
+        safety_flags.get("honeypot"),
+        safety_flags.get("rugcheck"),
+        safety_flags.get("phase"),
+    )
+    if safety_gate.verdict == Verdict.DROP:
+        return True
+
     score = entry.get("score", 0) or 0
     tier = str(entry.get("tier") or "?")
     if score == 0 and tier in ("?", "", "unknown", "None"):

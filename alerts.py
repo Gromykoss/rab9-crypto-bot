@@ -21,6 +21,7 @@ from utils import (
     split_text,
 )
 from dex import get_dex_token_pairs, pick_best_pair
+from operators import Verdict, check_destination
 from scoring import analyze_pair_metrics
 from watchlist import load_watchlist, watch_key
 
@@ -330,6 +331,16 @@ async def alert_loop(application: Application):
 
     while True:
         try:
+            destination = check_destination(TELEGRAM_GROUP_ID)
+            if destination.verdict != Verdict.ALLOW:
+                logger.warning(
+                    "DESTINATION LOCK: alert_loop blocked for %s (%s)",
+                    TELEGRAM_GROUP_ID,
+                    destination.reason,
+                )
+                await asyncio.sleep(ALERT_INTERVAL_SECONDS)
+                continue
+
             text = await asyncio.to_thread(build_watch_alerts_text)
 
             if text:
