@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 16.08.2026 — 21-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **21-й день без сигналов** (27.07–16.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (1 неделя 1 день uptime, active с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 14392 жив. Ошибки — только штатный long-poll timeout листенера (7x за день: `read operation timed out`) + 1x ночной 502 Bad Gateway 01:11 (transient, стандартное окно обслуживания Telegram). Core — 0 ошибок (кроме пары NetworkError Bad Gateway 01:11, transient). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. Код за день не менялся. GitHub: 0 коммитов за день. Рабочее дерево: M CHRONOLOGY.md (staged), M msf_listener.py (secrets-миграция с 13.08, listener НЕ рестартован — работает на старом пути), ?? kpi_report.py, ?? .kpi-proposal/, ?? briefings/.
+
 ## 15.08.2026 — Enforced-слой: финальный точечный проход safety/verifier/dedupe
 
 - Причина: финальный Maker-проход по 4 дефектам enforced-слоя: `phase=dead` давал hard `DROP`, warning `INCONCLUSIVE` попадал в verifier context, ручные handlers не помечали `INCONCLUSIVE`, а dedupe-recap мог обходить safety-drop при повторе.
@@ -443,3 +447,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **15.08.2026 23:15** — CHRONOLOGY agent: итог дня. День активный по коду — детерминирование профиля RAB9 завершено (enforced-слой `operators/`, 4 прохода Maker/Checker, детерминированный hard DROP = ровно 2 scam-факта `honeypot=fail`+`rugcheck=rugged`). 0 MSF-сигналов — **20-й день без сигналов** (27.07–15.08), мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (6d 15h uptime), MSF HTTP :8089 200 (127.0.0.1), MSF Listener PID 14392 жив. Ошибки core — 0. dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. Незакоммичено: `msf_listener.py` (secrets-миграция с 13.08 — listener НЕ рестартован, работает на старом пути), untracked `kpi_report.py` + `.kpi-proposal/` (KPI/E2E-отчёт). Рабочее дерево: M CHRONOLOGY.md (staged), M msf_listener.py, ?? kpi_report.py, ?? .kpi-proposal/, ?? briefings/.
 - **15.08.2026 23:16** — chrono: 2026-08-15 — детерминирование operators/ завершено, 20-й день без сигналов (`12ed4f9`)
 - **15.08.2026 23:16** — chrono: 2026-08-15 (auto-sync record 12ed4f9) (`5d1c647`)
+- **15.08.2026 23:17** — chrono: 2026-08-15 (auto-sync record 5d1c647) (`27b7d92`)
