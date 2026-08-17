@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 17.08.2026 — 22-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **22-й день без сигналов** (27.07–17.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (uptime с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 14392 жив. Ошибки — только ночной Telegram Bad Gateway 01:10 (5х `Telegram handler error` + traceback, transient, стандартное окно обслуживания Telegram, самовосстановился). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. Код за день не менялся. Рабочее дерево: M CHRONOLOGY.md, M msf_listener.py (secrets-миграция с 13.08, listener НЕ рестартован — работает на старом пути), ?? kpi_report.py, ?? .kpi-proposal/, ?? briefings/.
+
 ## 16.08.2026 — 21-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **21-й день без сигналов** (27.07–16.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (1 неделя 1 день uptime, active с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 14392 жив. Ошибки — только штатный long-poll timeout листенера (7x за день: `read operation timed out`) + 1x ночной 502 Bad Gateway 01:11 (transient, стандартное окно обслуживания Telegram). Core — 0 ошибок (кроме пары NetworkError Bad Gateway 01:11, transient). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. Код за день не менялся. GitHub: 0 коммитов за день. Рабочее дерево: M CHRONOLOGY.md (staged), M msf_listener.py (secrets-миграция с 13.08, listener НЕ рестартован — работает на старом пути), ?? kpi_report.py, ?? .kpi-proposal/, ?? briefings/.
@@ -448,3 +452,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **15.08.2026 23:16** — chrono: 2026-08-15 — детерминирование operators/ завершено, 20-й день без сигналов (`12ed4f9`)
 - **15.08.2026 23:16** — chrono: 2026-08-15 (auto-sync record 12ed4f9) (`5d1c647`)
 - **15.08.2026 23:17** — chrono: 2026-08-15 (auto-sync record 5d1c647) (`27b7d92`)
+- **16.08.2026 23:15** — chrono: 2026-08-16 (`753ff99`)
