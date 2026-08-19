@@ -1,5 +1,14 @@
 # RAB9 — Хронология
 
+## 19.08.2026 — 24-й день без MSF-сигналов + secrets-миграция listener активирована
+
+- **07:36** — MSF Listener рестартован (PID 14392 → **2514283**). Перед этим 2x `HTTP Error 409: Conflict` на getUpdates (05:24, 05:27) — временный race, n8n не активен (нет процессов/docker). Offset сохранён (`892536603`), апдейты не потеряны. Рестарт активировал secrets-миграцию от 13.08: новый листенер пишет offset в `~/.hermes/secrets/rab9/msf_offset.txt` (обновлён 23:15), корневой `msf_offset.txt` остановился на 07:35. Техдолг «listener работает на старом пути» закрыт.
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **24-й день без сигналов** (27.07–19.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (1 week 4 days uptime, с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 2514283 жив. Core — 0 ошибок (только health-check GET). Листенер — штатные long-poll `read operation timed out` + 2x 409 Conflict утром (до рестарта). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15, verdict ⏳ WAIT | ❓ НЕИЗВЕСТНО). GMGN OpenAPI read-only, trading disabled. Код за день не менялся (только CHRONOLOGY).
+
+## 18.08.2026 — 23-й день без MSF-сигналов (CHRONOLOGY agent не запускался)
+
+- Пропуск: дневной CHRONOLOGY agent не отработал — записи за 18.08 в хронологии нет (заполнено задним числом по логам). Listener: штатные long-poll `read operation timed out` + 2x `502 Bad Gateway` 19:54 (transient, стандартное окно обслуживания Telegram). Core: 5 строк лога, 0 ошибок, 0 сигналов. 0 MSF-сигналов — **23-й день без сигналов** (27.07–18.08).
+
 ## 17.08.2026 — 22-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **22-й день без сигналов** (27.07–17.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (uptime с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 14392 жив. Ошибки — только ночной Telegram Bad Gateway 01:10 (5х `Telegram handler error` + traceback, transient, стандартное окно обслуживания Telegram, самовосстановился). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15). GMGN OpenAPI read-only, trading disabled. Код за день не менялся. Рабочее дерево: M CHRONOLOGY.md, M msf_listener.py (secrets-миграция с 13.08, listener НЕ рестартован — работает на старом пути), ?? kpi_report.py, ?? .kpi-proposal/, ?? briefings/.
@@ -454,3 +463,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **15.08.2026 23:17** — chrono: 2026-08-15 (auto-sync record 5d1c647) (`27b7d92`)
 - **16.08.2026 23:15** — chrono: 2026-08-16 (`753ff99`)
 - **17.08.2026 23:16** — chrono: 2026-08-17 (`e190ef4`)
+- **19.08.2026 04:00** — daily-sync: auto-commit (`c5c544a`)
