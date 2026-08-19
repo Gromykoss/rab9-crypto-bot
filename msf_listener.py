@@ -16,8 +16,9 @@ logging.basicConfig(
 log = logging.getLogger("msf_listener")
 
 BASE_DIR = "/home/hermes-workspace/rab9"
-OFFSET_FILE = os.path.join(BASE_DIR, "msf_offset.txt")
-TOKEN_FILE = os.path.join(BASE_DIR, "msf_token.txt")
+SECRETS_DIR = "/home/hermes-workspace/.hermes/secrets/rab9"
+OFFSET_FILE = os.path.join(SECRETS_DIR, "msf_offset.txt")
+TOKEN_FILE = os.path.join(SECRETS_DIR, "msf_token.txt")
 ENV_FILE = os.path.join(BASE_DIR, ".env")
 RAB9_URL = "http://localhost:8089/msf-signal"
 
