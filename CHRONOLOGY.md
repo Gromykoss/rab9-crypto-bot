@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 20.08.2026 — 25-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **25-й день без сигналов** (27.07–20.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (1 week 5 days uptime, с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 2514283 жив (с 19.08). Ошибки core — только ночной `Telegram NetworkError Bad Gateway` 01:11 (2x, transient, стандартное окно обслуживания Telegram, самовосстановился). Листенер — штатный long-poll `read operation timed out` (2x: 00:46, 05:18) + 1x `Connection reset by peer` 12:31 (transient). Secrets-миграция подтверждена: offset пишется в `~/.hermes/secrets/rab9/msf_offset.txt` (892536613, обновлён 23:17), корневой `msf_offset.txt` остановился на 19.08 07:35 (892536610). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15, verdict ⏳ WAIT | ❓ НЕИЗВЕСТНО). GMGN OpenAPI read-only, trading disabled. Код за день не менялся (только CHRONOLOGY).
+
 ## 19.08.2026 — 24-й день без MSF-сигналов + secrets-миграция listener активирована
 
 - **07:36** — MSF Listener рестартован (PID 14392 → **2514283**). Перед этим 2x `HTTP Error 409: Conflict` на getUpdates (05:24, 05:27) — временный race, n8n не активен (нет процессов/docker). Offset сохранён (`892536603`), апдейты не потеряны. Рестарт активировал secrets-миграцию от 13.08: новый листенер пишет offset в `~/.hermes/secrets/rab9/msf_offset.txt` (обновлён 23:15), корневой `msf_offset.txt` остановился на 07:35. Техдолг «listener работает на старом пути» закрыт.
@@ -465,3 +469,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **17.08.2026 23:16** — chrono: 2026-08-17 (`e190ef4`)
 - **19.08.2026 04:00** — daily-sync: auto-commit (`c5c544a`)
 - **19.08.2026 23:17** — chrono: 2026-08-19 — 24-й день без сигналов, listener secrets-миграция активирована (`7a2834b`)
+- **20.08.2026 04:04** — auto-sync infra 20260820 (`2a39e16`)
