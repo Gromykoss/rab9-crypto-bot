@@ -1,5 +1,19 @@
 # RAB9 — Хронология
 
+## 21.08.2026 — внедрение manipulation research в код (buy_ratio, breakout-interest, KOL-swarm)
+
+- **причина** — прикладное применение инструкции Grok по манипуляциям (`grok_manipulation_research_result.md`) в живые модули: выводы §3/§4/§5/§7, проверенные на BURNIE, перенесены в код.
+- **что сделано** —
+  - `burnie_price_watch.py`: в price-алерт добавлен `buy_ratio` (buy/sell 24h из DexScreener `txns.h24`, бесплатно). ≥1.3 → «покупки доминируют» (подтверждение пробоя покупками), <0.5 → «продажи доминируют ⚠️» (dump), иначе «смешанно». §4.
+  - `chart_analysis.py`: новый флаг `smart_money_breakout_interest` — цена выше пробойного уровня при объёме ×1.5–×2.0 → «интерес», но ещё НЕ кандидат (полный breakout остаётся ×2.0). Ниже ×1.5 = шум. §3/§7.
+  - `radar_x.py`: `large_mention_count` (аккаунты ≥50k) + warning `⚠️ KOL-SWARM`: ≥2 крупных аккаунтов упомянули в одном снимке без #ad/disclosure → вероятный заказной разогрев (paid shill), НЕ органика. §5.
+- **статус** — правки в рабочем дереве, НЕ закоммичены. RAB9 Core не рестартован (enrichment-модули — изменения подхватятся следующим прогоном анализа).
+- **файлы** — `burnie_price_watch.py`, `chart_analysis.py`, `radar_x.py`.
+
+## 21.08.2026 — 26-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **26-й день без сигналов** (27.07–21.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (13d 15h uptime, с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 2514283 жив (с 19.08). Core-ошибки — только ночной `Telegram NetworkError Bad Gateway` 01:10 (5x handler error + traceback, transient, стандартное окно обслуживания Telegram, самовосстановился). Листенер — штатный long-poll `read operation timed out` (6x за день). BURNIE price-watch жив: baseline $0.00255, текущая $0.00258 — без аномалии, тишина. Live DexScreener: price $0.00258, MC $2.50M, vol24 $500K, 24h −0.84%. dedupe: только BURNIE (96/115 HIGH CONVICTION, GMGN 10/15, verdict ⏳ WAIT | ❓ НЕИЗВЕСТНО). GMGN OpenAPI read-only, trading disabled. Код: 3 модуля правлены (внедрение manipulation research) — не закоммичено. Рабочее дерево: M CHRONOLOGY.md, M burnie_price_watch.py, M chart_analysis.py, M radar_x.py, ?? LOG_DUMP_20260821_160833.txt, ?? grok_manipulation_research_20260821_150547.txt.
+
 ## 21.08.2026 — BURNIE price-watch: крон чаще при аномалии цены + московское время
 
 - ** причина ** — Сергей: крон BURNIE срабатывает 2 раза в сутки; нужно, чтобы при аномалии цены срабатывал чаще. Доп. требование: время переводить на местное автоматически (сейчас московский пояс).
@@ -504,3 +518,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **21.08.2026 08:55** — chore: CHRONOLOGY 21.08.2026 — msf-listener systemd vs фон инцидент закрыт (`a3326b0`)
 - **21.08.2026 13:30** — feat: Grok манипуляции + breakout-фикс + price-watch крон (21.08) (`77349ac`)
 - **21.08.2026 13:42** — chore: daily briefing 20.08 + CHRONOLOGY (feat 77349ac) (`0808974`)
+- **21.08.2026 13:42** — chrono: 2026-08-21 — daily briefing commit (0808974) (`7215863`)
