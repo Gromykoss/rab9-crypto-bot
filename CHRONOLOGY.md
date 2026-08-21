@@ -503,3 +503,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **21.08.2026 08:52** — chrono: 2026-08-21 — закрыт инцидент msf-listener systemd vs фон (`40ff044`)
 - **21.08.2026 08:55** — chore: CHRONOLOGY 21.08.2026 — msf-listener systemd vs фон инцидент закрыт (`a3326b0`)
 - **21.08.2026 13:30** — feat: Grok манипуляции + breakout-фикс + price-watch крон (21.08) (`77349ac`)
+- **21.08.2026 13:42** — chore: daily briefing 20.08 + CHRONOLOGY (feat 77349ac) (`0808974`)
