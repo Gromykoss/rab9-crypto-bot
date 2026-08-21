@@ -145,7 +145,7 @@ Primary: DeepSeek.
 | Компонент | Файл | Статус |
 |-----------|------|--------|
 | **RAB9 Core** | `rab9_bot.py` | systemd: `rab9-crypto-hermes` |
-| **MSF Listener** | `msf_listener.py` | background (→ systemd) |
+| **MSF Listener** | `msf_listener.py` | systemd system-юнит `msf-listener.service` (active+enabled, MainPID) |
 | **MSF HTTP** | `msf_http.py :8089` | внутри rab9_bot.py |
 | **Cabal Detector** | `cabal_detector.py` | pre-check |
 | **Wallet Intel** | `wallet_intel.py` | cross-reference KABAL (P≥80%) |
@@ -293,7 +293,7 @@ Trigger (@msf_rab_bot → msf_listener.py) → Discover (DexScreener) → Delega
 - RAB9 жив? `systemctl status rab9-crypto-hermes` (active)
 - MSF HTTP жив? `curl http://localhost:8089/health` (200)
 - MSF HTTP снаружи? `curl http://72.60.16.105:8089/health` (200)
-- MSF Listener жив? `ps aux | grep "[m]sf_listener"` (PID)
+- MSF Listener жив? `systemctl status msf-listener.service` (MainPID=листенер, active). НЕ `systemctl --user start` — user-scope дубль (hermes-agent/venv) `disabled`, поднимет второй long-poll = 409.
 - Сигналы идут? `journalctl -u rab9-crypto-hermes | grep "MSF analysis started" | tail -5`
 - Telegram-бот отвечает? Тестовый адрес в Песочницу
 - База трейдов жива? `sqlite3 data/rab9_trades.db "SELECT COUNT(*) FROM pair_trades"`

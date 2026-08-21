@@ -1904,6 +1904,12 @@ def fetch_chart_ta() -> dict[str, Any]:
                 "price": res.get("price"),
                 "support": (res.get("support") or {}).get("price"),
                 "resistance": (res.get("resistance") or {}).get("price"),
+                "breakout_resistance": res.get("breakout_resistance"),
+                "breakout_status": res.get("breakout_status"),
+                "smart_money_breakout": res.get("smart_money_breakout"),
+                "smart_money_accumulation": res.get("smart_money_accumulation"),
+                "breakout_volume_ratio": res.get("breakout_volume_ratio"),
+                "rel_vol_14d": res.get("rel_vol_14d"),
                 "ath_drawdown": res.get("ath_drawdown"),
                 "accumulation_score": res.get("accumulation_score"),
                 "distribution_score": res.get("distribution_score"),
@@ -2131,11 +2137,25 @@ def detect_warmup(snapshot: dict[str, Any]) -> dict[str, Any]:
         rsi = ta.get("rsi")
         if rsi is not None and rsi < 35 and mc == "bullish":
             signals.append(f"RSI {rsi} разворот от перепроданности")
-        price = ta.get("price")
-        resist = ta.get("resistance")
-        if price and resist and float(price) > float(resist):
-            signals.append(f"пробой сопротивления (${float(resist):.6f})")
+        # Пробой сопротивления: теперь по реальному breakout_status из chart_analysis,
+        # а НЕ `price > resistance` (resistance всегда выше цены → мёртвый код, баг Grok 21.08).
+        bs = ta.get("breakout_status")
+        if bs == "confirmed":
+            bvol = ta.get("breakout_volume_ratio")
+            blvl = ta.get("breakout_resistance")
+            lvl_s = f" (уровень ${float(blvl):.6f})" if blvl else ""
+            vol_s = f", объём ×{float(bvol):.1f}" if bvol else ""
+            signals.append(f"пробой сопротивления ПОДТВЕРЖДЁН{lvl_s}{vol_s}")
+        elif bs == "candidate":
+            blvl = ta.get("breakout_resistance")
+            lvl_s = f" (${float(blvl):.6f})" if blvl else ""
+            signals.append(f"пробой-кандидат{lvl_s}: свеча закрылась выше, удержание не подтверждено")
+        elif ta.get("smart_money_breakout"):
+            signals.append("smart-money пробой с объёмом (цена выше ближайшего свинг-хая ×2+ объём)")
+        elif bs == "liquidity_test":
+            signals.append("тест ликвидности: прокол сопротивления фитилём, закрытие внутри коридора")
         sma20 = ta.get("sma20")
+        price = ta.get("price")
         if price and sma20 and float(price) > float(sma20) and vd == "bullish_divergence":
             signals.append("цена выше SMA20 + накопление")
 
@@ -2282,6 +2302,12 @@ def format_alert(snapshot: dict[str, Any]) -> str:
         vd = ta.get("volume_divergence")
         if vd and vd != "none":
             ta_bits.append(f"дивергенция: {vd}")
+        bs = ta.get("breakout_status")
+        if bs and bs != "none":
+            bs_emoji = {"candidate": "🔎", "confirmed": "✅", "failed": "❌", "liquidity_test": "🧪"}.get(bs, "")
+            bvol = ta.get("breakout_volume_ratio")
+            vol_s = f" ×{float(bvol):.1f}" if bvol else ""
+            ta_bits.append(f"пробой: {bs_emoji}{bs}{vol_s}")
         lines.append("📐 TA: " + " | ".join(ta_bits))
 
     neg = snapshot.get("strong_negative") or []

@@ -35,12 +35,6 @@ from maker_sources import build_maker_find_text, build_maker_trades_text, build_
 from msf_analysis import build_compact_analysis_text
 from pair_sources import build_pair_resolve_text
 from wallet_profile import build_wallet_profile_text
-from wallet_watch import (
-    add_wallet_to_watchlist,
-    remove_wallet_from_watchlist,
-    format_walletlist_text,
-    build_checkwallets_text,
-)
 
 logger = logging.getLogger("rab9_crypto_intel_bot")
 
@@ -51,8 +45,6 @@ RAB9_SIGNAL_RE = re.compile(
     re.IGNORECASE,
 )
 TESTSIGNAL_PENDING = set()
-ALLOWED_FLOW_PERIODS = {"1h", "6h", "12h", "24h", "7d", "30d"}
-FLOW_PERIOD_HINT = "Допустимый период: 1h, 6h, 12h, 24h, 7d, 30d"
 SAFETY_INCONCLUSIVE_WARNING = (
     "⚠️ Safety не подтверждена (honeypot/rugcheck недоступны или неоднозначны) — "
     "ручная проверка обязательна."
@@ -272,118 +264,6 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await reply_long(update, text, main_reply_keyboard())
 
 
-
-
-async def wallet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    if len(context.args) < 1:
-        await update.message.reply_text(
-            "Формат:\n/wallet ADDRESS",
-            reply_markup=main_reply_keyboard(),
-        )
-        return
-
-    address = context.args[0].strip()
-
-    await update.message.reply_text(f"Проверяю Arkham wallet/address intel: {address}")
-    text = await asyncio.to_thread(build_wallet_text, address)
-    await reply_long(update, text, main_reply_keyboard())
-
-
-async def walletflow_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    if len(context.args) < 1:
-        await update.message.reply_text(
-            "Формат:\n/walletflow ADDRESS",
-            reply_markup=main_reply_keyboard(),
-        )
-        return
-
-    address = context.args[0].strip()
-    time_last = context.args[1].strip() if len(context.args) > 1 else "24h"
-
-    if time_last not in ALLOWED_FLOW_PERIODS:
-        await update.message.reply_text(FLOW_PERIOD_HINT, reply_markup=main_reply_keyboard())
-        return
-
-    await update.message.reply_text(f"Проверяю Arkham wallet flow: {address} / {time_last}")
-    text = await asyncio.to_thread(build_wallet_flow_text, address, time_last)
-    await reply_long(update, text, main_reply_keyboard())
-
-
-async def tokenflow_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    if len(context.args) < 2:
-        await update.message.reply_text(
-            "Формат:\n/tokenflow chain ADDRESS",
-            reply_markup=main_reply_keyboard(),
-        )
-        return
-
-    chain = context.args[0].strip().lower()
-    address = context.args[1].strip()
-    time_last = context.args[2].strip() if len(context.args) > 2 else "24h"
-
-    if time_last not in ALLOWED_FLOW_PERIODS:
-        await update.message.reply_text(FLOW_PERIOD_HINT, reply_markup=main_reply_keyboard())
-        return
-
-    await update.message.reply_text(f"Проверяю Arkham token top flow: {chain} / {address} / {time_last}")
-    text = await asyncio.to_thread(build_token_flow_text, chain, address, time_last)
-    await reply_long(update, text, main_reply_keyboard())
-
-
-async def wallettx_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    if len(context.args) < 2:
-        await update.message.reply_text(
-            "Формат:\n/wallettx WALLET TOKEN\n/wallettx WALLET TOKEN 25",
-            reply_markup=main_reply_keyboard(),
-        )
-        return
-
-    wallet = context.args[0].strip()
-    token = context.args[1].strip()
-    limit = 25
-
-    if len(context.args) > 2:
-        try:
-            limit = int(context.args[2])
-        except ValueError:
-            limit = 25
-
-    limit = min(max(limit, 1), 50)
-
-    await update.message.reply_text(f"Проверяю Arkham transfers: {wallet} / {token} / limit {limit}")
-    text = await asyncio.to_thread(build_wallet_tx_text, wallet, token, limit)
-    await reply_long(update, text, main_reply_keyboard())
-
-
-async def wallettrade_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    if len(context.args) < 2:
-        await update.message.reply_text(
-            "Формат:\n/wallettrade WALLET TOKEN",
-            reply_markup=main_reply_keyboard(),
-        )
-        return
-
-    wallet = context.args[0].strip()
-    token = context.args[1].strip()
-
-    await update.message.reply_text(f"Анализирую wallet trade pattern: {wallet} / {token}")
-    text = await asyncio.to_thread(build_wallet_trade_text, wallet, token)
-    await reply_long(update, text, main_reply_keyboard())
 
 
 async def pricesource_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -625,69 +505,6 @@ async def walletprofile_command(update: Update, context: ContextTypes.DEFAULT_TY
 
     await update.message.reply_text(f"Собираю wallet profile: {wallet} / cases {len(cases)}")
     text = await asyncio.to_thread(build_wallet_profile_text, wallet, cases)
-    await reply_long(update, text, main_reply_keyboard())
-
-
-async def watchwallet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    if len(context.args) < 1:
-        await update.message.reply_text(
-            "Формат:\n/watchwallet ADDRESS заметка",
-            reply_markup=main_reply_keyboard(),
-        )
-        return
-
-    address = context.args[0].strip()
-    note = " ".join(context.args[1:]).strip()
-
-    status, item = await asyncio.to_thread(add_wallet_to_watchlist, address, note)
-    label = "Добавил" if status == "added" else "Обновил"
-
-    await update.message.reply_text(
-        f"👛 {label} wallet в watchlist\n"
-        f"Address: {item['address']}\n"
-        f"Note: {item.get('note') or 'без заметки'}",
-        reply_markup=main_reply_keyboard(),
-    )
-
-
-async def walletlist_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    text = await asyncio.to_thread(format_walletlist_text)
-    await reply_long(update, text, main_reply_keyboard())
-
-
-async def unwatchwallet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    if not context.args:
-        await update.message.reply_text(
-            "Формат:\n/unwatchwallet ADDRESS",
-            reply_markup=main_reply_keyboard(),
-        )
-        return
-
-    address = context.args[0].strip()
-    removed = await asyncio.to_thread(remove_wallet_from_watchlist, address)
-
-    if not removed:
-        await update.message.reply_text("Не нашёл такой wallet в watchlist.", reply_markup=main_reply_keyboard())
-        return
-
-    await update.message.reply_text(f"🗑 Удалил wallet из watchlist: {len(removed)}", reply_markup=main_reply_keyboard())
-
-
-async def checkwallets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_if_wrong_group(update):
-        return
-
-    await update.message.reply_text("Проверяю wallet watchlist...")
-    text = await asyncio.to_thread(build_checkwallets_text)
     await reply_long(update, text, main_reply_keyboard())
 
 
@@ -1010,46 +827,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_long_to_chat(context, chat_id, text)
         return
 
-    if data.startswith("arktoken:"):
-        try:
-            _, chain_id, address = data.split(":", 2)
-        except ValueError:
-            await context.bot.send_message(chat_id=chat_id, text="Ошибка callback arktoken data.")
-            return
-
-        await context.bot.send_message(chat_id=chat_id, text=f"Проверяю Arkham token intel: {chain_id} / {address}")
-        text = await asyncio.to_thread(build_ark_token_text, chain_id, address)
-        await send_long_to_chat(context, chat_id, text)
-        return
-
-    if data.startswith("wallet:"):
-        try:
-            _, address = data.split(":", 1)
-        except ValueError:
-            await context.bot.send_message(chat_id=chat_id, text="Ошибка callback wallet data.")
-            return
-
-        await context.bot.send_message(chat_id=chat_id, text=f"Проверяю Arkham wallet/address intel: {address}")
-        text = await asyncio.to_thread(build_wallet_text, address)
-        await send_long_to_chat(context, chat_id, text)
-        return
-
-    if data.startswith("watchwallet:"):
-        try:
-            _, address = data.split(":", 1)
-        except ValueError:
-            await context.bot.send_message(chat_id=chat_id, text="Ошибка callback watchwallet data.")
-            return
-
-        status, item = await asyncio.to_thread(add_wallet_to_watchlist, address, "added from button")
-        label = "Добавил" if status == "added" else "Обновил"
-
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=f"👛 {label} wallet в watchlist\nAddress: {item['address']}",
-        )
-        return
-
     if data.startswith("watchadd:"):
         try:
             _, chain_id, address = data.split(":", 2)
@@ -1157,11 +934,6 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("menu", menu_command))
     app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CommandHandler("wallet", wallet_command))
-    app.add_handler(CommandHandler("walletflow", walletflow_command))
-    app.add_handler(CommandHandler("tokenflow", tokenflow_command))
-    app.add_handler(CommandHandler("wallettx", wallettx_command))
-    app.add_handler(CommandHandler("wallettrade", wallettrade_command))
     app.add_handler(CommandHandler("pricesource", pricesource_command))
     app.add_handler(CommandHandler("walletswaps", walletswaps_command))
     app.add_handler(CommandHandler("makertrades", makertrades_command))
@@ -1170,11 +942,6 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("pairresolve", pairresolve_command))
     app.add_handler(CommandHandler("testsignal", testsignal_command))
     app.add_handler(CommandHandler("walletprofile", walletprofile_command))
-    app.add_handler(CommandHandler("watchwallet", watchwallet_command))
-    app.add_handler(CommandHandler("walletlist", walletlist_command))
-    app.add_handler(CommandHandler("unwatchwallet", unwatchwallet_command))
-    app.add_handler(CommandHandler("checkwallets", checkwallets_command))
-
     app.add_handler(CommandHandler("micro", micro_command))
     app.add_handler(CommandHandler("degen", degen_command))
     app.add_handler(CommandHandler("scan", scan_command))

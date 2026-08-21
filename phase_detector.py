@@ -37,6 +37,7 @@ BUY = {
     "onchain_mutable": False,                     # metadata must be immutable
     "days_since_launch_min": 3,                   # not fresh pump
     "vol_mc_ratio_min": 0.05,                     # minimum volume relative to MC
+    "vol_mc_ratio_max": 0.5,                      # max: ≥0.5 = памп уже идёт (поздно, не первый вход)
 }
 
 # ACCUMULATE signal: watch & buy small lots near support
@@ -329,9 +330,15 @@ def detect(
     buy_checks = 0
     buy_total = 0
 
+    # Hard-gate: vol/MC ≥ max = памп уже идёт, поздно для первого входа (research §4.3/§7)
+    late_entry = vol_mc_ratio > 0 and vol_mc_ratio >= BUY["vol_mc_ratio_max"]
+
     if phase not in BUY["chart_phase"]:
         evidence.append(f"🚫 BUY blocked: chart phase={phase}, need accumulation/markup")
         buy_total = 1  # single check, failed
+    elif late_entry:
+        evidence.append(f"🚫 BUY blocked: Vol/MC={vol_mc_ratio:.2f}x ≥ {BUY['vol_mc_ratio_max']}x (pump in progress — late entry)")
+        buy_total = 1
     else:
         if phase in BUY["chart_phase"]:
             buy_checks += 1

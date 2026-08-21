@@ -778,6 +778,30 @@ def score_whale(gmgn_score: int | None, rugcheck_level: str = "unknown") -> tupl
     return max(0, min(15, score)), notes
 
 
+def score_smart_money_ta(chart: dict | None) -> tuple[int, list[str]]:
+    """Pillar 8: Smart-Money TA — накопление/пробой с объёмом (10 pts).
+
+    Самостоятельный smart-money-индикатор (НЕ GMGN on-chain). Wyckoff-сигнал:
+    крупный игрок накапливает в диапазоне, затем пробивает сопротивление
+    с ростом объёма. Источник — chart_analysis.py (TA).
+
+    Веса:
+      - breakout  (цена > resistance И rel_vol ≥ 1.5) → +8 (подтверждённый вход)
+      - accumulation (phase=accumulation И bullish_divergence) → +5 (ранний вход)
+      - иначе → 0
+    """
+    if not chart or not chart.get("ok"):
+        return 0, ["Smart-Money TA: нет chart-данных"]
+
+    if chart.get("smart_money_breakout"):
+        return 8, ["📈 Smart-Money: пробой диапазона с объёмом (цена выше сопротивления, объём ×1.5+)"]
+
+    if chart.get("smart_money_accumulation"):
+        return 5, ["📦 Smart-Money: накопление с растущим объёмом (ранний вход, пробоя ещё нет)"]
+
+    return 0, ["Smart-Money TA: нет накопления/пробоя"]
+
+
 def _resolve_gate_flags(
     onchain: dict,
     security_hints: dict | None,
@@ -1022,6 +1046,11 @@ def compute_score(
     total += s
     max_total += 15
 
+    s, n = score_smart_money_ta(chart_data)
+    pillars["smart_money_ta"] = {"score": s, "max": 10, "notes": n}
+    total += s
+    max_total += 10
+
     raw_score = total
 
     # ── Hard-gates + caps + confidence ──
@@ -1031,14 +1060,14 @@ def compute_score(
     )
     total = final
 
-    # Tier (scaled for 115 max: 95≈83%, 80≈70%, 55≈48%)
+    # Tier (scaled for 125 max: 103≈83%, 87≈70%, 60≈48% — сохраняет калибровку 115-шкалы)
     if total <= 0 and gates.get("honeypot_status") == "fail":
         tier = "AVOID"
-    elif total >= 95:
+    elif total >= 103:
         tier = "HIGH CONVICTION"
-    elif total >= 80:
+    elif total >= 87:
         tier = "SOLID"
-    elif total >= 55:
+    elif total >= 60:
         tier = "SPECULATIVE"
     else:
         tier = "AVOID"

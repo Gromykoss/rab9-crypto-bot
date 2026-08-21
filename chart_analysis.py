@@ -522,6 +522,14 @@ def analyze(address: str) -> dict:
     else:
         rel_vol = 1.0
 
+    # 14-day average volume — порог пробоя (manipulation research §3/§4.3: ≥2× 14d-средней)
+    if n >= 14:
+        avg_vol14 = sum(volumes[-14:]) / 14
+        rel_vol_14d = volumes[-1] / avg_vol14 if avg_vol14 > 0 else 1.0
+    else:
+        avg_vol14 = sum(volumes) / n if n > 0 else 0.0
+        rel_vol_14d = volumes[-1] / avg_vol14 if avg_vol14 > 0 else 1.0
+
     # ── Phase Detection (TA-informed) ──
 
     # Price vs SMA
@@ -635,6 +643,83 @@ def analyze(address: str) -> dict:
             phase = "accumulation" if rsi and rsi < 50 else "distribution"
         phase_confidence = "low"
 
+    # ── Smart-Money TA: накопление/пробой с объёмом (Wyckoff) ──
+    # Самостоятельный smart-money-индикатор, НЕ GMGN: крупный игрок накапливает
+    # в диапазоне, затем пробивает сопротивление с ростом объёма.
+    smart_money_breakout = False
+    smart_money_accumulation = False
+    # ⛔ БАГ (Grok, 21.08): `sr["resistance"]` кладёт только свинг-хаи ВЫШЕ current
+    # (_support_resistance, стр. 128), поэтому current > resistance ВСЕГДА False и
+    # пробой не ловился никогда. Пробойный уровень = ближайший свинг-хай по МОДУЛЮ
+    # расстояния (верх коридора, НЕ ATH — manipulation research §3): если цена уже
+    # пробила его, он оказывается НИЖЕ current → пробой срабатывает.
+    _breakout_res_price = None
+    if swings and swings["highs"]:
+        _breakout_res_price = min(
+            swings["highs"], key=lambda s: abs(s["price"] - current)
+        )["price"]
+    if _breakout_res_price is not None:
+        smart_money_breakout = bool(current > _breakout_res_price and rel_vol_14d >= 2.0)
+    smart_money_accumulation = bool(
+        phase == "accumulation" and vol_div == "bullish_divergence"
+    )
+
+    # ── Breakout status: BREAKOUT_CANDIDATE → confirmed (закрытие выше + удержание) ──
+    # Manipulation research §3/§6: пробой — гипотеза, не факт, пока не подтверждён.
+    #   candidate:       последняя свеча закрылась выше сопротивления (или проколола фитилём),
+    #                    удержание следующей свечи ещё не проверено.
+    #   confirmed:       закрытие выше сопротивления + следующая свеча НЕ закрылась обратно в коридор.
+    #   failed:          пробой был, но следующая свеча закрылась обратно (ложный пробой).
+    #   liquidity_test:  последняя свеча проколола фитилём и закрылась внутри коридора (upthrust).
+    breakout_status = "none"
+    breakout_volume_ratio = 0.0
+    if _breakout_res_price is not None and n >= 2:
+        _res_price = float(_breakout_res_price)
+        above = [closes[i] > _res_price for i in range(n)]
+
+        # последняя свеча, закрывшаяся выше сопротивления
+        last_above = None
+        for i in range(n - 1, -1, -1):
+            if above[i]:
+                last_above = i
+                break
+
+        # первая свеча в последней серии «выше» (пробойная)
+        breakout_idx = None
+        if last_above is not None:
+            b = last_above
+            while b > 0 and above[b - 1]:
+                b -= 1
+            breakout_idx = b
+
+        # объёмный множитель пробойной свечи vs 14d-средней
+        _bavg = sum(volumes) / n if n > 0 else 0.0
+        if n >= 14:
+            _bavg = sum(volumes[-14:]) / 14
+        _vol_idx = breakout_idx if breakout_idx is not None else (n - 1)
+        if _bavg > 0:
+            breakout_volume_ratio = round(volumes[_vol_idx] / _bavg, 2)
+
+        if last_above is None:
+            # ни одна свеча не закрывалась выше: возможен прокол хвостом
+            if highs[-1] > _res_price:
+                breakout_status = "liquidity_test"
+        else:
+            if last_above == n - 1:
+                # последняя свеча закрылась выше
+                if breakout_idx == n - 1:
+                    breakout_status = "candidate"   # только что пробила, удержания ещё нет
+                else:
+                    breakout_status = "confirmed"   # пробила ранее, последующие свечи удержали
+            else:
+                # была выше, теперь закрылась обратно в коридор
+                breakout_status = "failed"
+
+        # Подтверждённый пробой → фаза markup (НЕ постфактум, а по закрытию + удержанию)
+        if breakout_status == "confirmed":
+            phase = "markup"
+            phase_confidence = "high"
+
     # ── Volume zone detection (from zone analysis — kept for phase_detector compat) ──
     vol_trend_zone = "falling" if vol_trend == "FALLING" else ("rising" if vol_trend == "RISING" else "stable")
     flat_days = 0
@@ -707,6 +792,12 @@ def analyze(address: str) -> dict:
         "accumulation_score": round(acc_score, 2),
         "distribution_score": round(dist_score, 2),
         "signal": signal,
+        "smart_money_breakout": smart_money_breakout,
+        "smart_money_accumulation": smart_money_accumulation,
+        "breakout_resistance": _breakout_res_price,
+        "breakout_status": breakout_status,
+        "breakout_volume_ratio": breakout_volume_ratio,
+        "rel_vol_14d": round(rel_vol_14d, 2),
         # Wash (метка)
         "wash_suspicious": wash.get("wash_suspicious", False),
         "wash_ratio": wash.get("wash_ratio"),
@@ -757,12 +848,24 @@ def format_for_grok(result: dict) -> str:
     # Phase
     phase_label = {
         "accumulation": "📦 НАКОПЛЕНИЕ",
+        "markup": "🚀 РАЗГОН",
         "distribution": "📤 РАЗДАЧА",
         "decay": "💤 ЗАТУХАНИЕ",
         "dead": "💀 МЁРТВ",
         "unknown": "❓ НЕИЗВЕСТНО",
     }.get(result.get("phase", "unknown"), result.get("phase", "?"))
     lines.append(f"  Phase: {phase_label} (confidence: {result.get('phase_confidence', '?')}, acc={result.get('accumulation_score', 0):.2f} dist={result.get('distribution_score', 0):.2f})")
+
+    # Breakout status
+    if result.get("breakout_status") and result["breakout_status"] != "none":
+        bs_emoji = {
+            "candidate": "🔎",
+            "confirmed": "✅",
+            "failed": "❌",
+            "liquidity_test": "🧪",
+        }.get(result["breakout_status"], "")
+        bs_vol = result.get("breakout_volume_ratio", 0)
+        lines.append(f"  Breakout: {bs_emoji} {result['breakout_status']} (vol×{bs_vol})")
 
     # Signal
     signal = result.get("signal", "?")

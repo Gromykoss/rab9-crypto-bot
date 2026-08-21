@@ -1,5 +1,27 @@
 # RAB9 — Хронология
 
+## 21.08.2026 — BURNIE price-watch: крон чаще при аномалии цены + московское время
+
+- ** причина ** — Сергей: крон BURNIE срабатывает 2 раза в сутки; нужно, чтобы при аномалии цены срабатывал чаще. Доп. требование: время переводить на местное автоматически (сейчас московский пояс).
+- ** решение Сергея ** — порог аномалии **±20%** за короткое окно (~10 мин); поведение: сначала короткий цена-алерт → полный отчёт только если аномалия подтвердилась (удержалась на следующем тике). Полный трекер переведён с Бишкека (UTC+6) на Москву (UTC+3).
+- ** что сделано ** — новый `burnie_price_watch.py` (no_agent, stdlib-only): DexScreener-цена (бесплатно, без X-кредитов) каждые 10 мин; двухфазная логика: (1) |Δ|≥20% → цена-алерт + фиксация `anomaly_ref`; (2) на следующем тике удержалась → запуск полного `burnie_sentiment_tracker.py` + полный отчёт; откатилась → ложная тревога, тишина. State в `~/.hermes/profiles/rab9/scripts/burnie_price_state.json`. Крон `ba5712e3dfa2` (profile rab9, `*/10 * * * *`, deliver local — скрипт self-send). Полный трекер `59d37ee6a323` (default) сдвинут: `0 0,12 * * *` → `0 3,15 * * *` (06:00/18:00 МСК).
+- ** верификация ** — self-test трёх сценариев (baseline→тишина / скачок→алерт / удержание→полный отчёт) зелёный; live DexScreener ok (price $0.002228, MC $2.16M); реальный запуск из cron-dir: exit 0, baseline записан, тишина.
+- ** файлы ** — `burnie_price_watch.py` (новый, + копия в scripts/).
+
+## 21.08.2026 — фикс бага «пробой не ловился» (chart_analysis breakout) + апгрейд BURNIE-отчёта
+
+- ** причина ** — Grok прошёл по `chart_analysis.py` (строки 646–712) и нашёл: breakout-детектор не ловит пробой, два из четырёх статусов (`candidate`, `confirmed`) — мёртвый код. Корень: `_support_resistance` кладёт в `resistance` только свинг-хаи `price > current` (строка 128), поэтому `current > resistance` всегда False, `above[n-1]` всегда False. Параллельный баг — в трекере `detect_warmup` (строка 2136 `price > resistance`) с тем же эффектом.
+- ** что сделано ** — в `chart_analysis.py`: пробойный уровень теперь берётся как ближайший свинг-хай по МОДУЛЮ расстояния (`_breakout_res_price = min(swings["highs"], key=abs(p-current))`) — верх коридора, НЕ ATH (manipulation research §3). Он может быть НИЖЕ текущей цены → `candidate`/`confirmed` ожили. В `burnie_sentiment_tracker.py`: `fetch_chart_ta` тянет `breakout_status`/`smart_money_breakout`/`breakout_volume_ratio`/`breakout_resistance`/`rel_vol_14d`; `detect_warmup` переписан с мёртвого `price > resistance` на реальный `breakout_status`; `format_alert` показывает пробой в строке TA.
+- ** верификация ** — `py_compile` чисто. Live: BURNIE price 0.002229, `breakout_status=confirmed`, `smart_money_breakout=True`, `breakout_volume_ratio=4.96`, `phase=markup high`. `detect_warmup` выдаёт «пробой сопротивления ПОДТВЕРЖДЁН (уровень $0.002074), объём ×5.0». Dry-run всего трекера — та же картина.
+- ** файлы ** — `chart_analysis.py`, `burnie_sentiment_tracker.py`.
+
+## 21.08.2026 — Grok Build: инструкция по манипуляциям перезапущена и сохранена
+
+- ** причина ** — Сергей обнаружил: вывод Grok Build по манипуляциям мемкоинами пропал. Сохранились только промпты (`grok_research_prompt.txt` 07:34, `birdeye_eval_prompt.txt` 08:03), а сама инструкция (накопление → пробой → памп → раздача, ложный vs настоящий пробой) — ни в файлах, ни в CHRONOLOGY, ни в логах делегирования. Похоже, первый прогон не довели до конца или не записали вывод.
+- ** что сделано ** — Grok Build перезапущен заново с готовым промптом `grok_research_prompt.txt` (`grok -p "$(cat grok_research_prompt.txt)" --output-format plain`), вывод сразу писался в файл. Завершился с кодом 0, stderr пуст.
+- ** результат ** — `grok_manipulation_research_result.md` (38 КБ, 424 строки после чистки): полная инструкция для мониторинга RAB9 — цикл манипуляции (4 фазы), паттерны pump.fun (sniper/bundling/wash/KOL/rug), ядро «настоящий vs ложный пробой» (4 фильтра), ончейн-метрики раннего сигнала, X-классификация, карта аномалий A1–A10/B1–B6, сводные пороги. Reasoning-артефакт Grok Build из первой строки удалён.
+- ** файлы ** — `grok_manipulation_research_result.md` (новый), `grok_manipulation_research_stderr.log` (пустой).
+
 ## 21.08.2026 — инцидент «msf-listener systemd vs фон» закрыт
 
 - ** причина ** — два systemd-юнита на `msf-listener`: system (`/etc/systemd/system/`, active+enabled) и user (`~/.config/systemd/user/`, был enabled+inactive). User-юнит при автозапуске поднял бы второй long-poll на `@msf_rab_bot` → race/409. Плюс мёртвый дубль-поллер `msf_poller.py` (читал токен из несуществующего `~/rab9/msf_token.txt`).
@@ -479,3 +501,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **20.08.2026 04:04** — auto-sync infra 20260820 (`2a39e16`)
 - **20.08.2026 23:17** — chrono: 2026-08-20 (`52928a1`)
 - **21.08.2026 08:52** — chrono: 2026-08-21 — закрыт инцидент msf-listener systemd vs фон (`40ff044`)
+- **21.08.2026 08:55** — chore: CHRONOLOGY 21.08.2026 — msf-listener systemd vs фон инцидент закрыт (`a3326b0`)

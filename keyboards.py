@@ -8,7 +8,6 @@ def main_reply_keyboard():
             ["/micro", "/degen", "/scan", "/hot"],
             ["/watchlist", "/checkwatch"],
             ["/refreshwatch", "/alertsnow"],
-            ["/watchwallet", "/walletlist", "/checkwallets"],
             ["/token", "/morning", "/evening"],
         ],
         resize_keyboard=True,
@@ -36,10 +35,6 @@ def main_inline_keyboard():
                 InlineKeyboardButton("🔁 Check Watch", callback_data="watch:check"),
             ],
             [
-                InlineKeyboardButton("👛 Walletlist", callback_data="wallet:list"),
-                InlineKeyboardButton("🔁 Check Wallets", callback_data="wallet:check"),
-            ],
-            [
                 InlineKeyboardButton("🧪 Token Help", callback_data="menu:token_help"),
                 InlineKeyboardButton("🌅 Morning", callback_data="menu:morning"),
             ],
@@ -58,24 +53,6 @@ def token_chain_keyboard(address: str, detected_chain: str | None = None):
                     InlineKeyboardButton(
                         "🧪 Analyze Solana",
                         callback_data=f"token:solana:{address}",
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        callback_data=f"arktoken:solana:{address}",
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "👛 Wallet Intel",
-                        callback_data=f"wallet:{address}",
-                    )
-                ],
-
-                [
-                    InlineKeyboardButton(
-                        "👛 Watch Wallet",
-                        callback_data=f"watchwallet:{address}",
                     )
                 ],
                 [
