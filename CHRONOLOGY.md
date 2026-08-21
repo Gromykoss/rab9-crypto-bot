@@ -2,11 +2,10 @@
 
 ## 21.08.2026 — инцидент «msf-listener systemd vs фон» закрыт
 
-- ** причина ** — `msf-listener.service` (systemd user unit) дублировал живой фоновый листенер, создавал риск двойного getUpdates (race/409) при системном запуске. Решение: disable unit — канон = фоновый процесс.
-- ** что сделано ** (Hermes-зона): `systemctl --user disable msf-listener.service` → symlink `wants/` убран, `is-enabled` = `disabled`. Unit-файл НЕ удалялся — только disable.
-- ** верификация фона ** — листенер после disable не тронут: PID **2514283** жив (`Ss`, с 19.08), offset пишется в `~/.hermes/secrets/rab9/msf_offset.txt` = **892536633** (обновлён 08:50). Двойного getUpdates нет.
-- ** msf_poller.py выпилен** — НЕ в git-зоне rab9: файл жил только в `~/.hermes/scripts/` (зона Hermes), и `git log --all --diff-filter=D` подтверждает — в репо rab9 он НИКОГДА не был отслежен (нет коммита на удаление, нет `infra/` каталога). Коммитить нечего. Ссылки на него в `CHRONOLOGY.md` (стр. ~290) и `kpi_report.py` (стр. 21) — исторические.
-- ** итог ** — инцидент закрыт: фон PID 2514283 = канон, systemd unit = disabled, поллер отсутствует.
+- ** причина ** — два systemd-юнита на `msf-listener`: system (`/etc/systemd/system/`, active+enabled) и user (`~/.config/systemd/user/`, был enabled+inactive). User-юнит при автозапуске поднял бы второй long-poll на `@msf_rab_bot` → race/409. Плюс мёртвый дубль-поллер `msf_poller.py` (читал токен из несуществующего `~/rab9/msf_token.txt`).
+- ** что сделано ** — `systemctl --user disable msf-listener.service` → user-юнит `disabled` (symlink `wants/` убран, unit-файл не удалялся, без `stop`). System-юнит НЕ трогали. `msf_poller.py` выпилен из обеих копий: `~/.hermes/scripts/` (не git) и `~/hermes-agent-lab/infra/scripts/` (git-tracked — коммит `45741eb` «remove duplicate msf_poller.py»).
+- ** верификация ** — листенер жив и НЕ «фон»: PID **2514283** (`Ss`, с 19.08), PPID=1, cgroup `/system.slice/msf-listener.service` = это процесс system-юнита (MainPID 2514283). Offset пишется в `~/.hermes/secrets/rab9/msf_offset.txt` = **892536633** (обновлён 08:50). Ровно один `msf_listener.py`. System-юнит `active`+`enabled` (reboot-устойчив), user-юнит `disabled`+`inactive`.
+- ** итог ** — инцидент закрыт: канон = systemd system-юнит (PID 2514283), дубль user-юнит отключён, поллер выпилен.
 
 ## 20.08.2026 — 25-й день без MSF-сигналов
 
@@ -479,3 +478,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **19.08.2026 23:17** — chrono: 2026-08-19 — 24-й день без сигналов, listener secrets-миграция активирована (`7a2834b`)
 - **20.08.2026 04:04** — auto-sync infra 20260820 (`2a39e16`)
 - **20.08.2026 23:17** — chrono: 2026-08-20 (`52928a1`)
+- **21.08.2026 08:52** — chrono: 2026-08-21 — закрыт инцидент msf-listener systemd vs фон (`40ff044`)
