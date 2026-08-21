@@ -1,5 +1,13 @@
 # RAB9 — Хронология
 
+## 21.08.2026 — инцидент «msf-listener systemd vs фон» закрыт
+
+- ** причина ** — `msf-listener.service` (systemd user unit) дублировал живой фоновый листенер, создавал риск двойного getUpdates (race/409) при системном запуске. Решение: disable unit — канон = фоновый процесс.
+- ** что сделано ** (Hermes-зона): `systemctl --user disable msf-listener.service` → symlink `wants/` убран, `is-enabled` = `disabled`. Unit-файл НЕ удалялся — только disable.
+- ** верификация фона ** — листенер после disable не тронут: PID **2514283** жив (`Ss`, с 19.08), offset пишется в `~/.hermes/secrets/rab9/msf_offset.txt` = **892536633** (обновлён 08:50). Двойного getUpdates нет.
+- ** msf_poller.py выпилен** — НЕ в git-зоне rab9: файл жил только в `~/.hermes/scripts/` (зона Hermes), и `git log --all --diff-filter=D` подтверждает — в репо rab9 он НИКОГДА не был отслежен (нет коммита на удаление, нет `infra/` каталога). Коммитить нечего. Ссылки на него в `CHRONOLOGY.md` (стр. ~290) и `kpi_report.py` (стр. 21) — исторические.
+- ** итог ** — инцидент закрыт: фон PID 2514283 = канон, systemd unit = disabled, поллер отсутствует.
+
 ## 20.08.2026 — 25-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **25-й день без сигналов** (27.07–20.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (1 week 5 days uptime, с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 2514283 жив (с 19.08). Ошибки core — только ночной `Telegram NetworkError Bad Gateway` 01:11 (2x, transient, стандартное окно обслуживания Telegram, самовосстановился). Листенер — штатный long-poll `read operation timed out` (2x: 00:46, 05:18) + 1x `Connection reset by peer` 12:31 (transient). Secrets-миграция подтверждена: offset пишется в `~/.hermes/secrets/rab9/msf_offset.txt` (892536613, обновлён 23:17), корневой `msf_offset.txt` остановился на 19.08 07:35 (892536610). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M, GMGN 10/15, verdict ⏳ WAIT | ❓ НЕИЗВЕСТНО). GMGN OpenAPI read-only, trading disabled. Код за день не менялся (только CHRONOLOGY).
@@ -470,3 +478,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **19.08.2026 04:00** — daily-sync: auto-commit (`c5c544a`)
 - **19.08.2026 23:17** — chrono: 2026-08-19 — 24-й день без сигналов, listener secrets-миграция активирована (`7a2834b`)
 - **20.08.2026 04:04** — auto-sync infra 20260820 (`2a39e16`)
+- **20.08.2026 23:17** — chrono: 2026-08-20 (`52928a1`)
