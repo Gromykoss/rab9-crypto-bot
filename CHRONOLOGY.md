@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 22.08.2026 — 27-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **27-й день без сигналов** (27.07–22.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (14d uptime, с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 2422530 жив (рестартован 08:09 после деплоя 409-фикса). Ошибки core — только ночной `Telegram NetworkError Bad Gateway` 01:10 (6x handler error + traceback, transient, стандартное окно обслуживания Telegram, самовосстановился). Листенер — 1x `Connection reset by peer` 14:11 (transient). BURNIE price-watch жив: baseline $0.002801 (обновлён 23:10), live $0.002769 — без аномалии, тишина. Live DexScreener: price $0.002769, MC $2.69M, vol24 $182K, 24h +7.38%, txns buy/sell 678/974 (ratio 0.70 — смешанно). dedupe: только BURNIE (96/115 HIGH CONVICTION, GMGN 10/15, verdict ⏳ WAIT | ❓ НЕИЗВЕСТНО). GMGN OpenAPI read-only, trading disabled. За день: 409-фикс msf_listener задеплоен (commit `3edd7d0`, listener рестартован), AGENTS.md конденсирован 307→284 + KPI (staged). Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged), M burnie_price_watch.py, M burnie_sentiment_tracker.py, M chart_analysis.py, M radar_x.py (manipulation research от 21.08 — не закоммичено), ?? LOG_DUMP_20260821_160833.txt, ?? grok_manipulation_research_20260821_150547.txt, ?? rab9.log.bak-20260821, ?? briefings/.
+
 ## 22.08.2026 — лог-гигиена rab9.log + 409-защита msf_listener (по дампу 21.08)
 
 - **причина** — Сергей выложил `LOG_DUMP_20260821_160833.txt` (593 строки): обе службы живы, но дамп выявил два дефекта гигиены. (1) `rab9.log` = 1850 байт, mod 30.06 — мёртвый файл с июньским traceback `OSError [Errno 98] Address already in use`, не пишется 2 мес (текущий процесс логирует только в journald через stdout). (2) 409-гонка `getUpdates` при рестарте (см. 19.08, 26.07) — защиты на уровне кода не было.
@@ -538,3 +542,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **21.08.2026 13:42** — chore: daily briefing 20.08 + CHRONOLOGY (feat 77349ac) (`0808974`)
 - **21.08.2026 13:42** — chrono: 2026-08-21 — daily briefing commit (0808974) (`7215863`)
 - **21.08.2026 23:17** — chrono: 2026-08-21 (`0531a80`)
+- **22.08.2026 08:08** — fix(msf-listener): 409-защита getUpdates + архив мёртвого rab9.log (`3edd7d0`)
