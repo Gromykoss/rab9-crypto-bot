@@ -1,5 +1,23 @@
 # RAB9 — Хронология
 
+## 22.08.2026 — лог-гигиена rab9.log + 409-защита msf_listener (по дампу 21.08)
+
+- **причина** — Сергей выложил `LOG_DUMP_20260821_160833.txt` (593 строки): обе службы живы, но дамп выявил два дефекта гигиены. (1) `rab9.log` = 1850 байт, mod 30.06 — мёртвый файл с июньским traceback `OSError [Errno 98] Address already in use`, не пишется 2 мес (текущий процесс логирует только в journald через stdout). (2) 409-гонка `getUpdates` при рестарте (см. 19.08, 26.07) — защиты на уровне кода не было.
+- **что сделано** — (A) `rab9.log` → `rab9.log.bak-20260821` (архив трупа, не удалял). (B) `msf_listener.py`: добавлен import `urllib.error` + в except-блок детект `HTTPError 409` → `log.warning` + `setWebhook` (drop_pending_updates) + sleep 5 с; прочие HTTP-ошибки → `log.error` + sleep 10. Логика сигналов не тронута.
+- **верификация** — `py_compile msf_listener.py` OK; `operators.tests.test_operators` 30/30 OK (enforced-слой не задет); dry-детект `HTTPError(409).code == 409` → True. Живых дублёров листенера ровно один (PID 2514283), user-юнит msf disabled (гонка systemd закрыта 19.08) — патч кода = подстраховка на будущий ручной рестарт.
+- **файлы** — `msf_listener.py` (изменён), `rab9.log` → `rab9.log.bak-20260821`.
+- **откат** — `git checkout -- msf_listener.py`; `mv rab9.log.bak-20260821 rab9.log`.
+
+## 22.08.2026 — конденсация AGENTS.md (307→284) + KPI-блок (аудит MGT_maccha)
+
+- **причина** — недельный аудит MGT_maccha (21.08) записал красную находку: `rab9/AGENTS.md` = 307 строк (>порог 300) и KPI=0 (отсутствуют метрики). Задача: сжать до <300 без потери правил + добавить KPI.
+- **что сделано** — rab9 подготовил конденсацию, но его write заблокировал анти-self-modification шлюз (защищённый AGENTS.md требует живого approval человека). Сергей выбрал вариант 3: Hermes применил cross-profile patch.
+  - Удалены 5 дублей: `### Data Flow (полный цикл)` (ASCII = дубль Потока сигналов), `### Сервисы (systemd)` (= дубль Компонентов), `## Быстрые команды` (= дубль Инфраструктуры RAB9), дубли self-test/раздельно-с-Алиханом в «Правилах Сергея».
+  - Добавлен `## KPI (метрики проекта)` — 5 метрик (сигналы/день, точность верификатора ≥80%, false-positive <15%, аптайм листенера 100%, latency <5 мин).
+- **верификация** — `wc -l` = 284 (было 307); `grep CRITICAL GATES` = 2, `grep ENFORCED-ЗАКОНЫ` = 1, операторы check_destination/verifier/mutation/safety на месте; KPI = 1 вхождение (дубль не создан).
+- **статус** — файл стабилизирован, откат доступен (`git checkout -- AGENTS.md`).
+- **файлы** — `AGENTS.md` (изменён Hermes через cross-profile patch; зона rab9, правка по императиву Сергея).
+
 ## 21.08.2026 — внедрение manipulation research в код (buy_ratio, breakout-interest, KOL-swarm)
 
 - **причина** — прикладное применение инструкции Grok по манипуляциям (`grok_manipulation_research_result.md`) в живые модули: выводы §3/§4/§5/§7, проверенные на BURNIE, перенесены в код.
@@ -519,3 +537,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **21.08.2026 13:30** — feat: Grok манипуляции + breakout-фикс + price-watch крон (21.08) (`77349ac`)
 - **21.08.2026 13:42** — chore: daily briefing 20.08 + CHRONOLOGY (feat 77349ac) (`0808974`)
 - **21.08.2026 13:42** — chrono: 2026-08-21 — daily briefing commit (0808974) (`7215863`)
+- **21.08.2026 23:17** — chrono: 2026-08-21 (`0531a80`)

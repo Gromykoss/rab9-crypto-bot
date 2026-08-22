@@ -5,7 +5,7 @@ Listens to @msf_rab_bot in the Мемы group.
 Triggers ONLY on DexScreener links or raw Solana addresses.
 Forwards to RAB9 HTTP :8089/msf-signal.
 """
-import os, sys, json, re, time, urllib.request
+import os, sys, json, re, time, urllib.request, urllib.error
 import logging
 
 logging.basicConfig(
@@ -135,6 +135,24 @@ while True:
         with open(OFFSET_FILE, "w") as f:
             f.write(str(offset))
 
+    except urllib.error.HTTPError as e:
+        # 409 Conflict = другой процесс держит getUpdates на этот токен
+        # (дубль-юнит / рестарт гонка). Сбрасываем pending, чтобы не потерять
+        # апдейты и не молотить в конфликте.
+        if e.code == 409:
+            log.warning("409 Conflict — переподключение с drop_pending_updates")
+            try:
+                urllib.request.urlopen(
+                    f"https://api.telegram.org/bot{token}/setWebhook",
+                    data=b"",
+                    timeout=15,
+                )
+            except Exception as wh:
+                log.warning("setWebhook cleanup failed: %s", wh)
+            time.sleep(5)
+        else:
+            log.error("HTTP Error %s: %s", e.code, e)
+            time.sleep(10)
     except Exception as e:
         log.error("Poll error: %s", e)
         time.sleep(10)
