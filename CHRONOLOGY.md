@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 24.08.2026 — 29-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **29-й день без сигналов** (27.07–24.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (16d uptime, с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 2422530 жив (2d uptime, с 22.08). Ошибки core — httpx.ReadError 09:08 (transient) + 2x `Telegram handler error` Bad Gateway 19:58 (transient, стандартное окно обслуживания Telegram, самовосстановился). Листенер — штатный long-poll `read operation timed out` (~20x за день) + 2x 502 Bad Gateway 01:13–01:39 (transient, стандартное окно обслуживания Telegram). BURNIE price-watch жив: baseline $0.002522, live $0.002497 — без аномалии, тишина. Live DexScreener: price $0.002497, MC $2.42M, liq $294K, vol24 $62.9K, 24h **+3.52%**, txns buy/sell 301/378 (ratio 0.80 — смешанно). dedupe: только BURNIE (96/115 HIGH CONVICTION, GMGN 10/15, verdict ⏳ WAIT | ❓ НЕИЗВЕСТНО). X API жив (whoami 200, не 402). GMGN OpenAPI read-only, trading disabled. Код за день не менялся. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged), M burnie_price_watch.py, M burnie_sentiment_tracker.py, M chart_analysis.py, M radar_x.py (manipulation research от 21.08 — не закоммичено), ?? LOG_DUMP_20260821_160833.txt, ?? grok_manipulation_research_20260821_150547.txt, ?? rab9.log.bak-20260821, ?? briefings/.
+
 ## 23.08.2026 — 28-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **28-й день без сигналов** (27.07–23.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (15d uptime, с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 2422530 жив (с 22.08). Ошибки core — 0. Листенер — штатный long-poll `read operation timed out` (6x) + 2x SSL handshake timeout (00:35, 00:41) + 2x 502 Bad Gateway 01:11 (transient, стандартное окно обслуживания Telegram, самовосстановился). BURNIE price-watch жив: baseline $0.002415, live $0.002401 — без аномалии, тишина. Live DexScreener: price $0.002401, MC $2.33M, liq $285K, vol24 $276K, 24h **−13.18%**, txns buy/sell 1697/1417 (ratio 1.20 — покупки доминируют). dedupe: только BURNIE (96/115 HIGH CONVICTION, GMGN 10/15, verdict ⏳ WAIT | ❓ НЕИЗВЕСТНО). GMGN OpenAPI read-only, trading disabled. Код за день не менялся. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged), M burnie_price_watch.py, M burnie_sentiment_tracker.py, M chart_analysis.py, M radar_x.py (manipulation research от 21.08 — не закоммичено), ?? LOG_DUMP_20260821_160833.txt, ?? grok_manipulation_research_20260821_150547.txt, ?? rab9.log.bak-20260821, ?? briefings/.
@@ -548,3 +552,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **21.08.2026 23:17** — chrono: 2026-08-21 (`0531a80`)
 - **22.08.2026 08:08** — fix(msf-listener): 409-защита getUpdates + архив мёртвого rab9.log (`3edd7d0`)
 - **22.08.2026 23:17** — chrono: 2026-08-22 (`9332b24`)
+- **23.08.2026 23:16** — chrono: 2026-08-23 (`3b7c010`)
