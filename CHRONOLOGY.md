@@ -1,5 +1,13 @@
 # RAB9 — Хронология
 
+## 26.08.2026 — отчёт BURNIE «залипал»: заголовок/вердикт не реагировали на цену
+
+- **причина** — Сергей: «что вверх цена что вниз, отчет один и тот-же?». Разбор кода `format_alert` + `compute_weighted_score` показал 3 дефекта: (1) заголовок `🟢/🔴` считался ТОЛЬКО из сентимента X-постов, цена не участвовала; (2) вес «рынок» в скоре = 10/100, падение цены меняло вердикт на ±9 баллов — незаметно; (3) фаза `разгон` (markup) рисовалась даже при падении -15.8% (противоречие).
+- **что сделано** — (A) заголовок теперь считает цену первым: `change_24h < -10%` → «🔴 цена падает (откат/слив)», `> +10%` → «🟢 цена растёт (разогрев)», иначе падает на сентимент. (B) вес «рынок» поднят 10→20 через перераспределение (сентимент 20→15, виральность 20→15), сумма весов = 100, пороги вердикта остались 75/55/35, отображение `({total}/100)`. (C) если `phase == markup` и цена падает >10% — фаза рисуется как «откат после разгона».
+- **верификация** — `py_compile` OK; self-test двух сценариев на одном снимке: DOWN -15.8% → `market:2`, total 55, заголовок «🔴 цена падает», TA «фаза: откат после разгона»; UP +20% → `market:20`, total 73, заголовок «🟢 цена растёт». Вердикт реально двигается (Δ18 баллов), сумма весов = 100. Копия `~/.hermes/profiles/rab9/scripts/burnie_sentiment_tracker.py` синхронизирована (md5 совпадает). Cron берёт скрипт из `~/rab9/` (`cd ~/rab9 && python3 burnie_sentiment_tracker.py`), правка рабочая.
+- **файлы** — `burnie_sentiment_tracker.py`.
+- **откат** — `git checkout -- burnie_sentiment_tracker.py`.
+
 ## 25.08.2026 — 30-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **30-й день без сигналов** (27.07–25.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (17d uptime, с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 2422530 жив (3d uptime, с 22.08). Ошибки core — 1x `Telegram handler error` httpx.ConnectError 15:20 (transient, самовосстановился). Листенер — штатный long-poll `read operation timed out` (~9x за день) + 3x SSL handshake timeout (07:58, 09:47, 13:08 — transient). BURNIE price-watch жив: baseline $0.002399, live $0.002426 — без аномалии, тишина. Live DexScreener: price $0.002426, MC $2.35M, liq $290K, vol24 $79.1K, 24h **−3.91%**, txns buy/sell 385/315 (ratio 1.22 — покупки слегка доминируют). dedupe: только BURNIE (96/115 HIGH CONVICTION, GMGN 10/15, verdict ⏳ WAIT | ❓ НЕИЗВЕСТНО). X API жив (whoami 200, не 402). GMGN OpenAPI read-only, trading disabled. Код за день не менялся. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged), M burnie_price_watch.py, M burnie_sentiment_tracker.py, M chart_analysis.py, M radar_x.py (manipulation research от 21.08 — не закоммичено), ?? LOG_DUMP_20260821_160833.txt, ?? grok_manipulation_research_20260821_150547.txt, ?? rab9.log.bak-20260821, ?? briefings/.
@@ -542,6 +550,11 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **15.08.2026 23:16** — chrono: 2026-08-15 — детерминирование operators/ завершено, 20-й день без сигналов (`12ed4f9`)
 - **15.08.2026 23:16** — chrono: 2026-08-15 (auto-sync record 12ed4f9) (`5d1c647`)
 - **15.08.2026 23:17** — chrono: 2026-08-15 (auto-sync record 5d1c647) (`27b7d92`)
+
+## 27.08.2026 — 32-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle день. 0 MSF-сигналов — **32-й день без сигналов** (27.07–27.08); запись за 26.08 не была создана (пропуск, инфраструктура по логам 26.08 ошибок core не показывала). Инфраструктура стабильна: RAB9 Core active (PID 14391), MSF HTTP :8089 healthy (127.0.0.1), msf-listener active. Ошибки за 27.08: 2x Telegram NetworkError Bad Gateway 01:10 (transient, стандартное окно обслуживания, самовосстановился). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M). GMGN read-only, trading disabled. Рабочее дерево: незакоммиченные правки burnie_price_watch.py, burnie_sentiment_tracker.py, chart_analysis.py, radar_x.py, AGENTS.md (M) — изменений 16–25.08 не фиксировать как сегодня, даты правок не проверены.
+- **27.08.2026 23:15** — chrono: 2026-08-27 — 32-й день без сигналов, закрыт пробел 26.08
 - **16.08.2026 23:15** — chrono: 2026-08-16 (`753ff99`)
 - **17.08.2026 23:16** — chrono: 2026-08-17 (`e190ef4`)
 - **19.08.2026 04:00** — daily-sync: auto-commit (`c5c544a`)
@@ -558,3 +571,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **22.08.2026 23:17** — chrono: 2026-08-22 (`9332b24`)
 - **23.08.2026 23:16** — chrono: 2026-08-23 (`3b7c010`)
 - **24.08.2026 23:17** — chrono: 2026-08-24 (`eb2190d`)
+- **25.08.2026 23:16** — chrono: 2026-08-25 (`634932d`)
