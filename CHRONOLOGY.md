@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 28.08.2026 — 32-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **32-й день без сигналов** (27.07–28.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 (20d uptime, с 08.08), MSF HTTP :8089 200 (`ok=true`, 127.0.0.1), MSF Listener PID 2422530 жив (6d uptime, с 22.08). Ошибки core за день — 0. Листенер — штатный long-poll `read operation timed out` (~7x) + 1x SSL handshake timeout 03:38 (transient). BURNIE price-watch жив, без аномалии цены. Live DexScreener: price $0.002003, MC $1.94M, liq $273K, vol24 $76.9K, 24h **−16.26%**, txns buy/sell 366/338 (ratio 1.08 — смешанно). X API жив (whoami 200, не 402). GMGN OpenAPI read-only, trading disabled. Код за день не менялся. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged), M burnie_price_watch.py, M burnie_sentiment_tracker.py, M chart_analysis.py, M radar_x.py (не закоммичено), ?? LOG_DUMP_20260821_160833.txt, ?? grok_manipulation_research_20260821_150547.txt, ?? rab9.log.bak-20260821, ?? briefings/.
+
 ## 26.08.2026 — отчёт BURNIE «залипал»: заголовок/вердикт не реагировали на цену
 
 - **причина** — Сергей: «что вверх цена что вниз, отчет один и тот-же?». Разбор кода `format_alert` + `compute_weighted_score` показал 3 дефекта: (1) заголовок `🟢/🔴` считался ТОЛЬКО из сентимента X-постов, цена не участвовала; (2) вес «рынок» в скоре = 10/100, падение цены меняло вердикт на ±9 баллов — незаметно; (3) фаза `разгон` (markup) рисовалась даже при падении -15.8% (противоречие).
@@ -572,3 +576,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **23.08.2026 23:16** — chrono: 2026-08-23 (`3b7c010`)
 - **24.08.2026 23:17** — chrono: 2026-08-24 (`eb2190d`)
 - **25.08.2026 23:16** — chrono: 2026-08-25 (`634932d`)
+- **27.08.2026 23:16** — chrono: 2026-08-27 (`46a31c2`)
