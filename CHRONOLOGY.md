@@ -593,3 +593,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **23:15** — CHRONOLOGY agent: idle день. 0 MSF-сигналов — **33-й день без сигналов** (27.07–30.08). Мемы молчат. Инфраструктура стабильна: RAB9 Core active, MSF Listener active (PID 2422530, uptime 1 неделя с 22.08), MSF HTTP :8089 200 (127.0.0.1). Ошибки: 6 transient в логе листенера (штатные long-poll timeouts), ошибок core — нет (journal err --since today: No entries). dedupe: только BURNIE (96/115 HIGH CONVICTION, MC $1.3M). GMGN read-only, trading disabled. Рабочее дерево: незакоммиченные M burnie_price_watch.py, burnie_sentiment_tracker.py, chart_analysis.py, radar_x.py, AGENTS.md (даты правок не подтверждены — не атрибутировать сегодняшнему дню).
 - **30.08.2026 23:16** — chrono: 2026-08-30 (`4f4402a`)
 - **31.08.2026 05:55** — chrono: 2026-08-31 + инфраструктурная карта (`f458c76`)
+- **31.08.2026 23:17** — chrono: 2026-08-31 (`ca42935`)
