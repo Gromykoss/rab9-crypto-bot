@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 02.09.2026 — 37-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **37-й день без сигналов** (27.07–02.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 active (25d uptime, с 08.08), MSF Listener PID 2422530 active (11d, с 22.08), MSF HTTP :8089 200 (`ok=true`). Ошибки core за день — только ночной `Telegram NetworkError Bad Gateway` 01:10 (5x handler error + traceback, transient, стандартное окно обслуживания Telegram, самовосстановился). Листенер — 6x штатных poll-ошибок (5x `read operation timed out`, 1x `Connection reset by peer` 02:12 — transient). Live DexScreener (BURNIE `CGEDT9Q…Spump`): price $0.001333, MC $1.29M, liq $219K, vol24 $83.9K, 24h **−1.36%**, txns buy/sell 134/75 (ratio 1.79 — покупки доминируют). X API жив (whoami 200, не 402). GMGN read-only, trading disabled. Код за день не менялся. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged), M burnie_price_watch.py, M burnie_sentiment_tracker.py, M chart_analysis.py, M radar_x.py (не закоммичено), ?? briefings/, ?? лог-дампы от 21.08.
+
 ## 01.09.2026 — 36-й день без MSF-сигналов
 
 - **09:xx** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **36-й день без сигналов** (27.07–01.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 active (24d uptime, с 08.08), MSF Listener PID 2422530 active (10d, с 22.08), MSF HTTP :8089 200 (`ok=true`). Ошибки core за день — только ночной `Telegram NetworkError Bad Gateway` 01:10–01:11 (2x handler error + traceback, transient, стандартное окно обслуживания Telegram, самовосстановился); прочие hits — traceback-строки того же инцидента. Листенер — 0 ошибок (grep посчитал только подсказки journal). Live DexScreener: price $0.001287, MC $1.25M, liq $215K, vol24 $158.7K, 24h **−20.18%**, txns buy/sell 671/887 (ratio 0.76 — продажи доминируют). X API жив (whoami 200, не 402). GMGN read-only, trading disabled. Код за день не менялся. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md, M burnie_price_watch.py, M burnie_sentiment_tracker.py, M chart_analysis.py, M radar_x.py (не закоммичено), ?? briefings/, ?? лог-дампы от 21.08.
@@ -599,3 +603,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **31.08.2026 05:55** — chrono: 2026-08-31 + инфраструктурная карта (`f458c76`)
 - **31.08.2026 23:17** — chrono: 2026-08-31 (`ca42935`)
 - **31.08.2026 23:17** — briefing: 2026-08-31 (`a36cc46`)
+- **01.09.2026 23:17** — chrono: 2026-09-01 (`6c21f90`)
