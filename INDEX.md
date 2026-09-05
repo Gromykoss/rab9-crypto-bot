@@ -1,6 +1,8 @@
 # rab9 — Agent Map
 
 ## Start Here
+> 📇 Единый вход сессии: PROJECT_MEMORY_GRAPH.md (CONTRACT INDEX GATE, 05.09)
+
 - **AGENTS.md** — voice, boundaries, rules (read this first)
 - **INDEX.md** — this file (filesystem map)
 

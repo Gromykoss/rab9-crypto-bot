@@ -622,3 +622,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **02.09.2026 23:17** — chrono: 2026-09-02 (`7110bb8`)
 - **03.09.2026 23:17** — chrono: 2026-09-03 (`ca5e22b`)
 - **04.09.2026 23:17** — chrono: 2026-09-04 (`49345e9`)
+- **05.09.2026 19:15** — docs: rollout CONTRACT INDEX GATE (05.09) — PROJECT_MEMORY_GRAPH.md 50стр (Codex/Grok VERIFIED) + Gate 0.5 в AGENTS.md (fence исправлен) + запись 05.09 в CHRONOLOGY; попутно staged chrono-запись 04.09 auto-процесса (`d727c27`)

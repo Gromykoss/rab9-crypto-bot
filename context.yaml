@@ -1,5 +1,5 @@
 triggers:
-  session_start: [AGENTS.md#critical-gates, CHRONOLOGY.md#last-3-days]
+  session_start: [PROJECT_MEMORY_GRAPH.md, AGENTS.md#critical-gates, CHRONOLOGY.md#last-3-days]
   code_change: [AGENTS.md#critical-gates, CHRONOLOGY.md]
   signal_analysis: [AGENTS.md#поток-сигналов, CHRONOLOGY.md]
   audit: [CHRONOLOGY.md, BUGS.md]
