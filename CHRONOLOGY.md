@@ -1,5 +1,12 @@
 # RAB9 — Хронология
 
+## 05.09.2026 — CONTRACT INDEX GATE rollout
+
+- **причина** — Spec Drift Gate: введён единый контрактный индекс сессии, но rollout 05.09 не был закрыт датированной записью в CHRONOLOGY.
+- **что сделано** — создан `PROJECT_MEMORY_GRAPH.md` (8 доменов: session-contract, telegram-ingest, signal-analysis, safety-gates, llm-verification, delivery-alerts, burnie-monitoring, persistence-config); в `AGENTS.md` после CONTEXT GATE вставлен CONTRACT INDEX GATE 0.5.
+- **верификация** — проверены Boot Rule, Global Invariants, Domain Map (8 доменов), Change Routing и Spec Drift Gate; маршрут чтения: граф + AGENTS Gates на старте, остальные доки точечно по графу.
+- **файлы** — `PROJECT_MEMORY_GRAPH.md`, `AGENTS.md`, `CHRONOLOGY.md`.
+
 ## 04.09.2026 — 39-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **39-й день без сигналов** (27.07–04.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 active (27d uptime, с 08.08), MSF Listener PID 2422530 active (13d, с 22.08), MSF HTTP :8089 200 (`ok=true`). Ошибки core за день — 0. Листенер — 7x штатных poll-ошибок (6x long-poll `read operation timed out`, 1x `Connection reset by peer` 20:55, 1x `502 Bad Gateway` 01:10 — transient, стандартное окно обслуживания Telegram). Live DexScreener (BURNIE, пара `5tYFviFW`): price $0.001623, MC $1.57M, liq $245K, vol24 $129K, 24h **−7.06%** (частичный откат после вчерашнего +29%), txns buy/sell 650/686 (ratio 0.95 — смешанно). X API жив (oauth2 whoami 200, не 402). GMGN read-only, trading disabled. Код за день не менялся. Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged), M burnie_price_watch.py, M burnie_sentiment_tracker.py, M chart_analysis.py, M radar_x.py (не закоммичено), ?? briefings/, ?? лог-дампы от 21.08.
@@ -614,3 +621,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **01.09.2026 23:17** — chrono: 2026-09-01 (`6c21f90`)
 - **02.09.2026 23:17** — chrono: 2026-09-02 (`7110bb8`)
 - **03.09.2026 23:17** — chrono: 2026-09-03 (`ca5e22b`)
+- **04.09.2026 23:17** — chrono: 2026-09-04 (`49345e9`)

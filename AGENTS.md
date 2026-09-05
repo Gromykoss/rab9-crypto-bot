@@ -15,7 +15,10 @@
 0. **CONTEXT GATE (MANDATORY):** перед ЛЮБЫМ действием — выбрать триггер и загрузить контекст:
    ```bash
    python3 ~/.hermes/scripts/context_loader.py rab9 <trigger> [--max-tokens 500]
+   ```
 ---
+
+0.5. **CONTRACT INDEX GATE (05.09.2026):** единый вход сессии — PROJECT_MEMORY_GRAPH.md (корень). Boot Rule: граф + AGENTS Gates на старте, остальные доки по маршруту из графа. Изменил домен/инвариант → обнови граф + CHRONOLOGY; иначе запись «Contract index update: not needed» в CHRONOLOGY.
 
 ## 🗣️ Групповое общение в Buzz (multi-agent)
 
