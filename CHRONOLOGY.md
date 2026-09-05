@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 05.09.2026 — 40-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **40-й день без сигналов** (27.07–05.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 active (28d uptime, с 08.08), MSF Listener PID 2422530 active (14d, с 22.08), MSF HTTP :8089 200 (`ok=true`). Ошибки core за день — 0. Листенер — 2x штатных long-poll `read operation timed out` (01:12, 20:32 — transient). Live DexScreener (BURNIE, пара `5tYFviFW`): price $0.001649, MC $1.60M, liq $249K, vol24 $114K, 24h **+2.66%** (боковик после отката), txns недоступны в снимке. X API жив (oauth2 whoami 200, не 402). GMGN read-only, trading disabled. Код бота за день не менялся; рабочее дерево держит незакоммиченные правки AGENTS.md (-44/+71 конденсация), burnie_price_watch.py (+34), burnie_sentiment_tracker.py (+125/-71), chart_analysis.py (+19), radar_x.py (+11) — от совместного rollout 05.09. Ранее за день: завершён rollout CONTRACT INDEX GATE (PROJECT_MEMORY_GRAPH.md + Gate 0.5 в AGENTS.md, коммиты d727c27, 06a6bb3). Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged), M burnie_price_watch.py, M burnie_sentiment_tracker.py, M chart_analysis.py, M radar_x.py, ?? briefings/, ?? лог-дампы от 21.08.
+
 ## 05.09.2026 — CONTRACT INDEX GATE rollout
 
 - **причина** — Spec Drift Gate: введён единый контрактный индекс сессии, но rollout 05.09 не был закрыт датированной записью в CHRONOLOGY.
@@ -623,3 +627,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **03.09.2026 23:17** — chrono: 2026-09-03 (`ca5e22b`)
 - **04.09.2026 23:17** — chrono: 2026-09-04 (`49345e9`)
 - **05.09.2026 19:15** — docs: rollout CONTRACT INDEX GATE (05.09) — PROJECT_MEMORY_GRAPH.md 50стр (Codex/Grok VERIFIED) + Gate 0.5 в AGENTS.md (fence исправлен) + запись 05.09 в CHRONOLOGY; попутно staged chrono-запись 04.09 auto-процесса (`d727c27`)
+- **05.09.2026 19:30** — docs: context.yaml session_start → PROJECT_MEMORY_GRAPH; INDEX.md указатель (sync rollout 05.09) (`06a6bb3`)
