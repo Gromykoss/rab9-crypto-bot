@@ -629,3 +629,5 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **05.09.2026 19:15** — docs: rollout CONTRACT INDEX GATE (05.09) — PROJECT_MEMORY_GRAPH.md 50стр (Codex/Grok VERIFIED) + Gate 0.5 в AGENTS.md (fence исправлен) + запись 05.09 в CHRONOLOGY; попутно staged chrono-запись 04.09 auto-процесса (`d727c27`)
 - **05.09.2026 19:30** — docs: context.yaml session_start → PROJECT_MEMORY_GRAPH; INDEX.md указатель (sync rollout 05.09) (`06a6bb3`)
 - **05.09.2026 23:17** — chrono: 2026-09-05 (`a118290`)
+- **06.09.2026 10:58** — [drift-bootstrap] Spec Drift Gate v1.3.1: AGENTS.md секция + журнал (`a09133b`)
+- **06.09.2026 11:52** — feat: волатильность в TA (σ 14д, тренд, day range) + скор и отчёт (`da0ef23`)

@@ -418,6 +418,15 @@ def detect_wash_trading(market: dict | None = None, address: str | None = None) 
 
 def analyze(address: str) -> dict:
     candles = fetch_ohlcv(address, "1D", 90)
+    # Дозаполнить из локального архива до 120+ свечей: 90-дневная базовая вола
+    # требует 91+ свечей, у провайдера окно часто ровно 90.
+    if candles and len(candles) < 121:
+        try:
+            extra = _load_local_ohlcv(address, 150)
+            if extra and len(extra) > len(candles):
+                candles = extra
+        except Exception:
+            pass
     if not candles:
         candles = fetch_ohlcv(address, "4H", 30)
     if not candles:
@@ -429,7 +438,6 @@ def analyze(address: str) -> dict:
     highs = [c["h"] for c in candles]
     lows = [c["l"] for c in candles]
     volumes = [c["v"] for c in candles]
-    opens = [c["o"] for c in candles]
     n = len(closes)
 
     current = closes[-1]
@@ -540,42 +548,41 @@ def analyze(address: str) -> dict:
         rel_vol_14d = volumes[-1] / avg_vol14 if avg_vol14 > 0 else 1.0
 
     # ── Волатильность (дневная, %) ──
-    # Hist.vol = станд. отклонение дневных доходностей за 14 дней, годировать не нужно —
-    # для мемкоина важно СРАВНЕНИЕ с прошлым периодом: выросла/упала вола.
-    # range% = (high-low)/open за последние свечи — насколько широко качает за день.
+    # Свинг-трейдинг: три горизонта — 7д (режим), 30д (свинг-цикл), 90д (базовая вола).
+    # day_range убран (решение Сергея: однодневный шум).
     volatility_pct = None
-    volatility_prev_pct = None  # предыдущие 14 дней (для тренда волы)
+    volatility_prev_pct = None  # mid-горизонт (30д), для тренда
     volatility_trend = "unknown"
-    day_range_pct = None
-    if n >= 15:
+    vol_short = None
+    vol_mid = None
+
+    def _stdev_pct(n_days: int):
+        """Дневная σ доходностей (%) за последние n_days свечей."""
+        if n < n_days + 1:
+            return None
         rets = []
-        for i in range(n - 14, n):
+        for i in range(n - n_days, n):
             if closes[i - 1] > 0:
                 rets.append((closes[i] - closes[i - 1]) / closes[i - 1] * 100)
-        if len(rets) >= 2:
-            mean = sum(rets) / len(rets)
-            variance = sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)
-            volatility_pct = round(variance ** 0.5, 2)  # дневная σ в %
-        prev_rets = []
-        for i in range(max(1, n - 28), n - 14):
-            if closes[i - 1] > 0:
-                prev_rets.append((closes[i] - closes[i - 1]) / closes[i - 1] * 100)
-        if len(prev_rets) >= 2:
-            pm = sum(prev_rets) / len(prev_rets)
-            pv = sum((r - pm) ** 2 for r in prev_rets) / (len(prev_rets) - 1)
-            volatility_prev_pct = round(pv ** 0.5, 2)
-        if volatility_pct is not None and volatility_prev_pct is not None and volatility_prev_pct > 0:
-            ratio = volatility_pct / volatility_prev_pct
-            if ratio >= 1.5:
-                volatility_trend = "rising"
-            elif ratio <= 0.67:
-                volatility_trend = "falling"
-            else:
-                volatility_trend = "stable"
-    if n >= 1 and opens:
-        o = opens[-1]
-        if o > 0:
-            day_range_pct = round((highs[-1] - lows[-1]) / o * 100, 1)
+        if len(rets) < 2:
+            return None
+        mean = sum(rets) / len(rets)
+        variance = sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)
+        return round(variance ** 0.5, 2)
+
+    vol_short = _stdev_pct(7)
+    vol_mid = _stdev_pct(30)
+    vol_base = _stdev_pct(90)
+    volatility_pct = vol_short
+    volatility_prev_pct = vol_mid
+    if vol_short is not None and vol_mid is not None and vol_mid > 0:
+        ratio = vol_short / vol_mid
+        if ratio >= 1.3:
+            volatility_trend = "rising"
+        elif ratio <= 0.77:
+            volatility_trend = "falling"
+        else:
+            volatility_trend = "stable"
 
     # ── Phase Detection (TA-informed) ──
 
@@ -830,11 +837,13 @@ def analyze(address: str) -> dict:
         "momentum": momentum,
         "volume_trend": vol_trend,
         "relative_volume": round(rel_vol, 2),
-        # Волатильность (дневная σ, %; тренд vs предыдущие 14д; дневной диапазон)
+        # Волатильность (дневная σ, %; три горизонта: 7д/30д/90д; тренд short vs mid)
         "volatility_pct": volatility_pct,
         "volatility_prev_pct": volatility_prev_pct,
         "volatility_trend": volatility_trend,
-        "day_range_pct": day_range_pct,
+        "volatility_short_7d": vol_short,
+        "volatility_mid_30d": vol_mid,
+        "volatility_base_90d": vol_base,
         # TA indicators
         "rsi": rsi,
         "sma20": sma20_val,

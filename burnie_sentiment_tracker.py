@@ -1918,9 +1918,9 @@ def fetch_chart_ta() -> dict[str, Any]:
                 "breakout_volume_ratio": res.get("breakout_volume_ratio"),
                 "rel_vol_14d": res.get("rel_vol_14d"),
                 "volatility_pct": res.get("volatility_pct"),
-                "volatility_prev_pct": res.get("volatility_prev_pct"),
+                "volatility_mid_30d": res.get("volatility_mid_30d"),
+                "volatility_base_90d": res.get("volatility_base_90d"),
                 "volatility_trend": res.get("volatility_trend"),
-                "day_range_pct": res.get("day_range_pct"),
                 "ath_drawdown": res.get("ath_drawdown"),
                 "delta_7d": res.get("delta_7d"),
                 "delta_30d": res.get("delta_30d"),
@@ -2346,17 +2346,18 @@ def format_alert(snapshot: dict[str, Any]) -> str:
             rel50 = "выше" if float(price_ta) > float(sma50) else "ниже"
             hist_bits.append(f"относительно SMA50 (50-дневная средняя): {rel50}")
     vola = ta.get("volatility_pct")
-    vola_prev = ta.get("volatility_prev_pct")
+    vola_mid = ta.get("volatility_mid_30d")
+    vola_base = ta.get("volatility_base_90d")
     vola_trend = ta.get("volatility_trend")
-    d_range = ta.get("day_range_pct")
     if vola is not None:
         vt_key = vola_trend if isinstance(vola_trend, str) else "unknown"
         vt_ru = {"rising": "растёт", "falling": "падает", "stable": "стабильна", "unknown": "?"}.get(vt_key, vt_key)
-        vs = f"волатильность (дневная, 14д): {vola:.1f}%"
-        if vola_prev is not None:
-            vs += f" (была {vola_prev:.1f}%, {vt_ru})"
-        if d_range is not None:
-            vs += f" | вчерашний диапазон: {d_range:.1f}%"
+        vs = f"волатильность: {vola:.1f}%/день (7д)"
+        if vola_mid is not None:
+            vs += f" | 30д: {vola_mid:.1f}%"
+        if vola_base is not None:
+            vs += f" | 90д: {vola_base:.1f}%"
+        vs += f" | режим: {vt_ru}"
         hist_bits.append(vs)
     if hist_bits:
         lines.append("📅 Исторический контекст: " + " | ".join(hist_bits))
