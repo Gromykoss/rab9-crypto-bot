@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -28,6 +29,12 @@ from operators import Verdict, check_destination
 
 ROOT = Path(__file__).resolve().parent
 RAB9_DIR = Path("/home/hermes-workspace/rab9")
+# xurl: cron-PATH не включает ~/.local/bin и node → резолвим явно.
+# shutil.which() ловит symlink в интерактиве; fallback — нативный Go-бинарник
+# (статически слинкован, не требует node) — работает и под минимальным cron-PATH.
+XURL_BIN = shutil.which("xurl") or (
+    "/home/hermes-workspace/.local/lib/node_modules/@xdevplatform/xurl/binary/xurl"
+)
 OUTFILE = RAB9_DIR / "community_sentiment.jsonl"
 ACCOUNT = "BurnieSendersX"
 NEGATIVE_QUERY = (
@@ -367,7 +374,7 @@ AI_BUY_TERMS = (
 
 def run_xurl(args: list[str], timeout: int = 45) -> tuple[int, dict[str, Any] | None, str]:
     proc = subprocess.run(
-        ["xurl", *args],
+        [XURL_BIN, *args],
         cwd=str(RAB9_DIR),
         capture_output=True,
         text=True,
@@ -1910,7 +1917,14 @@ def fetch_chart_ta() -> dict[str, Any]:
                 "smart_money_accumulation": res.get("smart_money_accumulation"),
                 "breakout_volume_ratio": res.get("breakout_volume_ratio"),
                 "rel_vol_14d": res.get("rel_vol_14d"),
+                "volatility_pct": res.get("volatility_pct"),
+                "volatility_prev_pct": res.get("volatility_prev_pct"),
+                "volatility_trend": res.get("volatility_trend"),
+                "day_range_pct": res.get("day_range_pct"),
                 "ath_drawdown": res.get("ath_drawdown"),
+                "delta_7d": res.get("delta_7d"),
+                "delta_30d": res.get("delta_30d"),
+                "range_position": res.get("range_position"),
                 "accumulation_score": res.get("accumulation_score"),
                 "distribution_score": res.get("distribution_score"),
             }
@@ -1924,12 +1938,13 @@ def compute_weighted_score(snapshot: dict[str, Any]) -> dict[str, Any]:
     """Compute a weighted composite score — sum of all parameters with weights.
 
     Final verdict is based on the TOTAL, not any single metric.
-    Weights (sum = 100):
-      1. Sentiment (X)            — 20
-      2. Virality (KOL/catalyst)  — 20  (было 15; +5 с TA)
-      3. TA phase (chart)         — 15  (было 20; −5 в virality)
-      4. Smart money flow         — 15
-      5. Market momentum          — 10
+    Weights (sum = 100), rev. 01.09 (решение Сергея: TA главный, смарт-мани = манипуляция-допсигнал):
+      1. Sentiment (X)            — 15
+      2. Virality (KOL/catalyst)  — 15
+      3. TA phase (chart)         — 35 (было 15; главный индикатор — видно накопление ДО умных денег)
+      4. Smart money flow         — 5  (было 15; SM виден только в середине разгона, в начале мизерный шанс;
+                                          0 SM в накоплении ≠ «нет накопления» — киты копят тихо)
+      5. Market momentum          — 20
       6. Holder risk (bundlers)   — 10
       7. Security / RugCheck      — 10
     Календарный бонус (POLITICAL_CALENDAR ±3д) добавляется к virality.
@@ -1937,124 +1952,143 @@ def compute_weighted_score(snapshot: dict[str, Any]) -> dict[str, Any]:
     """
     S = {k: 0 for k in ("sentiment", "ta", "virality", "smart_money", "market", "holders", "security")}
 
-    # 1. Sentiment (X) — max 20
+    # 1. Sentiment (X) — max 15
     pos = snapshot.get("pos_hits", 0)
     neg = snapshot.get("neg_hits", 0)
     if neg > 0:
-        S["sentiment"] = max(0, min(20, pos * 3 - neg * 8))
+        S["sentiment"] = max(0, min(15, pos * 3 - neg * 8))
     else:
-        S["sentiment"] = min(20, pos * 2)
+        S["sentiment"] = min(15, pos * 2)
     if snapshot.get("toly_hits", 0) > 0:
-        S["sentiment"] = min(20, S["sentiment"] + 4)  # Toly = strong multiplier
+        S["sentiment"] = min(15, S["sentiment"] + 4)  # Toly = strong multiplier
 
-    # 2. TA phase — max 15 (было 20; 5 пунктов → virality)
+    # 2. TA phase — max 35 (ГЛАВНЫЙ вес rev. 01.09: теханализ = ранний индикатор фазы)
     ta = snapshot.get("chart_ta") or {}
     if ta.get("ok"):
         phase = ta.get("phase")
         if phase == "accumulation":
-            S["ta"] = 15
+            S["ta"] = 35
         elif phase == "decay":
-            S["ta"] = 6  # post-pump base — pre-catalyst zone
+            S["ta"] = 15  # post-pump base — pre-catalyst zone
         elif phase == "markup":
-            S["ta"] = 9  # running but late
+            S["ta"] = 22  # running but late
         elif phase == "distribution":
-            S["ta"] = 2
+            S["ta"] = 5
         vd = ta.get("volume_divergence")
         if vd == "bullish_divergence":
-            S["ta"] = min(15, S["ta"] + 4)
+            S["ta"] = min(35, S["ta"] + 10)  # истощение продавцов = ранний маркер накопления
         elif vd == "bearish_divergence":
-            S["ta"] = max(0, S["ta"] - 5)
+            S["ta"] = max(0, S["ta"] - 12)
         rsi = ta.get("rsi")
         if rsi is not None:
             if rsi < 35:
-                S["ta"] = min(15, S["ta"] + 2)  # oversold → upside room
+                S["ta"] = min(35, S["ta"] + 4)  # oversold → upside room
             elif rsi > 70:
-                S["ta"] = max(0, S["ta"] - 3)  # overbought → distribution risk
+                S["ta"] = max(0, S["ta"] - 8)  # overbought → distribution risk
+        # SMA-тренд: цена выше SMA20 = краткосрочный тренд развернулся
+        price = ta.get("price")
+        sma20 = ta.get("sma20")
+        sma50 = ta.get("sma50")
+        if price and sma20:
+            if float(price) > float(sma20):
+                S["ta"] = min(35, S["ta"] + 4)
+            else:
+                S["ta"] = max(0, S["ta"] - 3)
+        if sma20 and sma50 and float(sma20) > float(sma50):
+            S["ta"] = min(35, S["ta"] + 4)  # SMA20 > SMA50 = бычья структура
+        # Волатильность: рост волы в фазе накопления = подготовка к движению (киты двигают цену);
+        # рост волы в раздаче = паника. Контекст решает.
+        vol_trend_v = ta.get("volatility_trend")
+        if vol_trend_v == "rising" and phase == "accumulation":
+            S["ta"] = min(35, S["ta"] + 4)
+        elif vol_trend_v == "rising" and phase == "distribution":
+            S["ta"] = max(0, S["ta"] - 5)
 
-    # 3. Virality / катализатор — max 20 (было 15; +5 с TA)
+    # 3. Virality / катализатор — max 15 (было 20; −5 в market)
     # Катализатор важнее «просто KOL упомянул $BURNIE»: RT Маска/политика = лесной пожар.
     catalysts = snapshot.get("catalysts") or []
     kol = snapshot.get("kol_mentions") or []
     eng = snapshot.get("kol_engagement") or {}
     if catalysts:
         # База: число сигналов, capped
-        S["virality"] = min(12, len(catalysts) * 3)
+        S["virality"] = min(10, len(catalysts) * 3)
         tiers = {c.get("tier") for c in catalysts}
         types = {c.get("type") for c in catalysts}
         if "politician" in tiers:
-            S["virality"] = min(20, S["virality"] + 10)  # политик = высший приоритет
+            S["virality"] = min(15, S["virality"] + 10)  # политик = высший приоритет
         elif "known" in tiers or "mega" in tiers:
-            S["virality"] = min(20, S["virality"] + 8)  # Маск/Трамп/Toly-уровень
+            S["virality"] = min(15, S["virality"] + 8)  # Маск/Трамп/Toly-уровень
         elif "large" in tiers:
-            S["virality"] = min(20, S["virality"] + 5)  # ≥50k fol
+            S["virality"] = min(15, S["virality"] + 5)  # ≥50k fol
         elif "kol" in tiers:
-            S["virality"] = min(20, S["virality"] + 3)
+            S["virality"] = min(15, S["virality"] + 3)
         # Тип взаимодействия: RT офиц. сильнее bare-упоминания
         if "rt_fresh" in types:
-            S["virality"] = min(20, S["virality"] + 4)  # свежий RT = самый ранний сигнал
+            S["virality"] = min(15, S["virality"] + 4)  # свежий RT = самый ранний сигнал
         elif "rt_official" in types:
-            S["virality"] = min(20, S["virality"] + 3)
+            S["virality"] = min(15, S["virality"] + 3)
         elif "quote_fresh" in types or "quote_official" in types or "reply_official" in types:
-            S["virality"] = min(20, S["virality"] + 2)
+            S["virality"] = min(15, S["virality"] + 2)
         elif "bare_burnie" in types:
-            S["virality"] = min(20, S["virality"] + 2)  # двусмысленное слово BURNIE
+            S["virality"] = min(15, S["virality"] + 2)  # двусмысленное слово BURNIE
         if "like_spike" in types:
-            S["virality"] = min(20, S["virality"] + 3)  # аномальный всплеск лайков
+            S["virality"] = min(15, S["virality"] + 3)  # аномальный всплеск лайков
         likes = eng.get("likes", 0)
         if likes >= 50:
-            S["virality"] = min(20, S["virality"] + 2)
+            S["virality"] = min(15, S["virality"] + 2)
     elif kol:
         # fallback: старый kol_mentions без типизации
-        S["virality"] = min(20, len(kol) * 4)
+        S["virality"] = min(15, len(kol) * 4)
         likes = eng.get("likes", 0)
         if likes >= 50:
-            S["virality"] = min(20, S["virality"] + 5)
+            S["virality"] = min(15, S["virality"] + 5)
         elif likes >= 10:
-            S["virality"] = min(20, S["virality"] + 2)
+            S["virality"] = min(15, S["virality"] + 2)
 
     # Календарный бонус: ±3 дня от дебатов/праймериз/Election Day
     cal = snapshot.get("calendar") or calendar_boost()
     if cal.get("active") and cal.get("bonus"):
-        S["virality"] = min(20, S["virality"] + int(cal["bonus"]))
+        S["virality"] = min(15, S["virality"] + int(cal["bonus"]))
 
-    # 4. Smart money flow — max 15
+    # 4. Smart money flow — max 5 (rev. 01.09: смарт-мани = допсигнал/манипуляция, НЕ основа.
+    # Видны только в середине разгона, когда китам нужен FOMO-покупатель. 0 SM в начале ≠ «нет накопления».)
     sm = snapshot.get("smart_money") or {}
     if sm.get("ok"):
         sig = sm.get("signal")
         if sig == "accumulation":
-            S["smart_money"] = 15
+            S["smart_money"] = 5  # подтверждение деньгами — сильный, но поздний маркер
         elif sig == "mixed":
-            S["smart_money"] = 8
+            S["smart_money"] = 3
         elif sig == "distribution":
-            S["smart_money"] = 2
+            S["smart_money"] = 0  # киты сливают в розничный памп = классическая манипуляция
         else:
-            S["smart_money"] = 5  # no data / neutral
+            S["smart_money"] = 2  # нет данных / тишина — НЕХУДШИЙ сценарий (киты копят невидимо)
 
-    # 5. Market momentum — max 10
+    # 5. Market momentum — max 20 (было 10; +10 — цена должна реально двигать вердикт)
     chg = snapshot.get("change_24h")
     buy_r = snapshot.get("buy_ratio")
     if chg is not None:
         try:
             c = float(chg)
             if c >= 10:
-                S["market"] = 10
+                S["market"] = 20
             elif c >= 3:
-                S["market"] = 7
+                S["market"] = 14
             elif c >= -3:
-                S["market"] = 5  # flat — neutral
+                S["market"] = 10  # flat — neutral
             elif c >= -10:
-                S["market"] = 3
+                S["market"] = 6
             else:
-                S["market"] = 1
+                S["market"] = 2
         except (TypeError, ValueError):
-            S["market"] = 5
+            S["market"] = 10
     if buy_r is not None:
         try:
             br = float(buy_r)
             if br >= 1.3:
-                S["market"] = min(10, S["market"] + 3)
+                S["market"] = min(20, S["market"] + 6)
             elif br < 0.7:
-                S["market"] = max(0, S["market"] - 3)
+                S["market"] = max(0, S["market"] - 6)
         except (TypeError, ValueError):
             pass
 
@@ -2232,7 +2266,18 @@ def post_url(username: str, post_id: str) -> str:
 def format_alert(snapshot: dict[str, Any]) -> str:
     """Build a human-readable BURNIE report with verdict (plain Russian)."""
     senti = snapshot["sentiment"]
-    if senti == "neg":
+    chg_hdr = snapshot.get("change_24h")
+    # Цена сильнее сентимента: при падении/росте >10% заголовок отражает движение,
+    # даже если посты говорят обратное (посты могут отставать от цены).
+    try:
+        _chg = float(chg_hdr) if chg_hdr is not None else 0.0
+    except (TypeError, ValueError):
+        _chg = 0.0
+    if _chg < -10:
+        header = "🔴 BURNIE — цена падает (откат/слив)"
+    elif _chg > 10:
+        header = "🟢 BURNIE — цена растёт (разогрев)"
+    elif senti == "neg":
         header = "🔴 BURNIE — негативный сентимент"
     elif senti == "pos":
         header = "🟢 BURNIE — позитивный сентимент"
@@ -2275,6 +2320,48 @@ def format_alert(snapshot: dict[str, Any]) -> str:
     lines.append(f"💵 Цена: {price_s} | За 24ч: {chg_s} | Объём: {vol_s}")
 
     # Market read + TA (real indicators from OHLCV)
+    ta = snapshot.get("chart_ta") or {}
+    # Исторический контекст (дневные свечи, не краткосрочные окна)
+    hist_bits = []
+    d7 = ta.get("delta_7d")
+    d30 = ta.get("delta_30d")
+    rp = ta.get("range_position")
+    dd = ta.get("ath_drawdown")
+    if d7 is not None:
+        hist_bits.append(f"за 7д: {d7:+.1f}%")
+    if d30 is not None:
+        hist_bits.append(f"за 30д: {d30:+.1f}%")
+    if rp is not None:
+        pos_word = "у дна диапазона" if rp <= 25 else ("в середине" if rp <= 75 else "у вершины")
+        hist_bits.append(f"положение в 90-дневном диапазоне: {rp:.0f}% ({pos_word})")
+    if dd is not None:
+        hist_bits.append(f"от максимума (ATH): {dd:+.1f}%")
+    sma20 = ta.get("sma20")
+    sma50 = ta.get("sma50")
+    price_ta = ta.get("price")
+    if ta.get("ok") and price_ta and sma20:
+        rel20 = "выше" if float(price_ta) > float(sma20) else "ниже"
+        hist_bits.append(f"относительно SMA20 (20-дневная средняя): {rel20}")
+        if sma50:
+            rel50 = "выше" if float(price_ta) > float(sma50) else "ниже"
+            hist_bits.append(f"относительно SMA50 (50-дневная средняя): {rel50}")
+    vola = ta.get("volatility_pct")
+    vola_prev = ta.get("volatility_prev_pct")
+    vola_trend = ta.get("volatility_trend")
+    d_range = ta.get("day_range_pct")
+    if vola is not None:
+        vt_key = vola_trend if isinstance(vola_trend, str) else "unknown"
+        vt_ru = {"rising": "растёт", "falling": "падает", "stable": "стабильна", "unknown": "?"}.get(vt_key, vt_key)
+        vs = f"волатильность (дневная, 14д): {vola:.1f}%"
+        if vola_prev is not None:
+            vs += f" (была {vola_prev:.1f}%, {vt_ru})"
+        if d_range is not None:
+            vs += f" | вчерашний диапазон: {d_range:.1f}%"
+        hist_bits.append(vs)
+    if hist_bits:
+        lines.append("📅 Исторический контекст: " + " | ".join(hist_bits))
+
+    # Market read + TA (real indicators from OHLCV)
     if chg is not None and mc is not None:
         if float(chg) < -10:
             lines.append("📉 Цена заметно падает — возможен слив, осторожно.")
@@ -2282,7 +2369,6 @@ def format_alert(snapshot: dict[str, Any]) -> str:
             lines.append("📈 Цена растёт — идёт разогрев.")
         else:
             lines.append("➡️ Цена в боковике — рынок ждёт, накопление.")
-    ta = snapshot.get("chart_ta") or {}
     if ta.get("ok"):
         phase = ta.get("phase")
         phase_ru = {
@@ -2291,6 +2377,10 @@ def format_alert(snapshot: dict[str, Any]) -> str:
             "markup": "разгон",
             "decay": "затухание (дно после пампа)",
         }.get(phase, phase or "?")
+        # Если цена падает >10% за 24ч, фаза «разгон» (markup) — противоречие.
+        # Рисуем «откат после разгона» вместо «разгон».
+        if phase == "markup" and _chg < -10:
+            phase_ru = "откат после разгона"
         ta_bits = [f"фаза: {phase_ru}"]
         if phase == "decay":
             ta_bits.append("для PolitiFi это зона накопления до катализатора")
@@ -2488,6 +2578,29 @@ def format_alert(snapshot: dict[str, Any]) -> str:
     warmup = detect_warmup(snapshot)
     if warmup["warming"]:
         lines.append(f"🔥 Разогрев: начинается — {', '.join(warmup['signals'])}")
+        # КЛЮЧЕВОЙ ВОПРОС отчёта: разогрев подтверждён умными деньгами или это розница?
+        # TA-фазы (накопление/дивергенция) = ПАТТЕРН-кандидат; факт = сделки SM/KOL (GMGN).
+        sm_w = snapshot.get("smart_money") or {}
+        if sm_w.get("ok"):
+            w_b = int(sm_w.get("sm_buys", 0) or 0) + int(sm_w.get("kol_buys", 0) or 0)
+            w_s = int(sm_w.get("sm_sells", 0) or 0) + int(sm_w.get("kol_sells", 0) or 0)
+            rel14 = (snapshot.get("chart_ta") or {}).get("rel_vol_14d")
+            if w_b > 0 and w_b > w_s:
+                lines.append("   ✅ Подтверждение: smart money покупает (SM+KOL "
+                             f"{w_b} покупок / {w_s} продаж) — допподтверждение разгонной фазы.")
+            elif w_b == 0 and w_s == 0:
+                vol_note = ""
+                if rel14 is not None:
+                    if float(rel14) < 1.0:
+                        vol_note = f", объём {float(rel14):.1f}× от 14-дневной средней"
+                    else:
+                        vol_note = f", объём {float(rel14):.1f}× от 14-дневной средней"
+                lines.append(f"   ℹ️ SM/KOL-сделок нет{vol_note} — норма для начала накопления: "
+                             "киты копят тихо и станут видны ближе к середине разгона. "
+                             "Опора — TA; SM-покупки при появлении = допподтверждение.")
+            elif w_s >= w_b > 0:
+                lines.append(f"   ⚠️ Smart money продаёт в разогрев (SM+KOL {w_b} покупок / {w_s} продаж) — "
+                             "признак манипуляции (слив в розничный памп), осторожно.")
 
     # Weighted composite verdict — total of ALL parameters
     score = snapshot.get("weighted_score") or compute_weighted_score(snapshot)

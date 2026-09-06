@@ -429,12 +429,21 @@ def analyze(address: str) -> dict:
     highs = [c["h"] for c in candles]
     lows = [c["l"] for c in candles]
     volumes = [c["v"] for c in candles]
+    opens = [c["o"] for c in candles]
     n = len(closes)
 
     current = closes[-1]
     ath = max(highs)
     atl = min(lows)
     ath_drawdown = round((current - ath) / ath * 100, 1)
+
+    # Исторические ориентиры: цена N дней назад (по дневным свечам) и позиция в диапазоне.
+    # daily_candles=True, если последний fetch был по дневкам (иначе ориентиры бессмысленны).
+    price_7d_ago = closes[-8] if len(closes) >= 8 else None
+    price_30d_ago = closes[-31] if len(closes) >= 31 else None
+    delta_7d = round((current - price_7d_ago) / price_7d_ago * 100, 1) if price_7d_ago else None
+    delta_30d = round((current - price_30d_ago) / price_30d_ago * 100, 1) if price_30d_ago else None
+    range_position = round((current - atl) / (ath - atl) * 100, 1) if ath > atl else None
 
     # ── TA Indicators ──
 
@@ -529,6 +538,44 @@ def analyze(address: str) -> dict:
     else:
         avg_vol14 = sum(volumes) / n if n > 0 else 0.0
         rel_vol_14d = volumes[-1] / avg_vol14 if avg_vol14 > 0 else 1.0
+
+    # ── Волатильность (дневная, %) ──
+    # Hist.vol = станд. отклонение дневных доходностей за 14 дней, годировать не нужно —
+    # для мемкоина важно СРАВНЕНИЕ с прошлым периодом: выросла/упала вола.
+    # range% = (high-low)/open за последние свечи — насколько широко качает за день.
+    volatility_pct = None
+    volatility_prev_pct = None  # предыдущие 14 дней (для тренда волы)
+    volatility_trend = "unknown"
+    day_range_pct = None
+    if n >= 15:
+        rets = []
+        for i in range(n - 14, n):
+            if closes[i - 1] > 0:
+                rets.append((closes[i] - closes[i - 1]) / closes[i - 1] * 100)
+        if len(rets) >= 2:
+            mean = sum(rets) / len(rets)
+            variance = sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)
+            volatility_pct = round(variance ** 0.5, 2)  # дневная σ в %
+        prev_rets = []
+        for i in range(max(1, n - 28), n - 14):
+            if closes[i - 1] > 0:
+                prev_rets.append((closes[i] - closes[i - 1]) / closes[i - 1] * 100)
+        if len(prev_rets) >= 2:
+            pm = sum(prev_rets) / len(prev_rets)
+            pv = sum((r - pm) ** 2 for r in prev_rets) / (len(prev_rets) - 1)
+            volatility_prev_pct = round(pv ** 0.5, 2)
+        if volatility_pct is not None and volatility_prev_pct is not None and volatility_prev_pct > 0:
+            ratio = volatility_pct / volatility_prev_pct
+            if ratio >= 1.5:
+                volatility_trend = "rising"
+            elif ratio <= 0.67:
+                volatility_trend = "falling"
+            else:
+                volatility_trend = "stable"
+    if n >= 1 and opens:
+        o = opens[-1]
+        if o > 0:
+            day_range_pct = round((highs[-1] - lows[-1]) / o * 100, 1)
 
     # ── Phase Detection (TA-informed) ──
 
@@ -660,6 +707,13 @@ def analyze(address: str) -> dict:
         )["price"]
     if _breakout_res_price is not None:
         smart_money_breakout = bool(current > _breakout_res_price and rel_vol_14d >= 2.0)
+    # Нижний порог «интереса» ×1.5 (manipulation research §3/§7): цена выше пробойного
+    # уровня при объёме ×1.5–×2.0 → «интерес», но ещё НЕ кандидат. Ниже ×1.5 = шум.
+    smart_money_breakout_interest = bool(
+        _breakout_res_price is not None
+        and current > _breakout_res_price
+        and 1.5 <= rel_vol_14d < 2.0
+    )
     smart_money_accumulation = bool(
         phase == "accumulation" and vol_div == "bullish_divergence"
     )
@@ -769,10 +823,18 @@ def analyze(address: str) -> dict:
         "ath": round(ath, 8),
         "atl": round(atl, 8),
         "ath_drawdown": ath_drawdown,
+        "delta_7d": delta_7d,
+        "delta_30d": delta_30d,
+        "range_position": range_position,
         "trend": trend,
         "momentum": momentum,
         "volume_trend": vol_trend,
         "relative_volume": round(rel_vol, 2),
+        # Волатильность (дневная σ, %; тренд vs предыдущие 14д; дневной диапазон)
+        "volatility_pct": volatility_pct,
+        "volatility_prev_pct": volatility_prev_pct,
+        "volatility_trend": volatility_trend,
+        "day_range_pct": day_range_pct,
         # TA indicators
         "rsi": rsi,
         "sma20": sma20_val,
@@ -793,6 +855,7 @@ def analyze(address: str) -> dict:
         "distribution_score": round(dist_score, 2),
         "signal": signal,
         "smart_money_breakout": smart_money_breakout,
+        "smart_money_breakout_interest": smart_money_breakout_interest,
         "smart_money_accumulation": smart_money_accumulation,
         "breakout_resistance": _breakout_res_price,
         "breakout_status": breakout_status,
