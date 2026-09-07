@@ -1,0 +1,593 @@
+======================================================================
+ RAB9 / BURNIE — ПОЛНЫЙ ДАМП ЛОГОВ
+ Сформирован: 2026-08-21 16:08:33 UTC
+ Хост: srv1622697
+======================================================================
+
+############################## СОДЕРЖИМОЕ ##############################
+ 1. systemd status: msf-listener.service
+ 2. systemd status: rab9-crypto-hermes.service
+ 3. Полный journal: msf-listener.service (без ограничения времени)
+ 4. Полный journal: rab9-crypto-hermes.service (без ограничения времени)
+ 5. Файл rab9.log
+ 6. Сводка процессов rab9/msf
+======================================================================
+
+========================= 1. STATUS msf-listener =========================
+● msf-listener.service - RAB9 MSF Listener (Мемы → RAB9 bridge)
+     Loaded: loaded (/etc/systemd/system/msf-listener.service; enabled; preset: enabled)
+     Active: active (running) since Wed 2026-08-19 07:36:21 UTC; 2 days ago
+   Main PID: 2514283 (python)
+      Tasks: 1 (limit: 19144)
+     Memory: 8.4M (peak: 11.7M swap: 2.6M swap peak: 2.6M)
+        CPU: 14.983s
+     CGroup: /system.slice/msf-listener.service
+             └─2514283 /home/hermes-workspace/rab9/venv/bin/python /home/hermes-workspace/rab9/msf_listener.py
+
+Aug 19 18:29:31 srv1622697 python[2514283]: 2026-08-19 18:29:31,652 | ERROR | Poll error: The read operation timed out
+Aug 19 18:56:30 srv1622697 python[2514283]: 2026-08-19 18:56:30,964 | ERROR | Poll error: The read operation timed out
+Aug 20 00:46:56 srv1622697 python[2514283]: 2026-08-20 00:46:56,852 | ERROR | Poll error: The read operation timed out
+Aug 20 05:18:53 srv1622697 python[2514283]: 2026-08-20 05:18:53,856 | ERROR | Poll error: The read operation timed out
+Aug 20 12:31:24 srv1622697 python[2514283]: 2026-08-20 12:31:24,277 | ERROR | Poll error: <urlopen error [Errno 104] Connection reset by peer>
+Aug 20 23:39:56 srv1622697 python[2514283]: 2026-08-20 23:39:56,903 | ERROR | Poll error: The read operation timed out
+Aug 21 00:02:16 srv1622697 python[2514283]: 2026-08-21 00:02:16,827 | ERROR | Poll error: The read operation timed out
+Aug 21 00:39:25 srv1622697 python[2514283]: 2026-08-21 00:39:25,558 | ERROR | Poll error: The read operation timed out
+Aug 21 10:11:16 srv1622697 python[2514283]: 2026-08-21 10:11:16,167 | ERROR | Poll error: The read operation timed out
+Aug 21 12:12:05 srv1622697 python[2514283]: 2026-08-21 12:12:05,025 | ERROR | Poll error: The read operation timed out
+
+====================== 2. STATUS rab9-crypto-hermes =====================
+● rab9-crypto-hermes.service - RAB9 Crypto Intel Bot (Hermes-managed)
+     Loaded: loaded (/etc/systemd/system/rab9-crypto-hermes.service; enabled; preset: enabled)
+     Active: active (running) since Sat 2026-08-08 07:48:17 UTC; 1 week 6 days ago
+   Main PID: 14391 (python)
+      Tasks: 3 (limit: 19144)
+     Memory: 26.5M (peak: 47.3M swap: 33.6M swap peak: 34.1M)
+        CPU: 7min 21.663s
+     CGroup: /system.slice/rab9-crypto-hermes.service
+             └─14391 /home/hermes-workspace/rab9/venv/bin/python /home/hermes-workspace/rab9/rab9_bot.py
+
+Aug 21 01:10:57 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 21 01:10:57 srv1622697 python[14391]:     result = await request.post(
+Aug 21 01:10:57 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 21 01:10:57 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 21 01:10:57 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 21 01:10:57 srv1622697 python[14391]:     raise exception
+Aug 21 01:10:57 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+
+================== 3. JOURNAL msf-listener (FULL) =======================
+Hint: You are currently not seeing messages from other users and the system.
+      Users in groups 'adm', 'systemd-journal' can see all messages.
+      Pass -q to turn off this notice.
+Aug 14 20:39:57 srv1622697 python[14392]: 2026-08-14 20:39:57,053 | ERROR | Poll error: The read operation timed out
+Aug 14 21:53:45 srv1622697 python[14392]: 2026-08-14 21:53:45,654 | ERROR | Poll error: <urlopen error _ssl.c:999: The handshake operation timed out>
+Aug 15 03:06:53 srv1622697 python[14392]: 2026-08-15 03:06:53,556 | ERROR | Poll error: <urlopen error timed out>
+Aug 15 07:13:55 srv1622697 python[14392]: 2026-08-15 07:13:55,395 | ERROR | Poll error: The read operation timed out
+Aug 15 08:29:06 srv1622697 python[14392]: 2026-08-15 08:29:06,747 | ERROR | Poll error: The read operation timed out
+Aug 15 09:24:16 srv1622697 python[14392]: 2026-08-15 09:24:16,489 | ERROR | Poll error: The read operation timed out
+Aug 15 16:13:51 srv1622697 python[14392]: 2026-08-15 16:13:51,624 | ERROR | Poll error: The read operation timed out
+Aug 15 17:28:09 srv1622697 python[14392]: 2026-08-15 17:28:09,594 | ERROR | Poll error: The read operation timed out
+Aug 15 17:35:38 srv1622697 python[14392]: 2026-08-15 17:35:38,055 | ERROR | Poll error: The read operation timed out
+Aug 15 22:52:31 srv1622697 python[14392]: 2026-08-15 22:52:31,445 | ERROR | Poll error: The read operation timed out
+Aug 16 01:05:48 srv1622697 python[14392]: 2026-08-16 01:05:48,992 | ERROR | Poll error: The read operation timed out
+Aug 16 01:11:23 srv1622697 python[14392]: 2026-08-16 01:11:23,080 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 16 01:13:33 srv1622697 python[14392]: 2026-08-16 01:13:33,258 | ERROR | Poll error: The read operation timed out
+Aug 16 10:44:44 srv1622697 python[14392]: 2026-08-16 10:44:44,718 | ERROR | Poll error: The read operation timed out
+Aug 16 13:42:58 srv1622697 python[14392]: 2026-08-16 13:42:58,344 | ERROR | Poll error: The read operation timed out
+Aug 16 18:22:27 srv1622697 python[14392]: 2026-08-16 18:22:27,910 | ERROR | Poll error: The read operation timed out
+Aug 16 21:05:52 srv1622697 python[14392]: 2026-08-16 21:05:52,233 | ERROR | Poll error: The read operation timed out
+Aug 17 01:12:23 srv1622697 python[14392]: 2026-08-17 01:12:23,103 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 17 01:13:33 srv1622697 python[14392]: 2026-08-17 01:13:33,269 | ERROR | Poll error: The read operation timed out
+Aug 17 02:08:27 srv1622697 python[14392]: 2026-08-17 02:08:27,761 | ERROR | Poll error: <urlopen error _ssl.c:999: The handshake operation timed out>
+Aug 17 02:52:53 srv1622697 python[14392]: 2026-08-17 02:52:53,217 | ERROR | Poll error: The read operation timed out
+Aug 17 05:35:20 srv1622697 python[14392]: 2026-08-17 05:35:20,184 | ERROR | Poll error: The read operation timed out
+Aug 17 07:41:42 srv1622697 python[14392]: 2026-08-17 07:41:42,900 | ERROR | Poll error: The read operation timed out
+Aug 17 10:16:44 srv1622697 python[14392]: 2026-08-17 10:16:44,658 | ERROR | Poll error: The read operation timed out
+Aug 17 14:10:58 srv1622697 python[14392]: 2026-08-17 14:10:58,703 | ERROR | Poll error: The read operation timed out
+Aug 17 18:27:46 srv1622697 python[14392]: 2026-08-17 18:27:46,694 | ERROR | Poll error: The read operation timed out
+Aug 17 21:42:21 srv1622697 python[14392]: 2026-08-17 21:42:21,007 | ERROR | Poll error: The read operation timed out
+Aug 18 00:03:50 srv1622697 python[14392]: 2026-08-18 00:03:50,989 | ERROR | Poll error: The read operation timed out
+Aug 18 01:11:11 srv1622697 python[14392]: 2026-08-18 01:11:11,787 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 01:46:26 srv1622697 python[14392]: 2026-08-18 01:46:26,347 | ERROR | Poll error: The read operation timed out
+Aug 18 04:43:32 srv1622697 python[14392]: 2026-08-18 04:43:32,281 | ERROR | Poll error: The read operation timed out
+Aug 18 13:51:38 srv1622697 python[14392]: 2026-08-18 13:51:38,289 | ERROR | Poll error: The read operation timed out
+Aug 18 19:30:25 srv1622697 python[14392]: 2026-08-18 19:30:25,030 | ERROR | Poll error: The read operation timed out
+Aug 18 19:44:11 srv1622697 python[14392]: 2026-08-18 19:44:11,242 | ERROR | Poll error: The read operation timed out
+Aug 18 19:45:36 srv1622697 python[14392]: 2026-08-18 19:45:36,672 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:47:02 srv1622697 python[14392]: 2026-08-18 19:47:02,281 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:47:28 srv1622697 python[14392]: 2026-08-18 19:47:28,925 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:48:54 srv1622697 python[14392]: 2026-08-18 19:48:54,524 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:49:20 srv1622697 python[14392]: 2026-08-18 19:49:20,073 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:50:45 srv1622697 python[14392]: 2026-08-18 19:50:45,618 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:52:11 srv1622697 python[14392]: 2026-08-18 19:52:11,168 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:52:36 srv1622697 python[14392]: 2026-08-18 19:52:36,721 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:53:02 srv1622697 python[14392]: 2026-08-18 19:53:02,279 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:54:12 srv1622697 python[14392]: 2026-08-18 19:54:12,425 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:54:22 srv1622697 python[14392]: 2026-08-18 19:54:22,632 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:54:32 srv1622697 python[14392]: 2026-08-18 19:54:32,789 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:54:42 srv1622697 python[14392]: 2026-08-18 19:54:42,986 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:54:53 srv1622697 python[14392]: 2026-08-18 19:54:53,150 | ERROR | Poll error: HTTP Error 502: Bad Gateway
+Aug 18 19:57:03 srv1622697 python[14392]: 2026-08-18 19:57:03,306 | ERROR | Poll error: The read operation timed out
+Aug 18 19:59:13 srv1622697 python[14392]: 2026-08-18 19:59:13,419 | ERROR | Poll error: The read operation timed out
+Aug 18 20:01:23 srv1622697 python[14392]: 2026-08-18 20:01:23,579 | ERROR | Poll error: The read operation timed out
+Aug 18 20:03:33 srv1622697 python[14392]: 2026-08-18 20:03:33,757 | ERROR | Poll error: The read operation timed out
+Aug 18 20:04:43 srv1622697 python[14392]: 2026-08-18 20:04:43,964 | ERROR | Poll error: The read operation timed out
+Aug 18 20:05:55 srv1622697 python[14392]: 2026-08-18 20:05:55,160 | ERROR | Poll error: The read operation timed out
+Aug 18 20:07:07 srv1622697 python[14392]: 2026-08-18 20:07:07,479 | ERROR | Poll error: The read operation timed out
+Aug 18 20:09:17 srv1622697 python[14392]: 2026-08-18 20:09:17,608 | ERROR | Poll error: The read operation timed out
+Aug 18 20:11:27 srv1622697 python[14392]: 2026-08-18 20:11:27,736 | ERROR | Poll error: The read operation timed out
+Aug 18 20:12:37 srv1622697 python[14392]: 2026-08-18 20:12:37,946 | ERROR | Poll error: The read operation timed out
+Aug 18 20:13:48 srv1622697 python[14392]: 2026-08-18 20:13:48,128 | ERROR | Poll error: The read operation timed out
+Aug 18 20:15:58 srv1622697 python[14392]: 2026-08-18 20:15:58,288 | ERROR | Poll error: The read operation timed out
+Aug 18 20:18:08 srv1622697 python[14392]: 2026-08-18 20:18:08,473 | ERROR | Poll error: The read operation timed out
+Aug 18 20:20:18 srv1622697 python[14392]: 2026-08-18 20:20:18,651 | ERROR | Poll error: The read operation timed out
+Aug 18 20:22:28 srv1622697 python[14392]: 2026-08-18 20:22:28,787 | ERROR | Poll error: The read operation timed out
+Aug 18 20:23:40 srv1622697 python[14392]: 2026-08-18 20:23:40,000 | ERROR | Poll error: The read operation timed out
+Aug 18 20:24:50 srv1622697 python[14392]: 2026-08-18 20:24:50,175 | ERROR | Poll error: The read operation timed out
+Aug 18 20:26:00 srv1622697 python[14392]: 2026-08-18 20:26:00,351 | ERROR | Poll error: The read operation timed out
+Aug 18 20:27:10 srv1622697 python[14392]: 2026-08-18 20:27:10,560 | ERROR | Poll error: The read operation timed out
+Aug 18 20:29:20 srv1622697 python[14392]: 2026-08-18 20:29:20,711 | ERROR | Poll error: The read operation timed out
+Aug 18 20:30:30 srv1622697 python[14392]: 2026-08-18 20:30:30,851 | ERROR | Poll error: The read operation timed out
+Aug 18 20:32:40 srv1622697 python[14392]: 2026-08-18 20:32:40,969 | ERROR | Poll error: The read operation timed out
+Aug 18 20:33:53 srv1622697 python[14392]: 2026-08-18 20:33:53,299 | ERROR | Poll error: The read operation timed out
+Aug 18 20:36:03 srv1622697 python[14392]: 2026-08-18 20:36:03,446 | ERROR | Poll error: The read operation timed out
+Aug 18 20:37:17 srv1622697 python[14392]: 2026-08-18 20:37:17,809 | ERROR | Poll error: The read operation timed out
+Aug 18 20:38:29 srv1622697 python[14392]: 2026-08-18 20:38:29,027 | ERROR | Poll error: The read operation timed out
+Aug 18 20:39:39 srv1622697 python[14392]: 2026-08-18 20:39:39,216 | ERROR | Poll error: The read operation timed out
+Aug 18 20:41:49 srv1622697 python[14392]: 2026-08-18 20:41:49,347 | ERROR | Poll error: The read operation timed out
+Aug 18 20:42:59 srv1622697 python[14392]: 2026-08-18 20:42:59,512 | ERROR | Poll error: The read operation timed out
+Aug 18 22:53:55 srv1622697 python[14392]: 2026-08-18 22:53:55,106 | ERROR | Poll error: The read operation timed out
+Aug 19 05:24:53 srv1622697 python[14392]: 2026-08-19 05:24:53,537 | ERROR | Poll error: HTTP Error 409: Conflict
+Aug 19 05:27:48 srv1622697 python[14392]: 2026-08-19 05:27:48,595 | ERROR | Poll error: HTTP Error 409: Conflict
+Aug 19 05:47:38 srv1622697 python[14392]: 2026-08-19 05:47:38,238 | ERROR | Poll error: The read operation timed out
+Aug 19 07:36:21 srv1622697 python[2514283]: 2026-08-19 07:36:21,380 | INFO | MSF Listener started. Offset: 892536603
+Aug 19 11:24:44 srv1622697 python[2514283]: 2026-08-19 11:24:43,994 | ERROR | Poll error: The read operation timed out
+Aug 19 14:37:33 srv1622697 python[2514283]: 2026-08-19 14:37:33,430 | ERROR | Poll error: The read operation timed out
+Aug 19 18:29:31 srv1622697 python[2514283]: 2026-08-19 18:29:31,652 | ERROR | Poll error: The read operation timed out
+Aug 19 18:56:30 srv1622697 python[2514283]: 2026-08-19 18:56:30,964 | ERROR | Poll error: The read operation timed out
+Aug 20 00:46:56 srv1622697 python[2514283]: 2026-08-20 00:46:56,852 | ERROR | Poll error: The read operation timed out
+Aug 20 05:18:53 srv1622697 python[2514283]: 2026-08-20 05:18:53,856 | ERROR | Poll error: The read operation timed out
+Aug 20 12:31:24 srv1622697 python[2514283]: 2026-08-20 12:31:24,277 | ERROR | Poll error: <urlopen error [Errno 104] Connection reset by peer>
+Aug 20 23:39:56 srv1622697 python[2514283]: 2026-08-20 23:39:56,903 | ERROR | Poll error: The read operation timed out
+Aug 21 00:02:16 srv1622697 python[2514283]: 2026-08-21 00:02:16,827 | ERROR | Poll error: The read operation timed out
+Aug 21 00:39:25 srv1622697 python[2514283]: 2026-08-21 00:39:25,558 | ERROR | Poll error: The read operation timed out
+Aug 21 10:11:16 srv1622697 python[2514283]: 2026-08-21 10:11:16,167 | ERROR | Poll error: The read operation timed out
+Aug 21 12:12:05 srv1622697 python[2514283]: 2026-08-21 12:12:05,025 | ERROR | Poll error: The read operation timed out
+
+=============== 4. JOURNAL rab9-crypto-hermes (FULL) ===================
+Hint: You are currently not seeing messages from other users and the system.
+      Users in groups 'adm', 'systemd-journal' can see all messages.
+      Pass -q to turn off this notice.
+Aug 14 23:15:24 srv1622697 python[14391]: 2026-08-14 23:15:24,254 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 15 01:03:04 srv1622697 python[14391]: 2026-08-15 01:03:04,617 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 15 01:03:04 srv1622697 python[14391]: 2026-08-15 01:03:04,774 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 15 01:03:04 srv1622697 python[14391]: 2026-08-15 01:03:04,959 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 15 01:03:12 srv1622697 python[14391]: 2026-08-15 01:03:12,105 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 15 01:03:23 srv1622697 python[14391]: 2026-08-15 01:03:23,002 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 15 23:15:47 srv1622697 python[14391]: 2026-08-15 23:15:47,536 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 15 23:30:38 srv1622697 python[14391]: 2026-08-15 23:30:38,718 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 16 01:11:18 srv1622697 python[14391]: 2026-08-16 01:11:18,238 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 16 01:11:18 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 16 01:11:18 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 16 01:11:18 srv1622697 python[14391]:     await do_action()
+Aug 16 01:11:18 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 16 01:11:18 srv1622697 python[14391]:     action_cb_task.result()
+Aug 16 01:11:18 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 16 01:11:18 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 16 01:11:18 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:18 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 16 01:11:18 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 16 01:11:18 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:18 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 16 01:11:18 srv1622697 python[14391]:     await self._post(
+Aug 16 01:11:18 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 16 01:11:18 srv1622697 python[14391]:     return await self._do_post(
+Aug 16 01:11:18 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:18 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 16 01:11:18 srv1622697 python[14391]:     return await super()._do_post(
+Aug 16 01:11:18 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:18 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 16 01:11:18 srv1622697 python[14391]:     result = await request.post(
+Aug 16 01:11:18 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:18 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 16 01:11:18 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 16 01:11:18 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:18 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 16 01:11:18 srv1622697 python[14391]:     raise exception
+Aug 16 01:11:18 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 16 01:11:19 srv1622697 python[14391]: 2026-08-16 01:11:19,269 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 16 01:11:19 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 16 01:11:19 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 16 01:11:19 srv1622697 python[14391]:     await do_action()
+Aug 16 01:11:19 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 16 01:11:19 srv1622697 python[14391]:     action_cb_task.result()
+Aug 16 01:11:19 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 16 01:11:19 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 16 01:11:19 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:19 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 16 01:11:19 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 16 01:11:19 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:19 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 16 01:11:19 srv1622697 python[14391]:     await self._post(
+Aug 16 01:11:19 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 16 01:11:19 srv1622697 python[14391]:     return await self._do_post(
+Aug 16 01:11:19 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:19 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 16 01:11:19 srv1622697 python[14391]:     return await super()._do_post(
+Aug 16 01:11:19 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:19 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 16 01:11:19 srv1622697 python[14391]:     result = await request.post(
+Aug 16 01:11:19 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:19 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 16 01:11:19 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 16 01:11:19 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 16 01:11:19 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 16 01:11:19 srv1622697 python[14391]:     raise exception
+Aug 16 01:11:19 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 16 23:15:41 srv1622697 python[14391]: 2026-08-16 23:15:41,440 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 16 23:30:31 srv1622697 python[14391]: 2026-08-16 23:30:31,769 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 17 01:10:56 srv1622697 python[14391]: 2026-08-17 01:10:56,370 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 17 01:10:56 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 17 01:10:56 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 17 01:10:56 srv1622697 python[14391]:     await do_action()
+Aug 17 01:10:56 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 17 01:10:56 srv1622697 python[14391]:     action_cb_task.result()
+Aug 17 01:10:56 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 17 01:10:56 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 17 01:10:56 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:56 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 17 01:10:56 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 17 01:10:56 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:56 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 17 01:10:56 srv1622697 python[14391]:     await self._post(
+Aug 17 01:10:56 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 17 01:10:56 srv1622697 python[14391]:     return await self._do_post(
+Aug 17 01:10:56 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:56 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 17 01:10:56 srv1622697 python[14391]:     return await super()._do_post(
+Aug 17 01:10:56 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:56 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 17 01:10:56 srv1622697 python[14391]:     result = await request.post(
+Aug 17 01:10:56 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:56 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 17 01:10:56 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 17 01:10:56 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:56 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 17 01:10:56 srv1622697 python[14391]:     raise exception
+Aug 17 01:10:56 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 17 01:10:57 srv1622697 python[14391]: 2026-08-17 01:10:57,443 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 17 01:10:57 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 17 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 17 01:10:57 srv1622697 python[14391]:     await do_action()
+Aug 17 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 17 01:10:57 srv1622697 python[14391]:     action_cb_task.result()
+Aug 17 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 17 01:10:57 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 17 01:10:57 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 17 01:10:57 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 17 01:10:57 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 17 01:10:57 srv1622697 python[14391]:     await self._post(
+Aug 17 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 17 01:10:57 srv1622697 python[14391]:     return await self._do_post(
+Aug 17 01:10:57 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 17 01:10:57 srv1622697 python[14391]:     return await super()._do_post(
+Aug 17 01:10:57 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 17 01:10:57 srv1622697 python[14391]:     result = await request.post(
+Aug 17 01:10:57 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 17 01:10:57 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 17 01:10:57 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 17 01:10:57 srv1622697 python[14391]:     raise exception
+Aug 17 01:10:57 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 17 01:10:59 srv1622697 python[14391]: 2026-08-17 01:10:59,022 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 17 01:10:59 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 17 01:10:59 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 17 01:10:59 srv1622697 python[14391]:     await do_action()
+Aug 17 01:10:59 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 17 01:10:59 srv1622697 python[14391]:     action_cb_task.result()
+Aug 17 01:10:59 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 17 01:10:59 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 17 01:10:59 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:59 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 17 01:10:59 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 17 01:10:59 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:59 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 17 01:10:59 srv1622697 python[14391]:     await self._post(
+Aug 17 01:10:59 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 17 01:10:59 srv1622697 python[14391]:     return await self._do_post(
+Aug 17 01:10:59 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:59 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 17 01:10:59 srv1622697 python[14391]:     return await super()._do_post(
+Aug 17 01:10:59 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:59 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 17 01:10:59 srv1622697 python[14391]:     result = await request.post(
+Aug 17 01:10:59 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:59 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 17 01:10:59 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 17 01:10:59 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:10:59 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 17 01:10:59 srv1622697 python[14391]:     raise exception
+Aug 17 01:10:59 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 17 01:11:01 srv1622697 python[14391]: 2026-08-17 01:11:01,345 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 17 01:11:01 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 17 01:11:01 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 17 01:11:01 srv1622697 python[14391]:     await do_action()
+Aug 17 01:11:01 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 17 01:11:01 srv1622697 python[14391]:     action_cb_task.result()
+Aug 17 01:11:01 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 17 01:11:01 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 17 01:11:01 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:01 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 17 01:11:01 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 17 01:11:01 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:01 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 17 01:11:01 srv1622697 python[14391]:     await self._post(
+Aug 17 01:11:01 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 17 01:11:01 srv1622697 python[14391]:     return await self._do_post(
+Aug 17 01:11:01 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:01 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 17 01:11:01 srv1622697 python[14391]:     return await super()._do_post(
+Aug 17 01:11:01 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:01 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 17 01:11:01 srv1622697 python[14391]:     result = await request.post(
+Aug 17 01:11:01 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:01 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 17 01:11:01 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 17 01:11:01 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:01 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 17 01:11:01 srv1622697 python[14391]:     raise exception
+Aug 17 01:11:01 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 17 01:11:05 srv1622697 python[14391]: 2026-08-17 01:11:05,084 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 17 01:11:05 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 17 01:11:05 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 17 01:11:05 srv1622697 python[14391]:     await do_action()
+Aug 17 01:11:05 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 17 01:11:05 srv1622697 python[14391]:     action_cb_task.result()
+Aug 17 01:11:05 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 17 01:11:05 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 17 01:11:05 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:05 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 17 01:11:05 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 17 01:11:05 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:05 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 17 01:11:05 srv1622697 python[14391]:     await self._post(
+Aug 17 01:11:05 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 17 01:11:05 srv1622697 python[14391]:     return await self._do_post(
+Aug 17 01:11:05 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:05 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 17 01:11:05 srv1622697 python[14391]:     return await super()._do_post(
+Aug 17 01:11:05 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:05 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 17 01:11:05 srv1622697 python[14391]:     result = await request.post(
+Aug 17 01:11:05 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:05 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 17 01:11:05 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 17 01:11:05 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 17 01:11:05 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 17 01:11:05 srv1622697 python[14391]:     raise exception
+Aug 17 01:11:05 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 17 23:15:55 srv1622697 python[14391]: 2026-08-17 23:15:55,981 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 17 23:30:41 srv1622697 python[14391]: 2026-08-17 23:30:41,901 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 18 23:16:07 srv1622697 python[14391]: 2026-08-18 23:16:07,389 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 18 23:30:58 srv1622697 python[14391]: 2026-08-18 23:30:58,986 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 19 23:15:45 srv1622697 python[14391]: 2026-08-19 23:15:45,931 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 19 23:30:24 srv1622697 python[14391]: 2026-08-19 23:30:24,747 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 20 01:11:02 srv1622697 python[14391]: 2026-08-20 01:11:02,444 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 20 01:11:02 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 20 01:11:02 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 20 01:11:02 srv1622697 python[14391]:     await do_action()
+Aug 20 01:11:02 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 20 01:11:02 srv1622697 python[14391]:     action_cb_task.result()
+Aug 20 01:11:02 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 20 01:11:02 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 20 01:11:02 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:02 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 20 01:11:02 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 20 01:11:02 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:02 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 20 01:11:02 srv1622697 python[14391]:     await self._post(
+Aug 20 01:11:02 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 20 01:11:02 srv1622697 python[14391]:     return await self._do_post(
+Aug 20 01:11:02 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:02 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 20 01:11:02 srv1622697 python[14391]:     return await super()._do_post(
+Aug 20 01:11:02 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:02 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 20 01:11:02 srv1622697 python[14391]:     result = await request.post(
+Aug 20 01:11:02 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:02 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 20 01:11:02 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 20 01:11:02 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:02 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 20 01:11:02 srv1622697 python[14391]:     raise exception
+Aug 20 01:11:02 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 20 01:11:11 srv1622697 python[14391]: 2026-08-20 01:11:11,039 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 20 01:11:11 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 20 01:11:11 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 20 01:11:11 srv1622697 python[14391]:     await do_action()
+Aug 20 01:11:11 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 20 01:11:11 srv1622697 python[14391]:     action_cb_task.result()
+Aug 20 01:11:11 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 20 01:11:11 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 20 01:11:11 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:11 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 20 01:11:11 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 20 01:11:11 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:11 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 20 01:11:11 srv1622697 python[14391]:     await self._post(
+Aug 20 01:11:11 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 20 01:11:11 srv1622697 python[14391]:     return await self._do_post(
+Aug 20 01:11:11 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:11 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 20 01:11:11 srv1622697 python[14391]:     return await super()._do_post(
+Aug 20 01:11:11 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:11 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 20 01:11:11 srv1622697 python[14391]:     result = await request.post(
+Aug 20 01:11:11 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:11 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 20 01:11:11 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 20 01:11:11 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 20 01:11:11 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 20 01:11:11 srv1622697 python[14391]:     raise exception
+Aug 20 01:11:11 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 20 23:15:56 srv1622697 python[14391]: 2026-08-20 23:15:56,891 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 20 23:30:43 srv1622697 python[14391]: 2026-08-20 23:30:43,240 | INFO | rab9_crypto_intel_bot | MSF HTTP: "GET /health HTTP/1.1" 200 -
+Aug 21 01:10:52 srv1622697 python[14391]: 2026-08-21 01:10:52,564 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 21 01:10:52 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 21 01:10:52 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 21 01:10:52 srv1622697 python[14391]:     await do_action()
+Aug 21 01:10:52 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 21 01:10:52 srv1622697 python[14391]:     action_cb_task.result()
+Aug 21 01:10:52 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 21 01:10:52 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 21 01:10:52 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:52 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 21 01:10:52 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 21 01:10:52 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:52 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 21 01:10:52 srv1622697 python[14391]:     await self._post(
+Aug 21 01:10:52 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 21 01:10:52 srv1622697 python[14391]:     return await self._do_post(
+Aug 21 01:10:52 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:52 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 21 01:10:52 srv1622697 python[14391]:     return await super()._do_post(
+Aug 21 01:10:52 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:52 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 21 01:10:52 srv1622697 python[14391]:     result = await request.post(
+Aug 21 01:10:52 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:52 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 21 01:10:52 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 21 01:10:52 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:52 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 21 01:10:52 srv1622697 python[14391]:     raise exception
+Aug 21 01:10:52 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 21 01:10:53 srv1622697 python[14391]: 2026-08-21 01:10:53,591 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 21 01:10:53 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 21 01:10:53 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 21 01:10:53 srv1622697 python[14391]:     await do_action()
+Aug 21 01:10:53 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 21 01:10:53 srv1622697 python[14391]:     action_cb_task.result()
+Aug 21 01:10:53 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 21 01:10:53 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 21 01:10:53 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:53 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 21 01:10:53 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 21 01:10:53 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:53 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 21 01:10:53 srv1622697 python[14391]:     await self._post(
+Aug 21 01:10:53 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 21 01:10:53 srv1622697 python[14391]:     return await self._do_post(
+Aug 21 01:10:53 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:53 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 21 01:10:53 srv1622697 python[14391]:     return await super()._do_post(
+Aug 21 01:10:53 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:53 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 21 01:10:53 srv1622697 python[14391]:     result = await request.post(
+Aug 21 01:10:53 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:53 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 21 01:10:53 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 21 01:10:53 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:53 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 21 01:10:53 srv1622697 python[14391]:     raise exception
+Aug 21 01:10:53 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 21 01:10:55 srv1622697 python[14391]: 2026-08-21 01:10:55,130 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 21 01:10:55 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 21 01:10:55 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 21 01:10:55 srv1622697 python[14391]:     await do_action()
+Aug 21 01:10:55 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 21 01:10:55 srv1622697 python[14391]:     action_cb_task.result()
+Aug 21 01:10:55 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 21 01:10:55 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 21 01:10:55 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:55 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 21 01:10:55 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 21 01:10:55 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:55 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 21 01:10:55 srv1622697 python[14391]:     await self._post(
+Aug 21 01:10:55 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 21 01:10:55 srv1622697 python[14391]:     return await self._do_post(
+Aug 21 01:10:55 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:55 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 21 01:10:55 srv1622697 python[14391]:     return await super()._do_post(
+Aug 21 01:10:55 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:55 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 21 01:10:55 srv1622697 python[14391]:     result = await request.post(
+Aug 21 01:10:55 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:55 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 21 01:10:55 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 21 01:10:55 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:55 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 21 01:10:55 srv1622697 python[14391]:     raise exception
+Aug 21 01:10:55 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+Aug 21 01:10:57 srv1622697 python[14391]: 2026-08-21 01:10:57,417 | ERROR | rab9_crypto_intel_bot | Telegram handler error
+Aug 21 01:10:57 srv1622697 python[14391]: Traceback (most recent call last):
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+Aug 21 01:10:57 srv1622697 python[14391]:     await do_action()
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+Aug 21 01:10:57 srv1622697 python[14391]:     action_cb_task.result()
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+Aug 21 01:10:57 srv1622697 python[14391]:     updates = await self.bot.get_updates(
+Aug 21 01:10:57 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 680, in get_updates
+Aug 21 01:10:57 srv1622697 python[14391]:     updates = await super().get_updates(
+Aug 21 01:10:57 srv1622697 python[14391]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 4767, in get_updates
+Aug 21 01:10:57 srv1622697 python[14391]:     await self._post(
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 712, in _post
+Aug 21 01:10:57 srv1622697 python[14391]:     return await self._do_post(
+Aug 21 01:10:57 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Aug 21 01:10:57 srv1622697 python[14391]:     return await super()._do_post(
+Aug 21 01:10:57 srv1622697 python[14391]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/_bot.py", line 741, in _do_post
+Aug 21 01:10:57 srv1622697 python[14391]:     result = await request.post(
+Aug 21 01:10:57 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 198, in post
+Aug 21 01:10:57 srv1622697 python[14391]:     result = await self._request_wrapper(
+Aug 21 01:10:57 srv1622697 python[14391]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 21 01:10:57 srv1622697 python[14391]:   File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Aug 21 01:10:57 srv1622697 python[14391]:     raise exception
+Aug 21 01:10:57 srv1622697 python[14391]: telegram.error.NetworkError: Bad Gateway
+
+========================= 5. FILE rab9.log =============================
+2026-06-30 16:09:25,317 | INFO | rab9_crypto_intel_bot | RAB9 Crypto Intel Bot started
+Traceback (most recent call last):
+  File "/home/hermes-workspace/rab9/rab9_bot.py", line 46, in <module>
+    main()
+  File "/home/hermes-workspace/rab9/rab9_bot.py", line 42, in main
+    app.run_polling(allowed_updates=["message", "callback_query"])
+  File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_application.py", line 839, in run_polling
+    return self.__run(
+           ^^^^^^^^^^^
+  File "/home/hermes-workspace/rab9/venv/lib/python3.11/site-packages/telegram/ext/_application.py", line 1056, in __run
+    loop.run_until_complete(self.post_init(self))
+  File "/home/hermes-workspace/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/hermes-workspace/rab9/rab9_bot.py", line 24, in post_init
+    start_msf_http_server(application, loop)
+  File "/home/hermes-workspace/rab9/msf_http.py", line 152, in start_msf_http_server
+    server = ThreadingHTTPServer((RAB9_HTTP_HOST, RAB9_HTTP_PORT), MsfSignalHandler)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hermes-workspace/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/socketserver.py", line 456, in __init__
+    self.server_bind()
+  File "/home/hermes-workspace/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/http/server.py", line 140, in server_bind
+    socketserver.TCPServer.server_bind(self)
+  File "/home/hermes-workspace/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/socketserver.py", line 472, in server_bind
+    self.socket.bind(self.server_address)
+OSError: [Errno 98] Address already in use
+
+==================== 6. ПРОЦЕССЫ rab9/msf =============================
+hermes-+   14391  0.0  0.2 304400 40736 ?        Ssl  Aug08   7:21 /home/hermes-workspace/rab9/venv/bin/python /home/hermes-workspace/rab9/rab9_bot.py
+hermes-+ 2514283  0.0  0.1  36356 22144 ?        Ss   Aug19   0:14 /home/hermes-workspace/rab9/venv/bin/python /home/hermes-workspace/rab9/msf_listener.py
+
+======================================================================
+ КОНЕЦ ДАМПА
+======================================================================
