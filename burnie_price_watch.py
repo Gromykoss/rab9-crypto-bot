@@ -64,7 +64,7 @@ def msk_now():
 
 
 def fetch_price():
-    """Текущая цена BURNIE через DexScreener (бесплатно). {ok, price, mc, vol, chg}."""
+    """Текущая цена BURNIE через DexScreener (бесплатно). {ok, price, mc, vol, chg, buy_ratio}."""
     out = {"ok": False}
     try:
         url = "https://api.dexscreener.com/latest/dex/tokens/%s" % BURNIE_MINT
@@ -82,12 +82,25 @@ def fetch_price():
         if not best:
             return out
         price = best.get("priceUsd")
+        # buy/sell ratio 24h (manipulation research §3/§4): buy_ratio ≥1.3 → подтверждение
+        # покупками; <0.5 → dump. Из DexScreener txns.h24, бесплатно.
+        buy_ratio = None
+        try:
+            txns_h24 = (best.get("txns") or {}).get("h24") or {}
+            buy_24h = txns_h24.get("buys")
+            sell_24h = txns_h24.get("sells")
+            if buy_24h is not None and sell_24h is not None:
+                b, s = int(buy_24h), int(sell_24h)
+                buy_ratio = round(b / s, 2) if s > 0 else None
+        except (TypeError, ValueError):
+            buy_ratio = None
         out.update({
             "ok": True,
             "price": float(price) if price else None,
             "mc": best.get("marketCap"),
             "vol": (best.get("volume") or {}).get("h24"),
             "chg": (best.get("priceChange") or {}).get("h24"),
+            "buy_ratio": buy_ratio,
         })
     except Exception:
         pass
@@ -124,6 +137,23 @@ def _fmt_price(v):
         return "${:.6f}".format(float(v))
     except (TypeError, ValueError):
         return "N/A"
+
+
+def _fmt_buy_ratio(v):
+    """Buy/Sell 24h с расшифровкой (manipulation research §4: ≥1.3 подтверждение, <0.5 dump)."""
+    if v is None:
+        return "нет данных"
+    try:
+        r = float(v)
+    except (TypeError, ValueError):
+        return "нет данных"
+    if r >= 1.3:
+        tag = "покупки доминируют"
+    elif r < 0.5:
+        tag = "продажи доминируют ⚠️"
+    else:
+        tag = "смешанно"
+    return "%.2f (%s)" % (r, tag)
 
 
 def run_full_tracker():
@@ -177,6 +207,7 @@ def main():
                 "🚨 BURNIE — аномалия цены\n"
                 "💵 Цена: %s (было %s, %+.1f%% за ~10 мин)\n"
                 "💰 Капитализация: %s | Объём 24ч: %s | За 24ч: %+.1f%%\n"
+                "📊 Buy/Sell 24ч: %s\n"
                 "⏱ %s МСК\n"
                 "🔍 Проверю удержание через ~10 мин — если подтвердится, пришлю полный отчёт."
             ) % (
@@ -186,6 +217,7 @@ def main():
                 _fmt_usd(dex.get("mc")),
                 _fmt_usd(dex.get("vol")),
                 float(dex.get("chg") or 0),
+                _fmt_buy_ratio(dex.get("buy_ratio")),
                 now.strftime("%d.%m %H:%M"),
             )
             send_tg(tok, grp, msg)

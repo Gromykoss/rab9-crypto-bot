@@ -66,6 +66,7 @@ def search_x(query: str) -> dict:
     total_rt = 0
     spam_count = 0
     kabal_warnings = []
+    large_mention_count = 0
 
     SPAM_PATTERNS = [
         "voted YES for", "get listed on FOMO", "almost on moonshot",
@@ -95,6 +96,8 @@ def search_x(query: str) -> dict:
                 user = users.get(author_id, {})
                 username = user.get("username", "?")
                 followers = user.get("public_metrics", {}).get("followers_count", 0)
+                if followers >= 50000:
+                    large_mention_count += 1
                 text = t.get("text", "")[:200]
                 text_lower = text.lower()
                 if any(p.lower() in text_lower for p in SPAM_PATTERNS) or ("moonshot" in text_lower and ("vote" in text_lower or "voted" in text_lower)):
@@ -124,6 +127,14 @@ def search_x(query: str) -> dict:
         kabal_warnings.append(f"⚠️ LISTING CAMPAIGN: {spam_count} vote-spam posts detected — standard memecoin Moonshot/FOMO listing campaign. This is NORMAL for meme coins, NOT proof of fake community. Check token's OWN X account for real engagement.")
     if kb_influencers and not live_influencers:
         kabal_warnings.append("⚠️ MANIPULATION: Influencer backing is KB-HISTORICAL only — NO live posts found. Community may be manufacturing narrative.")
+
+    # KOL-swarm / paid-shill (manipulation research §5): пачка крупных аккаунтов
+    # в одном снимке без #ad/disclosure → вероятный заказной разогрев, не органика.
+    if large_mention_count >= 2:
+        kabal_warnings.append(
+            f"⚠️ KOL-SWARM: {large_mention_count} крупных аккаунтов (≥50k) упомянули в одном снимке "
+            f"без #ad/disclosure — вероятный заказной разогрев (paid shill), НЕ органика."
+        )
 
     return {
         "ok": True, "query": clean_query,
