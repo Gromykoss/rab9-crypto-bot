@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 08.09.2026 — 44-й день без MSF-сигналов
+
+- **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **44-й день без сигналов** (27.07–08.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 active (1м+ uptime, с 08.08), MSF Listener PID 2422530 active (2w3d, с 22.08), MSF HTTP :8089 200 (`ok=true`). Ошибки core за день — 0. Листенер — 6x штатных long-poll `read operation timed out` (02:42–16:11 — transient). Live DexScreener (BURNIE, пара `5tYFviFW`): price $0.001787, MC $1.73M, liq $260K, vol24 $223K, 24h **+8.13%** (умеренный разогрев), txns buy/sell 1022/1202 (ratio 0.85 — смешанно). X API жив (oauth2 whoami отвечает, не 402). GMGN read-only, trading disabled. Код за день не менялся. Вчерашний chrono-коммит 5346618 + briefings/2026-09-07.md закоммичены в 5346618; незакоммиченного кода в дереве нет.
+
 ## 05.09.2026 — 40-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **40-й день без сигналов** (27.07–05.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 active (28d uptime, с 08.08), MSF Listener PID 2422530 active (14d, с 22.08), MSF HTTP :8089 200 (`ok=true`). Ошибки core за день — 0. Листенер — 2x штатных long-poll `read operation timed out` (01:12, 20:32 — transient). Live DexScreener (BURNIE, пара `5tYFviFW`): price $0.001649, MC $1.60M, liq $249K, vol24 $114K, 24h **+2.66%** (боковик после отката), txns недоступны в снимке. X API жив (oauth2 whoami 200, не 402). GMGN read-only, trading disabled. Код бота за день не менялся; рабочее дерево держит незакоммиченные правки AGENTS.md (-44/+71 конденсация), burnie_price_watch.py (+34), burnie_sentiment_tracker.py (+125/-71), chart_analysis.py (+19), radar_x.py (+11) — от совместного rollout 05.09. Ранее за день: завершён rollout CONTRACT INDEX GATE (PROJECT_MEMORY_GRAPH.md + Gate 0.5 в AGENTS.md, коммиты d727c27, 06a6bb3). Рабочее дерево: M AGENTS.md, M CHRONOLOGY.md (staged), M burnie_price_watch.py, M burnie_sentiment_tracker.py, M chart_analysis.py, M radar_x.py, ?? briefings/, ?? лог-дампы от 21.08.
@@ -642,3 +646,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 
 - **07.09.2026** — корректировка: запись от 07.09 выше неверно атрибутирует код от 21.08 как «работу Alikhan». Фактически это работа самогo RAB9-отдела: 21.08 manipulation research (Grok) внедрён в код — buy_ratio, KOL-swarm (см. запись 21.08 и брифинги 21.08-06.09, каждый отмечал «не закоммичено»). Коммиты 86f78e4/1150742..86f78e4 — коммит этой работы, не чужой. Границ отделов не нарушение.
 - **07.09.2026 04:17** — chrono: корректировка атрибуции кода 21.08 (RAB9-отдел, не Alikhan) (`dee054f`)
+- **07.09.2026 23:15** — chrono: 2026-09-07 (`5346618`)
