@@ -22,6 +22,7 @@ NO_CI_RE = re.compile(r"<!--\s*no-ci\s*-->", re.IGNORECASE)
 # Domain implementation/spec/test/fixture files must still be present in the map.
 WHITELIST = (
     "CHRONOLOGY.md",
+    "PROJECT_MEMORY_GRAPH.md",
     "spec_drift_log.md",
     "briefings/**",
     "knowledge_graph/**",
