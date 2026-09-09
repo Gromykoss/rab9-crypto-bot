@@ -671,3 +671,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.09.2026 07:37** — GWT rab9: Checker FAIL fixes — pytest-asyncio в CI, THEN-ассерты (pattern/issues), trap-уточнение (`a90656f`)
 - **09.09.2026 07:37** — SDG: writeback a90656f (`65e1702`)
 - **09.09.2026 07:40** — GWT rab9: sys.path-бутстрап в test_structured_reflection (боевой CI 34324886428) (`e0e84fc`)
+- **09.09.2026 07:40** — SDG: writeback e0e84fc (`a1dc65d`)
