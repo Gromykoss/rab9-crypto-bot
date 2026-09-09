@@ -29,3 +29,18 @@ llm-intel.anti_rug_penalty_matrix:
   test: tests/test_llm_fallback.py::TestAntiRugPenalty
   code:
     - meme_score.py
+reflection-loop.pass_on_first_try:
+  card: openspec/specs/reflection-loop.md
+  test: tests/test_structured_reflection.py::test_pass_on_first_try
+  code:
+    - structured_reflection.py
+reflection-loop.retry_then_pass:
+  card: openspec/specs/reflection-loop.md
+  test: tests/test_structured_reflection.py::test_retry_then_pass
+  code:
+    - structured_reflection.py
+reflection-loop.fail_after_max_retries:
+  card: openspec/specs/reflection-loop.md
+  test: tests/test_structured_reflection.py::test_fail_after_max_retries
+  code:
+    - structured_reflection.py

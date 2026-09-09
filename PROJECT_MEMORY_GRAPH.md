@@ -32,6 +32,7 @@ RAB9 — Python-бот крипто-сигналов MSF: Telegram-мемы -> �
 | signal-analysis | `PROJECT.md`, `CHRONOLOGY.md` | `msf_analysis.py`, `dex.py`, `chart_analysis.py`, `onchain_check.py`, `meme_score.py` | `tests` |
 | safety-gates | `AGENTS.md` Enforced-законы | `cabal_detector.py`, `wallet_intel.py`, `honeypot_check.py`, `rugcheck_client.py`, `operators`, `msf_dedupe.py` | `tests` |
 | llm-verification | `AGENTS.md`, `PROJECT.md` | `loop_verifier.py`, `loop_stops.py`, `radar_x.py`, `radar_gh.py` | `tests` |
+| reflection-loop | `openspec/specs/reflection-loop.md` | `structured_reflection.py` | `tests/test_structured_reflection.py` |
 | delivery-alerts | `AGENTS.md` Destination lock | `alerts.py`, `alert_state.json`, `handlers.py`, `msf_http.py` | `tests` |
 | burnie-monitoring | `CHRONOLOGY.md`, `PROJECT.md` | `burnie_sentiment_tracker.py`, `burnie_price_watch.py`, `kpi_report.py` | `tests` |
 | persistence-config | `AGENTS.md`, `INDEX.md` | `data`, `data/rab9_trades.db`, `trade_db.py`, `config.py`, `.env.example`, `requirements.txt` | `tests` |
@@ -42,6 +43,7 @@ RAB9 — Python-бот крипто-сигналов MSF: Telegram-мемы -> �
 - **DexScreener / анализ токена / chart/onchain/meme-score** -> `msf_analysis.py` + `dex.py` + нужный enrichment-модуль.
 - **Cabal / wallet / honeypot / rugcheck / operators** -> `AGENTS.md` Enforced-законы + соответствующий модуль safety-gates.
 - **DeepSeek/Grok/MoA/loop verifier/X radar** -> `loop_verifier.py` + `radar_x.py` + `radar_gh.py` + `PROJECT.md`.
+- **GWT Maker/Judge reflection loop** -> `openspec/specs/reflection-loop.md` + `structured_reflection.py` + `tests/test_structured_reflection.py`.
 - **Telegram доставка / allowlist / alerts** -> `alerts.py` + `msf_http.py` + `handlers.py` + Destination lock в `AGENTS.md`.
 - **BURNIE cron / sentiment / price-watch / KPI** -> `burnie_sentiment_tracker.py` + `burnie_price_watch.py` + `kpi_report.py` + свежая `CHRONOLOGY.md`.
 - **БД / конфиг / зависимости** -> `trade_db.py` + `config.py` + `data/rab9_trades.db` + `requirements.txt` без чтения секретов из `.env`.

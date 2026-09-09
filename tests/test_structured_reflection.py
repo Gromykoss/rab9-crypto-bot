@@ -15,6 +15,7 @@ def FAIL_JUDGE():
 
 
 @pytest.mark.asyncio
+@pytest.mark.scenario("reflection-loop.pass_on_first_try")
 async def test_pass_on_first_try():
     mock_verdict = PASS_JUDGE()
 
@@ -30,6 +31,7 @@ async def test_pass_on_first_try():
 
 
 @pytest.mark.asyncio
+@pytest.mark.scenario("reflection-loop.retry_then_pass")
 async def test_retry_then_pass():
     fail_verdict = FAIL_JUDGE()
     pass_verdict = PASS_JUDGE()
@@ -45,6 +47,7 @@ async def test_retry_then_pass():
 
 
 @pytest.mark.asyncio
+@pytest.mark.scenario("reflection-loop.fail_after_max_retries")
 async def test_fail_after_max_retries():
     fail_verdict = FAIL_JUDGE()
 
