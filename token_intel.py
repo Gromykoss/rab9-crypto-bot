@@ -467,3 +467,5 @@ def build_token_intel_text(chain_id: str, token_address: str) -> str:
         f"{analysis}\n\n"
         f"URL: {best_pair.get('url', 'n/a')}"
     )
+
+# GWT: affected-probe marker (CI verification) 09.09
