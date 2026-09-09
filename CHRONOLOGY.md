@@ -656,3 +656,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.09.2026 05:37** — SDG: writeback c9c7711 (`7f9b9f1`)
 - **09.09.2026 05:41** — GWT rab9: CI deps fix — pip requests python-dotenv (боевой FAIL 34315679190) (`f14d3bf`)
 - **09.09.2026 05:41** — SDG: writeback f14d3bf (`351f1f1`)
+- **09.09.2026 05:45** — GWT rab9: affected-probe — боевой прогон контура (`9e256ee`)
