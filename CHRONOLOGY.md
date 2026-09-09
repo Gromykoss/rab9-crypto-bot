@@ -653,3 +653,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.09.2026 05:20** — SDG: writeback 7af13e4 (`b88b7f8`)
 - **09.09.2026 05:20** — SDG: writeback 7af13e4 (`e50d78f`)
 - **09.09.2026 05:37** — GWT rab9: Checker FAIL fixes — CI deps, PR paths, map msf_template, THEN narrowing (`c9c7711`)
+- **09.09.2026 05:37** — SDG: writeback c9c7711 (`7f9b9f1`)
