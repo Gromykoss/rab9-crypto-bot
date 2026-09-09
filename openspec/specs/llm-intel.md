@@ -38,11 +38,11 @@ LLM-анализ токена с graceful degradation: deepseek -> grok -> templ
 
 ### GIVEN оба LLM упали `llm-intel.template_fallback`
 - WHEN `ask_llm_with_template(...)` строит запасной ответ
-- THEN template-текст с данными kwargs или `live_fallback_text`, src=`"template"`/`"live"`, не сырой error
+- THEN template-ветка: текст из kwargs, src=`"template"`, без сырого error-префикса; live-ветка: текст = `live_fallback_text`, src=`"live"`
 
 ### GIVEN score/liq/vol/mc/rugcheck `llm-intel.template_card_no_invent`
 - WHEN `build_template_card(...)` строит карточку
-- THEN карточка содержит name/score/dexscreener.com, без выдуманных значений
+- THEN карточка содержит name, score и dexscreener.com (ассерты assertIn)
 
 ### GIVEN market-снапшоты `llm-intel.anti_rug_penalty_matrix`
 - WHEN `anti_rug_penalty(...)` считает штраф

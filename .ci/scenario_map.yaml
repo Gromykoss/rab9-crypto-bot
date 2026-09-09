@@ -18,6 +18,7 @@ llm-intel.template_fallback:
   test: tests/test_llm_fallback.py::TestAskLlmWithTemplate
   code:
     - token_intel.py
+    - msf_template.py
 llm-intel.template_card_no_invent:
   card: openspec/specs/llm-intel.md
   test: tests/test_llm_fallback.py::TestTemplateCardLiveOnly::test_build_template_no_invent

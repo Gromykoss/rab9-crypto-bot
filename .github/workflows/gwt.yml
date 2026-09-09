@@ -2,6 +2,14 @@ name: gwt
 
 on:
   pull_request:
+    paths:
+      - "tests/test_llm_fallback.py"
+      - "token_intel.py"
+      - "msf_template.py"
+      - "meme_score.py"
+      - "openspec/specs/**"
+      - ".ci/**"
+      - ".github/workflows/gwt.yml"
   push:
     branches: [main]
     paths:
