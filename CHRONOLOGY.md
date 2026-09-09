@@ -668,3 +668,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.09.2026 07:22** — SDG: writeback 4d70514 (`GWT rab9: whitelist contract index в scenario completeness`).
 - **09.09.2026 07:22** — GWT rab9: whitelist contract index в scenario completeness (`4d70514`)
 - **09.09.2026 07:22** — SDG: writeback contract index whitelist SHA (`f4bef23`)
+- **09.09.2026 07:37** — GWT rab9: Checker FAIL fixes — pytest-asyncio в CI, THEN-ассерты (pattern/issues), trap-уточнение (`a90656f`)
