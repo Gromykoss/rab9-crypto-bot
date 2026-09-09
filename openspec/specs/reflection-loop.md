@@ -14,7 +14,7 @@ Maker/Judge рефлексия сигнала: Grok builder строит `Signal
 ## Known Traps
 - `JudgeVerdict` строго 4 поля `Literal["PASS", "FAIL"]`; `issues` формируются как `key:FAIL` из `model_dump`, НЕ human-readable текст.
 - `_call_grok` без `XAI_API_KEY` -> fallback `SignalAnalysis(verdict="pass", confidence=0.8)` — НЕ ошибка.
-- `ReflectionResult.confidence` берётся из `signal_analysis.confidence` builder'а, НЕ judge.
+- `ReflectionResult.confidence` на pass берётся из `signal_analysis.confidence` builder'а (НЕ judge); fail-ветка ставит фикс `0.3`.
 - `routing_receipt`: `maker`/`reviewer`/`attempts`/`pattern`/`final`.
 
 ## Update Rule

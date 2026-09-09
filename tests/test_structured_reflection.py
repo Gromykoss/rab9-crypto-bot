@@ -28,6 +28,8 @@ async def test_pass_on_first_try():
         assert result.verdict == "pass"
         assert result.attempts == 1
         assert result.confidence == 0.9
+        assert result.issues == []
+        assert result.routing_receipt["pattern"] == "neil_xbt_structured"
 
 
 @pytest.mark.asyncio
@@ -44,6 +46,7 @@ async def test_retry_then_pass():
         result = await verify_signal({"address": "0xabc"})
         assert result.verdict == "pass"
         assert result.attempts == 2
+        assert result.issues == []
 
 
 @pytest.mark.asyncio
@@ -59,4 +62,4 @@ async def test_fail_after_max_retries():
         result = await verify_signal({"address": "0xdef"})
         assert result.verdict == "fail"
         assert result.attempts == 3  # initial + 2 retries
-        assert any("FAIL" in i for i in result.issues)
+        assert "number_accuracy:FAIL" in result.issues
