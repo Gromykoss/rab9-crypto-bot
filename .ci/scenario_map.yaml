@@ -1,0 +1,30 @@
+llm-intel.is_llm_error_matrix:
+  card: openspec/specs/llm-intel.md
+  test: tests/test_llm_fallback.py::TestIsLlmError
+  code:
+    - token_intel.py
+llm-intel.llm_order_resolution:
+  card: openspec/specs/llm-intel.md
+  test: tests/test_llm_fallback.py::TestResolveOrder
+  code:
+    - token_intel.py
+llm-intel.ask_llm_chain:
+  card: openspec/specs/llm-intel.md
+  test: tests/test_llm_fallback.py::TestAskLlmChain
+  code:
+    - token_intel.py
+llm-intel.template_fallback:
+  card: openspec/specs/llm-intel.md
+  test: tests/test_llm_fallback.py::TestAskLlmWithTemplate
+  code:
+    - token_intel.py
+llm-intel.template_card_no_invent:
+  card: openspec/specs/llm-intel.md
+  test: tests/test_llm_fallback.py::TestTemplateCardLiveOnly::test_build_template_no_invent
+  code:
+    - msf_template.py
+llm-intel.anti_rug_penalty_matrix:
+  card: openspec/specs/llm-intel.md
+  test: tests/test_llm_fallback.py::TestAntiRugPenalty
+  code:
+    - meme_score.py

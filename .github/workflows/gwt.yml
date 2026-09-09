@@ -1,0 +1,87 @@
+name: gwt
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - "tests/test_llm_fallback.py"
+      - "token_intel.py"
+      - "msf_template.py"
+      - "meme_score.py"
+      - "openspec/specs/**"
+      - ".ci/**"
+      - ".github/workflows/gwt.yml"
+
+jobs:
+  lint-cards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: lint GWT cards
+        run: python3 .ci/lint_gwt_cards.py openspec/specs --tests tests/test_llm_fallback.py
+
+  completeness:
+    needs: lint-cards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: scenario map completeness
+        run: |
+          BASE="${{ github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            BASE="$(git rev-parse HEAD~1 2>/dev/null || true)"
+          fi
+          if [ -z "$BASE" ]; then
+            echo "No base resolved - completeness cannot run"
+            exit 3
+          fi
+          python3 .ci/check_scenario_map.py --base "$BASE"
+
+  scenarios:
+    needs: completeness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - name: affected scenarios
+        run: |
+          BASE="${{ github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            BASE="$(git rev-parse HEAD~1 2>/dev/null || true)"
+          fi
+          if [ -z "$BASE" ]; then
+            AFFECTED=$(python3 .ci/run_affected.py --all)
+          else
+            CHANGED=$(git -c core.quotePath=false diff --name-only "$BASE" HEAD || true)
+            if [ -z "$CHANGED" ]; then
+              AFFECTED=$(python3 .ci/run_affected.py --all)
+            else
+              AFFECTED=$(python3 .ci/run_affected.py --changed $CHANGED)
+            fi
+          fi
+          echo "Affected: $AFFECTED"
+          if [ -z "$AFFECTED" ]; then
+            echo "No affected scenarios - nothing to run"
+            exit 0
+          fi
+          ARGS=()
+          while IFS= read -r t; do [ -n "$t" ] && ARGS+=("$t"); done <<< "$AFFECTED"
+          pytest "${ARGS[@]}" -m scenario -q --maxfail=1

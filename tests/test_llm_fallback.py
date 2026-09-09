@@ -9,6 +9,8 @@ import sys
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 # rab9 root on path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -23,23 +25,28 @@ from meme_score import anti_rug_penalty  # noqa: E402
 
 
 class TestIsLlmError(unittest.TestCase):
+    @pytest.mark.scenario("llm-intel.is_llm_error_matrix")
     def test_empty(self):
         self.assertTrue(_is_llm_error("", "grok"))
         self.assertTrue(_is_llm_error("   ", "deepseek"))
 
+    @pytest.mark.scenario("llm-intel.is_llm_error_matrix")
     def test_openrouter_key_hole(self):
         """Дыра: раньше msf_analysis принимал это за success."""
         self.assertTrue(_is_llm_error("OpenRouter API key не найден", "deepseek"))
 
+    @pytest.mark.scenario("llm-intel.is_llm_error_matrix")
     def test_grok_errors(self):
         self.assertTrue(_is_llm_error("Grok API key не найден в .env", "grok"))
         self.assertTrue(_is_llm_error("Grok API error: 429 | rate limit", "grok"))
         self.assertTrue(_is_llm_error("Grok request failed: timeout", "grok"))
 
+    @pytest.mark.scenario("llm-intel.is_llm_error_matrix")
     def test_deepseek_errors(self):
         self.assertTrue(_is_llm_error("DeepSeek API error: 500", "deepseek"))
         self.assertTrue(_is_llm_error("DeepSeek request failed: conn", "deepseek"))
 
+    @pytest.mark.scenario("llm-intel.is_llm_error_matrix")
     def test_real_analysis_ok(self):
         self.assertFalse(
             _is_llm_error(
@@ -56,24 +63,29 @@ class TestIsLlmError(unittest.TestCase):
 
 
 class TestResolveOrder(unittest.TestCase):
+    @pytest.mark.scenario("llm-intel.llm_order_resolution")
     def test_default_deepseek_first(self):
         with patch.dict(os.environ, {"RAB9_LLM": "deepseek"}, clear=False):
             self.assertEqual(_resolve_llm_order(None), ["deepseek", "grok"])
 
+    @pytest.mark.scenario("llm-intel.llm_order_resolution")
     def test_grok_primary(self):
         self.assertEqual(_resolve_llm_order("grok"), ["grok", "deepseek"])
 
+    @pytest.mark.scenario("llm-intel.llm_order_resolution")
     def test_hy3_maps_to_deepseek(self):
         self.assertEqual(_resolve_llm_order("hy3"), ["deepseek", "grok"])
 
 
 class TestAskLlmChain(unittest.TestCase):
+    @pytest.mark.scenario("llm-intel.ask_llm_chain")
     @patch("token_intel.ask_deepseek", return_value="OpenRouter API key не найден")
     @patch("token_intel.ask_grok", return_value="Grok API key не найден в .env")
     def test_both_fail_returns_empty(self, _g, _d):
         with patch.dict(os.environ, {"RAB9_LLM": "deepseek"}, clear=False):
             self.assertEqual(ask_llm("test prompt"), "")
 
+    @pytest.mark.scenario("llm-intel.ask_llm_chain")
     @patch("token_intel.ask_deepseek", return_value="OpenRouter API key не найден")
     @patch("token_intel.ask_grok", return_value="Хороший mid-cap, WATCH.")
     def test_fallback_to_grok(self, _g, _d):
@@ -81,6 +93,7 @@ class TestAskLlmChain(unittest.TestCase):
             out = ask_llm("test prompt")
             self.assertEqual(out, "Хороший mid-cap, WATCH.")
 
+    @pytest.mark.scenario("llm-intel.ask_llm_chain")
     @patch("token_intel.ask_deepseek", return_value="DeepSeek: solid setup.")
     @patch("token_intel.ask_grok", return_value="should not call if primary ok")
     def test_primary_deepseek_success(self, mock_g, _d):
@@ -91,6 +104,7 @@ class TestAskLlmChain(unittest.TestCase):
 
 
 class TestAskLlmWithTemplate(unittest.TestCase):
+    @pytest.mark.scenario("llm-intel.template_fallback")
     @patch("token_intel.ask_deepseek", return_value="DeepSeek request failed: x")
     @patch("token_intel.ask_grok", return_value="Grok request failed: y")
     def test_both_fail_uses_template(self, _g, _d):
@@ -117,6 +131,7 @@ class TestAskLlmWithTemplate(unittest.TestCase):
         self.assertFalse(text.startswith("DeepSeek"))
         self.assertFalse(text.startswith("OpenRouter"))
 
+    @pytest.mark.scenario("llm-intel.template_fallback")
     @patch("token_intel.ask_deepseek", return_value="")
     @patch("token_intel.ask_grok", return_value="")
     def test_both_fail_live_fallback_text(self, _g, _d):
@@ -130,6 +145,7 @@ class TestAskLlmWithTemplate(unittest.TestCase):
 
 
 class TestTemplateCardLiveOnly(unittest.TestCase):
+    @pytest.mark.scenario("llm-intel.template_card_no_invent")
     def test_build_template_no_invent(self):
         card = build_template_card(
             token_name="TEST",
@@ -146,11 +162,13 @@ class TestTemplateCardLiveOnly(unittest.TestCase):
 
 
 class TestAntiRugPenalty(unittest.TestCase):
+    @pytest.mark.scenario("llm-intel.anti_rug_penalty_matrix")
     def test_unavailable_skip(self):
         """Нет данных → 0 penalty, не штрафует."""
         pen, notes = anti_rug_penalty({}, {})
         self.assertEqual(pen, 0)
 
+    @pytest.mark.scenario("llm-intel.anti_rug_penalty_matrix")
     def test_low_buy_ratio_penalizes(self):
         market = {
             "txns": {"h1": {"buys": 30, "sells": 70}},  # 30% buys
@@ -161,12 +179,14 @@ class TestAntiRugPenalty(unittest.TestCase):
         self.assertGreaterEqual(pen, 3)
         self.assertTrue(any("buy_ratio" in n for n in notes))
 
+    @pytest.mark.scenario("llm-intel.anti_rug_penalty_matrix")
     def test_thin_liq_penalizes(self):
         market = {"liquidity": {"usd": 100}}  # << 5 SOL
         pen, notes = anti_rug_penalty({}, market)
         self.assertGreaterEqual(pen, 5)
         self.assertTrue(any("liq" in n for n in notes))
 
+    @pytest.mark.scenario("llm-intel.anti_rug_penalty_matrix")
     def test_established_high_mcap_no_sniper_penalty(self):
         """BURNIE-like: high mcap + age >> 6h → max_mcap не штрафует."""
         market = {
