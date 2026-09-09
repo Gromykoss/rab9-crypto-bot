@@ -658,3 +658,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.09.2026 05:41** — SDG: writeback f14d3bf (`351f1f1`)
 - **09.09.2026 05:45** — GWT rab9: affected-probe — боевой прогон контура (`9e256ee`)
 - **09.09.2026 05:45** — SDG: writeback 9e256ee (`ce9150e`)
+- **09.09.2026 06:28** — fix(tests): structured_reflection — моки под neil_xbt_structured контракт (SignalAnalysis+JudgeVerdict); прод не тронут (`4ace068`)
