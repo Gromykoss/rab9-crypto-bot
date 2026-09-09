@@ -661,3 +661,5 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.09.2026 06:28** — fix(tests): structured_reflection — моки под neil_xbt_structured контракт (SignalAnalysis+JudgeVerdict); прод не тронут (`4ace068`)
 - **09.09.2026 06:28** — SDG: writeback 4ace068 (`5612a96`)
 - **09.09.2026 07:18** — GWT rab9: добавлен домен `reflection-loop` в openspec/GWT контур: карточка `openspec/specs/reflection-loop.md`, 3 scenario-маркера в `tests/test_structured_reflection.py`, mapping в `.ci/scenario_map.yaml`, workflow paths + deps `httpx pydantic`; `PROJECT_MEMORY_GRAPH.md` обновлён для нового домена. Проверка выполняется перед коммитом.
+- **09.09.2026 07:19** — SDG: writeback 2014068 (`GWT rab9: домен reflection-loop — 3 сценария Maker/Judge`).
+- **09.09.2026 07:19** — GWT rab9: домен reflection-loop — 3 сценария Maker/Judge (`2014068`)
