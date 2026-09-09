@@ -665,3 +665,5 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.09.2026 07:19** — GWT rab9: домен reflection-loop — 3 сценария Maker/Judge (`2014068`)
 - **09.09.2026 07:20** — SDG: writeback reflection-loop GWT SHA (`e690a8f`)
 - **09.09.2026 07:21** — GWT rab9: `check_scenario_map.py` whitelist расширен `PROJECT_MEMORY_GRAPH.md`, потому что contract index обновляется по AGENTS gate и является repo-level/meta файлом, а не scenario-owned артефактом. Contract index update: not needed.
+- **09.09.2026 07:22** — SDG: writeback 4d70514 (`GWT rab9: whitelist contract index в scenario completeness`).
+- **09.09.2026 07:22** — GWT rab9: whitelist contract index в scenario completeness (`4d70514`)
