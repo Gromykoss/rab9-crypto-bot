@@ -673,3 +673,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.09.2026 07:40** — GWT rab9: sys.path-бутстрап в test_structured_reflection (боевой CI 34324886428) (`e0e84fc`)
 - **09.09.2026 07:40** — SDG: writeback e0e84fc (`a1dc65d`)
 - **09.09.2026 10:33** — CHRONOLOGY: writeback записи 09.09 (тираж GWT) (`b360c3f`)
+- **09.09.2026 10:40** — CHRONOLOGY: SHA closure записи 09.09 (финал тиража GWT) (`3ab5cee`)
