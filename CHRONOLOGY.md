@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 10.09.2026 — 46-й день без MSF-сигналов
+
+- **23:16** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **46-й день без сигналов** (27.07–10.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 active (с 08.08), MSF Listener PID 2422530 active (с 22.08), MSF HTTP :8089 200 (`ok=true`, health «healthy»). Ошибки core за день — 2x `telegram.error.Conflict: terminated by other getUpdates request` (22:45:27, 22:46:49 UTC, transient; живых дублёров бота нет — только PID 14391, self-resolved). Листенер — 9 штатных long-poll `read operation timed out` (transient). Live DexScreener (BURNIE, `CGEDT9QZ…Spump`): price $0.001695, MC $1.64M, liq $249K, vol24 $113K, 24h **+7.6%**, txns buy/sell 379/549 (ratio 0.69 — продажи доминируют; рост на продавливании — осторожно). X API жив (oauth2 search отвечает, не 402). GMGN read-only, trading disabled. Код бота за день не менялся; последний коммит c634dc5 (SDG: SHA closure c9e1d26, chrono 09.09). Рабочее дерево: M CHRONOLOGY.md (staged — эта запись).
+
 ## 09.09.2026 — 45-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **45-й день без сигналов** (27.07–09.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core active, MSF Listener active, MSF HTTP :8089 200 (`ok=true`, health «healthy»). Ошибки core за день — 0 (journal 24h). Листенер — 10 transient-записей (штатные long-poll timeouts). Live DexScreener (BURNIE, mint `CGEDT9QZ…Spump`): price $0.001583, MC $1.54M, liq $243K, vol24 $211K, 24h **−11.41%** (откат после вчерашнего +8%), txns buy/sell 809/897 (ratio 0.90 — смешанно). Baseline price-watch $0.001567 (обновлён 02:10), аномалий нет. X API жив. GMGN read-only, trading disabled. Код бота за день не менялся; за день в репо: daily infra sync 09.09 (0943307), SHA-закрытие chrono-записи 09.09 по GWT (3ab5cee, b360c3f), GWT sys.path-бутстрап в test_structured_reflection (e0e84fc/a1dc65d). Рабочее дерево: M CHRONOLOGY.md (staged — эта запись).
@@ -680,3 +684,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.09.2026 10:40** — CHRONOLOGY: SHA closure записи 09.09 (финал тиража GWT) (`3ab5cee`)
 - **09.09.2026 11:03** — sync: daily infra sync 09.09 (`0943307`)
 - **09.09.2026 23:18** — chrono: 2026-09-09 (`c9e1d26`)
+- **09.09.2026 23:19** — SDG: SHA closure c9e1d26 (`c634dc5`)
