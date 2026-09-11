@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 11.09.2026 — 47-й день без MSF-сигналов
+
+- **23:20** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **47-й день без сигналов** (27.07–11.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core MainPID 3575936 active (перезапуск 06:06:09 UTC — штатный, старый PID 14391 корректно завершился, новые PID не дублируют getUpdates; по логам за 24ч — 1x Telegram NetworkError Bad Gateway 01:10 и transient TimedOut при shutdown старого процесса, после 06:06 ошибок 0). MSF Listener PID 3575937 active (тот же рестарт 06:06 — вероятно, общая причина: VPS maintenance/upgrade; рассинхрона нет). MSF HTTP :8089 → 200. Листенер — 9 штатных long-poll timeouts (transient). Live DexScreener (BURNIE, `CGEDT9QZ…Spump`): price $0.001481, MC $1.44M, liq $237K, vol24 $241K, 24h **−12.52%** (продолжение отката с $0.0017 от 10.09), txns buy/sell 1161/971 (ratio 1.20 — покупки доминируют, но цена падает — продажа в стакан крупным объёмом). X API жив. GMGN read-only, trading disabled. Код бота за день не менялся; в репо за день коммитов нет (последний a93fb4a chrono 10.09). Рабочее дерево: M CHRONOLOGY.md (staged — эта запись).
+
 ## 10.09.2026 — 46-й день без MSF-сигналов
 
 - **23:16** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **46-й день без сигналов** (27.07–10.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 14391 active (с 08.08), MSF Listener PID 2422530 active (с 22.08), MSF HTTP :8089 200 (`ok=true`, health «healthy»). Ошибки core за день — 2x `telegram.error.Conflict: terminated by other getUpdates request` (22:45:27, 22:46:49 UTC, transient; живых дублёров бота нет — только PID 14391, self-resolved). Листенер — 9 штатных long-poll `read operation timed out` (transient). Live DexScreener (BURNIE, `CGEDT9QZ…Spump`): price $0.001695, MC $1.64M, liq $249K, vol24 $113K, 24h **+7.6%**, txns buy/sell 379/549 (ratio 0.69 — продажи доминируют; рост на продавливании — осторожно). X API жив (oauth2 search отвечает, не 402). GMGN read-only, trading disabled. Код бота за день не менялся; последний коммит c634dc5 (SDG: SHA closure c9e1d26, chrono 09.09). Рабочее дерево: M CHRONOLOGY.md (staged — эта запись).
@@ -685,3 +689,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **09.09.2026 11:03** — sync: daily infra sync 09.09 (`0943307`)
 - **09.09.2026 23:18** — chrono: 2026-09-09 (`c9e1d26`)
 - **09.09.2026 23:19** — SDG: SHA closure c9e1d26 (`c634dc5`)
+- **10.09.2026 23:16** — chrono: 2026-09-10 (`a93fb4a`)
