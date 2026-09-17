@@ -716,3 +716,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **17.09.2026 00:05** — briefings: 2026-09-16 (+10/13/14, scenario_map whitelist) (`2828bc6`)
 - **17.09.2026 00:06** — SDG: SHA closure 2828bc6 (briefings 2026-09-16) (`dd1a7fa`)
 - **17.09.2026 23:16** — chrono: день 53 без MSF-сигналов (мемы молчат, изменений за сутки нет — 0 записей до этого chrono-коммита). BURNIE по DexScreener $0.001265, 24h ≈ −2%; инфраструктура: RAB9 Core active, MSF Listener active, MSF HTTP :8089 200. Код не менялся. Contract index update: not needed.
+- **17.09.2026 23:18** — chrono: 2026-09-17 (`6a07143`)
