@@ -27,3 +27,4 @@
 | 2026-09-12T23:18 | .ci/check_scenario_map.py, spec_drift_log.md | AGENTS.md repo-level meta вне домена блокирует push CHRONOLOGY (клон PROJECT_MEMORY_GRAPH.md); whitelist дополняется, журнал фиксирует интент | scenario cards/tests |
 | 2026-09-15T23:17 | briefings/2026-09-15.md | ежедневный брифинг (данные-only, вне scenario-доменов) | код, tests | d654843 |
 | 2026-09-16T23:30 | briefings/2026-09-16.md, briefings/2026-09-10.md, briefings/2026-09-13.md, briefings/2026-09-14.md, .ci/check_scenario_map.py | ежедневные брифинги (данные-only) + докоммит whitelist из интента 09-12 | код бота, tests |
+| 2026-09-16T23:35 | spec_drift_log.md | SHA closure 2828bc6 (briefings) | |
