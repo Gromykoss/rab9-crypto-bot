@@ -23,6 +23,7 @@ NO_CI_RE = re.compile(r"<!--\s*no-ci\s*-->", re.IGNORECASE)
 WHITELIST = (
     "CHRONOLOGY.md",
     "PROJECT_MEMORY_GRAPH.md",
+    "AGENTS.md",
     "spec_drift_log.md",
     "briefings/**",
     "knowledge_graph/**",
