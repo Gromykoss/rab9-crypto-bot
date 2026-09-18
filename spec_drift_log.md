@@ -30,3 +30,4 @@
 | 2026-09-16T23:35 | spec_drift_log.md | SHA closure 2828bc6 (briefings) | |
 | 2026-09-17T23:18 | briefings/2026-09-17.md | ежедневный брифинг (данные-only; CHRONOLOGY и SDG whitelisted) | код, tests | |
 | 2026-09-17T23:20 | spec_drift_log.md | SHA closure 6a07143 (chrono+briefing) | | |
+| 2026-09-18T23:18 | briefings/2026-09-18.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов) | spec_drift_log.md, код бота, tests |  |
