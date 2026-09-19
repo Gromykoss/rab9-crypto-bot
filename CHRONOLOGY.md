@@ -720,3 +720,5 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **17.09.2026 23:18** — SDG: SHA closure 6a07143 (`3d9d45e`)
 - **18.09.2026 23:16** — burnie-tracker: день 54 без MSF-сигналов (мемы молчат, изменений за сутки нет — 0 записей до этого chrono-коммита); BURNIE по DexScreener $0.001587, 24h +10.5%, liq $259.7K (норма), vol24 $69K; инфраструктура: RAB9 Core active, MSF Listener active, MSF HTTP :8089 200. Код не менялся. Contract index update: not needed.
 - **18.09.2026 23:18** — chrono: 2026-09-18 (`a0346eb`)
+- **18.09.2026 23:19** — SDG: SHA closure a0346eb (`9ebe4d0`)
+- **19.09.2026 23:16** — burnie-tracker: день 55 без MSF-сигналов (мемы молчат, изменений за сутки нет); BURNIE по DexScreener $0.001336, 24h −9.98%, MC ~$1.30M, liq $226K (норма), vol24 $119K, buy/sell 430/451 (0.95); инфраструктура: RAB9 Core active, MSF Listener active, MSF HTTP :8089 200. Код не менялся. Contract index update: not needed.
