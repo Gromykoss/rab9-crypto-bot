@@ -724,3 +724,5 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **19.09.2026 23:16** — burnie-tracker: день 55 без MSF-сигналов (мемы молчат, изменений за сутки нет); BURNIE по DexScreener $0.001336, 24h −9.98%, MC ~$1.30M, liq $226K (норма), vol24 $119K, buy/sell 430/451 (0.95); инфраструктура: RAB9 Core active, MSF Listener active, MSF HTTP :8089 200. Код не менялся. Contract index update: not needed.
 - **19.09.2026 23:16** — chrono: 2026-09-19 (`2d0641e`)
 - **19.09.2026 23:17** — briefings: 2026-09-19 (`e4b8d69`)
+- **19.09.2026 23:18** — SDG: SHA closure e4b8d69 (`a892c11`)
+- **20.09.2026 23:20** — chrono: день 56 без MSF-сигналов (мемы молчат); BURNIE по DexScreener $0.001353, 24h −1.56%, MC ~$1.31M, liq $237.5K (норма), vol24 $63.4K, buy/sell 286/244 (1.17 — покупки слегка доминируют); инфраструктура: RAB9 Core active (PID 3575936, с 11.09 06:06), MSF Listener active (PID 3575937), MSF HTTP :8089 200 (healthy); core errors за 24ч — 0, listener — 4 transient long-poll; X API жив (whoami отвечает, не 402). Код не менялся. Contract index update: not needed.
