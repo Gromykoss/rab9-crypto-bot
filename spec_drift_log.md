@@ -36,3 +36,4 @@
 | 2026-09-19T23:18 | spec_drift_log.md | SHA closure e4b8d69 (chrono+briefing 2026-09-19) | | a892c11 |
 | 2026-09-20T23:18 | briefings/2026-09-20.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов) | spec_drift_log.md, код бота, tests |  |
 | 2026-09-20T23:19 | spec_drift_log.md | SHA closure d22dc26 (briefing 2026-09-20) | | 5c86aa8 |
+| 2026-09-21T23:16 | briefings/2026-09-21.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов) | spec_drift_log.md, код бота, tests |  |
