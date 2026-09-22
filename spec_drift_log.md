@@ -40,3 +40,4 @@
 | 2026-09-21T23:16 | briefings/2026-09-21.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов) | spec_drift_log.md, код бота, tests |  |
 | 2026-09-22T10:31 | spec_drift_log.md, CHRONOLOGY.md | restore journal: восстановление intent-строки 2026-09-21T23:16, перезаписанной на месте коммитом 19b5377 (ghost fp f2d2a852) | код бота, tests |  |
 | 2026-09-22T10:33 | spec_drift_log.md | SHA closure 84c4436 (journal restore 2026-09-21T23:16) | | 84c4436 |
+| 2026-09-22T23:15 | briefings/2026-09-22.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов) | spec_drift_log.md, код бота, tests |  |
