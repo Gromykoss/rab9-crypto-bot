@@ -235,7 +235,7 @@ Trigger (@msf_rab_bot → msf_listener.py) → Discover (DexScreener) → Delega
 3. **Preserve security** — НЕ байпасить cabal_detector, wallet_intel, loop_verifier. MSF-токены не логировать
 4. **Verification ladder** — `pytest -q` → MSF test signal → grep .env → `journalctl -u rab9 -n 10` → CHRONOLOGY.md
 5. **⛔ CHRONOLOGY АВТОМАТИЧЕСКИ** — после ЛЮБОГО фикса/инцидента сразу обнови CHRONOLOGY.md (датированная запись: причина→что сделал→как проверил→файлы). Не по напоминанию, не в конец сессии. Часть фикса.
-6. **Reproducible setup** — `pip install -r requirements.txt`, использовать `RAB9_LLM=grok|deepseek` из `.env`
+6. **Reproducible setup** — `pip install -r requirements.txt`, использовать xAI напрямую; cron-модель glm-5.3-flash (Nous Portal)
 7. **No production without approval** — сигналы в Песочницу (`-1003979753733`) только через approval gate. Не менять systemd unit
 8. **Never expose credentials** — `msf_token.txt`, `TELEGRAM_BOT_TOKEN`, Birdeye/DexScreener ключи — не коммитить
 9. **Preserve user changes** — `git status` перед работой, не перезаписывать чужие правки
