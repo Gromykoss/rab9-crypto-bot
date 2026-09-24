@@ -1,5 +1,9 @@
 # RAB9 — Хронология
 
+## 24.09.2026 — 60-й день без MSF-сигналов
+
+- **23:1x** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **60-й день без сигналов** (27.07–24.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 3575936 active (с 11.09 06:06 UTC), MSF Listener PID 3575937 active (тот же рестарт 11.09 06:06), MSF HTTP :8089 → 200 (`ok=true`, «healthy»). Ошибки core за день — 0 (journal 24h). Листенер — 6 transient-записей (все штатные long-poll `read operation timed out`, 01:12–19:59). Live DexScreener (BURNIE, пара `5tYFviFW`, solana): price $0.001625, MC $1.58M, liq $268K, vol24 $120K, 24h **+3.93%** (лёгкий отскок после отката 14.09 −9.98%), txns buy/sell 501/570 (ratio 0.88 — смешанно). X API жив (oauth2 whoami отвечает, не 402). GMGN read-only, trading disabled. Код бота за день не менялся; в репо за день: AGENTS.md audit fixes D1-D5 + D3 residual (LLM backend canon: xAI напрямую + cron glm-5.3-flash, одобрено Сергеем; коммиты eaf24b0, 173c6c7, 794ce68, b1db3f7, b11ca6b). Наблюдение: в CHRONOLOGY нет датированных idle-записей за 15–23.09 (при chrono-коммитах в эти дни) — возможно, journal-тело писалось только частично; не критично, инфраструктура по логам стабильна весь период.
+
 ## 14.09.2026 — 50-й день без MSF-сигналов
 
 - **23:15** — CHRONOLOGY agent: idle day. 0 MSF-сигналов — **50-й день без сигналов** (27.07–14.09). Мемы молчат. Инфраструктура стабильна: RAB9 Core PID 3575936 active (с 11.09 06:06 UTC), MSF Listener PID 3575937 active (тот же рестарт 11.09 06:06), MSF HTTP :8089 → 200 (`ok=true`, «healthy»). Ошибки core за день — 0 (journal grep по error/exception пуст). Листенер — 8 transient-записей (штатные long-poll timeouts). Live DexScreener (BURNIE, `CGEDT9QZ…Spump`): price $0.001336, MC $1.30M, liq $226K, vol24 $119K, 24h **−9.98%** (продолжение отката с боковика $0.00148 от 13.09), txns buy/sell 430/451 (ratio 0.95 — смешанно). X API: не проверялся отдельно в этой записи (вчера whoami отвечал, не 402). GMGN read-only, trading disabled. Код бота за день не менялся; в репо за день коммитов нет (последний c640b0f chrono 13.09). Рабочее дерево: M .ci/check_scenario_map.py, M CHRONOLOGY.md (staged — эта запись), M spec_drift_log.md, ?? briefings/2026-09-10.md, ?? briefings/2026-09-13.md (briefings — рабочие файлы крон-агента, код не менялся).
@@ -748,3 +752,5 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **24.09.2026 09:02** — AGENTS.md audit fixes D1-D5 + chrono (approved by Sergey) (`eaf24b0`)
 - **24.09.2026 09:02** — SDG: SHA closure eaf24b0 (audit fixes) (`173c6c7`)
 - **24.09.2026 09:03** — chrono: SDG closure eaf24b0 (auto-writeback) (`794ce68`)
+- **24.09.2026 09:04** — chrono: closure 794ce68 (auto-writeback) (`b1db3f7`)
+- **24.09.2026 09:16** — AGENTS.md: D3 residual — LLM backend canon: xAI напрямую + cron glm-5.3-flash (Nous Portal); аудит 24.09 approved (`b11ca6b`)
