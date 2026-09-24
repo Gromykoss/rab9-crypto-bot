@@ -747,3 +747,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **24.09.2026 09:02** — аудит формирующих файлов (одобрено Сергеем): AGENTS.md D1-D5 (диск 62%, meme_score 115pts, RAB9_LLM=grok|deepseek, LOOP_PROGRESS удалён, мёртвые skill-ссылки заменены), SOUL.md D6-D8,D10 (MCP-имена, systemd-чеклист, дедуп идентичности, границы ~/.hermes), USER.md D9 (115 баллов). Бэкапы в /tmp/*.bak-*. Проверка: diff-сверка патчей, сервисы active, :8089 healthy.
 - **24.09.2026 09:02** — AGENTS.md audit fixes D1-D5 + chrono (approved by Sergey) (`eaf24b0`)
 - **24.09.2026 09:02** — SDG: SHA closure eaf24b0 (audit fixes) (`173c6c7`)
+- **24.09.2026 09:03** — chrono: SDG closure eaf24b0 (auto-writeback) (`794ce68`)
