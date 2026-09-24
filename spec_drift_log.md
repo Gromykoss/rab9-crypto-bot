@@ -42,3 +42,4 @@
 | 2026-09-22T10:33 | spec_drift_log.md | SHA closure 84c4436 (journal restore 2026-09-21T23:16) | | 84c4436 |
 | 2026-09-22T23:15 | briefings/2026-09-22.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов) | spec_drift_log.md, код бота, tests | 05282dc |
 | 2026-09-23T23:16 | briefings/2026-09-23.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов; CHRONOLOGY.md — whitelist) | spec_drift_log.md, код бота, tests | be73f61 |
+| 2026-09-24T09:00 | AGENTS.md | audit fixes D1-D5: stale disk/meme_score/RAB9_LLM/LOOP_PROGRESS/skill refs (одобрено Сергеем) | код бота, tests |  |

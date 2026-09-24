@@ -66,7 +66,7 @@
    - `audit` → chronology + bugs
    - `default` → gates only
 
-0. **CNC-ПРАВИЛО — Codex/Grok = ИНЖЕНЕРЫ, НЕ ОТВЁРТКА (26.07.2026):** Codex и Grok Build — станки с ЧПУ. Делегируй ЦЕЛЬ, не инструкцию. ❌ «В rab9_bot.py, строка 42, замени X на Y» → ✅ «BURNIE показал памп на 40%. Разберись в rab9_bot.py и DexScreener. Пойми паттерн. Предложи фильтр.» Codex читает код, анализирует, ПОНИМАЕТ. Ты проверяешь результат. **Обязательное чтение:** `~/.hermes/docs/graph-harness-principles.md`. **MoA Auto:** `skill_view('moa-auto')`.
+0. **CNC-ПРАВИЛО — Codex/Grok = ИНЖЕНЕРЫ, НЕ ОТВЁРТКА (26.07.2026):** Codex и Grok Build — станки с ЧПУ. Делегируй ЦЕЛЬ, не инструкцию. ❌ «В rab9_bot.py, строка 42, замени X на Y» → ✅ «BURNIE показал памп на 40%. Разберись в rab9_bot.py и DexScreener. Пойми паттерн. Предложи фильтр.» Codex читает код, анализирует, ПОНИМАЕТ. Ты проверяешь результат. **Обязательное чтение:** `~/.hermes/docs/graph-harness-principles.md`.
    **⛔ НИКОГДА `delegate_task` без `acp_command`** — spawn default-сабагента (DeepSeek-клон), пустая трата токенов.
    **Правильные вызовы:** Codex = `delegate_task(acp_command='codex', goal=..., context=...)`, Grok = `delegate_task(acp_command='grok', acp_args=['agent', 'stdio'], goal=..., context=...)`.
 
@@ -82,7 +82,7 @@
 
 ## ⚖️ ENFORCED-ЗАКОНЫ (operators/ — детерминировано в коде, 15.08.2026)
 
-Слой `operators/` зашивает поведение в enum-вердикты (`ALLOW/BLOCK/HOLD/DROP/REJECT/INCONCLUSIVE`), fail-closed. Чистые функции, stdlib-only, без side-effects. Детали: скилл `agent-laws-code-scaffold`, узел `Operator Layer — Детерминирование профилей`.
+Слой `operators/` зашивает поведение в enum-вердикты (`ALLOW/BLOCK/HOLD/DROP/REJECT/INCONCLUSIVE`), fail-closed. Чистые функции, stdlib-only, без side-effects. Детали: `operators/` в репо (узел «Operator Layer — Детерминирование профилей»).
 
 | Закон | Оператор | Вердикты | Точка вшивания |
 |-------|----------|----------|----------------|
@@ -99,7 +99,7 @@
 
 ## Старт сессии
 
-1. `skill_view("hermes-self-knowledge")` — 14 паттернов харнеса
+1. Прочитай `~/rab9/CHRONOLOGY.md` — последние события
 2. Прочитай `~/hermes-vault/30_Logs/Арсенал Hermes.md`
 3. Затем этот файл
 
@@ -137,7 +137,7 @@ Primary: DeepSeek.
 | **Cabal Detector** | `cabal_detector.py` | pre-check |
 | **Wallet Intel** | `wallet_intel.py` | cross-reference KABAL (P≥80%) |
 
-- 5 enrichment модулей: radar_x, radar_gh, chart, onchain, meme_score (100pts)
+- 5 enrichment модулей: radar_x, radar_gh, chart, onchain, meme_score (115 pts, 7-pillar v3.0)
 - Verifier: loop-verifier (PASS/FLAG/FAIL), REJECT default
 - Loop engineering: trigger → process → verification → stop
 
@@ -150,7 +150,7 @@ Primary: DeepSeek.
 | **IP** | 72.60.16.105 |
 | **ОС** | Ubuntu 24.04 |
 | **RAM** | 15 GB |
-| **Диск** | 72/193 GB (37%) |
+| **Диск** | 120/193 GB (62%) |
 
 ### База данных
 | Параметр | Значение |
@@ -216,8 +216,6 @@ Trigger (@msf_rab_bot → msf_listener.py) → Discover (DexScreener) → Delega
 - stalled: FLAG дважды → REJECT
 - needs human: MC > 5M или unknown token → escalate
 
-**LOOP_PROGRESS.md:** каждая строка — время, токен, вердикт, модели. Читать при старте.
-
 **Maker ≠ Checker:** DeepSeek предлагает, Grok проверяет.
 
 # ⚠️ DO NOT SKIP: прочитай ВСЕ правила ниже перед любым действием
@@ -228,16 +226,16 @@ Trigger (@msf_rab_bot → msf_listener.py) → Discover (DexScreener) → Delega
 
 ## Agent-Driven Development Rules (Codex CLI / Grok Build)
 
-**Загрузить перед делегированием:** `skill_view('codex-grok-delegation')`
+**Загрузить перед делегированием:** `skill_view('codex')` / `skill_view('grok-build-cli')` (скиллы профиля).
 
 При делегировании задач в Codex CLI или Grok Build:
 
 1. **Read docs first** — прочитать этот AGENTS.md + `CHRONOLOGY.md` перед любым изменением
-2. **Use build plan** — для задач >20 строк кода: Шаблон 1 из `codex-grok-delegation` (Goal Mode)
+2. **Use build plan** — для задач >20 строк кода: Goal Mode (делегируй ЦЕЛЬ, не инструкцию)
 3. **Preserve security** — НЕ байпасить cabal_detector, wallet_intel, loop_verifier. MSF-токены не логировать
 4. **Verification ladder** — `pytest -q` → MSF test signal → grep .env → `journalctl -u rab9 -n 10` → CHRONOLOGY.md
 5. **⛔ CHRONOLOGY АВТОМАТИЧЕСКИ** — после ЛЮБОГО фикса/инцидента сразу обнови CHRONOLOGY.md (датированная запись: причина→что сделал→как проверил→файлы). Не по напоминанию, не в конец сессии. Часть фикса.
-6. **Reproducible setup** — `pip install -r requirements.txt`, использовать `RAB9_LLM=hy3|grok` из `.env`
+6. **Reproducible setup** — `pip install -r requirements.txt`, использовать `RAB9_LLM=grok|deepseek` из `.env`
 7. **No production without approval** — сигналы в Песочницу (`-1003979753733`) только через approval gate. Не менять systemd unit
 8. **Never expose credentials** — `msf_token.txt`, `TELEGRAM_BOT_TOKEN`, Birdeye/DexScreener ключи — не коммитить
 9. **Preserve user changes** — `git status` перед работой, не перезаписывать чужие правки
