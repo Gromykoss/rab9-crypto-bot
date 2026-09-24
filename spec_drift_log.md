@@ -38,8 +38,9 @@
 | 2026-09-20T23:19 | spec_drift_log.md | SHA closure d22dc26 (briefing 2026-09-20) | | 5c86aa8 |
 | 2026-09-21T23:16 | spec_drift_log.md | SHA closure b3f2a3b (chrono+briefing 2026-09-21) | | b3f2a3b |
 | 2026-09-21T23:16 | briefings/2026-09-21.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов) | spec_drift_log.md, код бота, tests |  |
-| 2026-09-22T10:31 | spec_drift_log.md, CHRONOLOGY.md | restore journal: восстановление intent-строки 2026-09-21T23:16, перезаписанной на месте коммитом 19b5377 (ghost fp f2d2a852) | код бота, tests |  |
+| 2026-09-22T10:31 | spec_drift_log.md, CHRONOLOGY.md | restore journal: восстановление intent-строки 2026-09-21T23:16, перезаписанной на месте коммитом 19b5377 (ghost fp f2d2a852) | код бота, tests | eaf24b0 |
 | 2026-09-22T10:33 | spec_drift_log.md | SHA closure 84c4436 (journal restore 2026-09-21T23:16) | | 84c4436 |
 | 2026-09-22T23:15 | briefings/2026-09-22.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов) | spec_drift_log.md, код бота, tests | 05282dc |
 | 2026-09-23T23:16 | briefings/2026-09-23.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов; CHRONOLOGY.md — whitelist) | spec_drift_log.md, код бота, tests | be73f61 |
-| 2026-09-24T09:00 | AGENTS.md | audit fixes D1-D5: stale disk/meme_score/RAB9_LLM/LOOP_PROGRESS/skill refs (одобрено Сергеем) | код бота, tests |  |
+| 2026-09-24T09:00 | AGENTS.md | audit fixes D1-D5: stale disk/meme_score/RAB9_LLM/LOOP_PROGRESS/skill refs (одобрено Сергеем) | код бота, tests | eaf24b0 |
+| 2026-09-24T09:03 | spec_drift_log.md | SHA closure eaf24b0 (audit fixes D1-D5) | | eaf24b0 |
