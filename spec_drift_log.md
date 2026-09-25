@@ -46,3 +46,4 @@
 | 2026-09-24T09:03 | spec_drift_log.md | SHA closure eaf24b0 (audit fixes D1-D5) | | eaf24b0 |
 | 2026-09-24T09:08 | AGENTS.md | D3 residual: RAB9_LLM формулировка → xAI напрямую + cron glm-5.3-flash (Nous Portal, канон фермы 26.08; одобрено Директором) | код бота, tests | b11ca6b |
 | 2026-09-24T23:18 | briefings/2026-09-24.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов; CHRONOLOGY.md — whitelist) | spec_drift_log.md, код бота, tests | 12629b3 |
+| 2026-09-25T23:16 | briefings/2026-09-25.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов; CHRONOLOGY.md — whitelist) | spec_drift_log.md, код бота, tests | |
