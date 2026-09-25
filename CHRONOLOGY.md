@@ -759,3 +759,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **24.09.2026 23:21** — chrono: closure d1b389d (auto-writeback) (`1e2494c`)
 - **24.09.2026 23:21** — chrono: closure 1e2494c (auto-writeback) (`e01b126`)
 - **25.09.2026 23:16** — chrono: день 61 без MSF-сигналов (мемы молчат, изменений за сутки нет — 0 записей до этого chrono-коммита); BURNIE по DexScreener $0.001622, 24h −1.25%, MC ~$1.57M, liq $274K (норма), vol24 $150K (pumpswap, buy/sell 517/411 = 1.26 — покупки доминируют); инфраструктура: RAB9 Core active, MSF Listener active, MSF HTTP :8089 200, core errors за 24ч — 0. Код не менялся. Contract index update: not needed.
+- **25.09.2026 23:17** — chrono: 2026-09-25 (`43180ab`)
