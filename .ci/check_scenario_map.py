@@ -34,6 +34,21 @@ WHITELIST = (
     ".ci/lint_gwt_cards.py",
     ".github/workflows/gwt.yml",
     "pytest.ini",
+    # inventory 29.09: removed dead root scripts (cleanup, never change again)
+    "gen_qr.py",
+    "gen_qr_fresh.py",
+    "kpi_report.py",
+    "loop_stops.py",
+    "monitor_burnie.py",
+    "pair_trade_analyzer.py",
+    "pair_trade_collector.py",
+    "run_analysis.py",
+    "magpie",
+    "LOG_DUMP_*",
+    # inventory 29.09: cron runtime scripts moved into git (ops meta, no unit tests)
+    "burnie_sentiment_tracker.py",
+    "scripts/burnie_cron.sh",
+    "scripts/burnie_accum_watch.py",
 )
 
 
