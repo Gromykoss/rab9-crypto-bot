@@ -762,3 +762,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **25.09.2026 23:17** — chrono: 2026-09-25 (`43180ab`)
 - **25.09.2026 23:18** — SDG: SHA closure 43180ab (chrono 2026-09-25) (`bb3c473`)
 - **27.09.2026 12:37** — ops: fleet boundary directive 27.09 (hard project boundaries) (`ad89459`)
+- **29.09.2026 05:35** — ops(inventory 29.09): commit accumulated crons work + return cron scripts to git (reproducibility) (`86310b7`)
