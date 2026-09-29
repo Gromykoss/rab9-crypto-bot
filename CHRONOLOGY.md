@@ -763,3 +763,5 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **25.09.2026 23:18** — SDG: SHA closure 43180ab (chrono 2026-09-25) (`bb3c473`)
 - **27.09.2026 12:37** — ops: fleet boundary directive 27.09 (hard project boundaries) (`ad89459`)
 - **29.09.2026 05:35** — ops(inventory 29.09): commit accumulated crons work + return cron scripts to git (reproducibility) (`86310b7`)
+- **29.09.2026 05:35** — chore(inventory 29.09): remove dead root scripts, drop magpie gitlink, log cleanup (`5504c9b`)
+- **29.09.2026 05:40** — ops: инвентаризация+уборка (директива владельца): удалены 8 мёртвых скриптов корня (~918 LOC, 5504c9b), magpie gitlink выведен из индекса (копия в hermes-backups), _archive/ и LOG_DUMP — в hermes-backups; крон-скрипты burnie_cron.sh и burnie_accum_watch.py возвращены в git (runtime-копии в профиле оставлены для совместимости путей jobs.json); uncommitted burnie_sentiment_tracker.py закоммичен (86310b7)

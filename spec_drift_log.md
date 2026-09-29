@@ -51,4 +51,4 @@
 | 2026-09-27T12:32 | AGENTS.md (fleet boundary block append) | директива Сергея 27.09: жёсткие границы профилей | код, тесты, конфиги проекта | ad89459 |
 | 2026-09-27T12:33 | AGENTS.md | fleet boundary directive 27.09 | код, тесты, конфиги | ad89459 |
 | 2026-09-29T05:35 | burnie_sentiment_tracker.py, magpie, scripts/burnie_accum_watch.py, scripts/burnie_cron.sh | inventory 29.09: коммит накопленной работы кронов (sentiment tracker) + возврат крон-скриптов в git для воспроизводимости, runtime-копии в профиле не трогаю | untracked || 86310b7 |
-| 2026-09-29T05:35 | LOG_DUMP_20260821_160833.txt, gen_qr.py, gen_qr_fresh.py, kpi_report.py, loop_stops.py, monitor_burnie.py, pair_trade_analyzer.py, pair_trade_collector.py, run_analysis.py | inventory 29.09 cleanup: git rm 8 мёртвых скриптов корня, magpie gitlink удалён, CHRONOLOGY запись | untracked | |
+| 2026-09-29T05:35 | LOG_DUMP_20260821_160833.txt, gen_qr.py, gen_qr_fresh.py, kpi_report.py, loop_stops.py, monitor_burnie.py, pair_trade_analyzer.py, pair_trade_collector.py, run_analysis.py | inventory 29.09 cleanup: git rm 8 мёртвых скриптов корня, magpie gitlink удалён, CHRONOLOGY запись | untracked || 5504c9b |
