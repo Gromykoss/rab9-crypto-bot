@@ -2263,6 +2263,31 @@ def post_url(username: str, post_id: str) -> str:
     return ""
 
 
+def _accum_watch_note() -> str:
+    """Он-чейн накопление BURNIE из снапшота accum-watch (data/burnie_accum_watch.json).
+
+    Контекст: GMGN не помечает этих кошельков как smart money, но они
+    структурно копят BURNIE мелкими покупками. Отсутствие SM-тегов ≠
+    отсутствие накопления. Обновляется задачей BURNIE accumulator watch.
+    """
+    path = Path(__file__).resolve().parent / "data" / "burnie_accum_watch.json"
+    try:
+        snap = json.loads(path.read_text())
+        wallets = snap.get("wallets") or []
+        if not wallets:
+            return "он-чейн снапшот накопителей пуст."
+        top = max(wallets, key=lambda w: w.get("net_buy_usd", 0) or 0)
+        total = sum(w.get("net_buy_usd", 0) or 0 for w in wallets)
+        return (
+            f"SM-тегов нет, НО идёт он-чейн накопление: {len(wallets)} кошельков, "
+            f"суммарно +${total:,.0f} net-buy мелкими ордерами; топ-копатель держит "
+            f"{top.get('pct')}% саплая (ср. входа ниже рынка, продаж 0). "
+            f"Мониторинг: BURNIE accumulator watch."
+        )
+    except Exception:
+        return "он-чейн данные накопителей недоступны (см. accumulator watch)."
+
+
 def format_alert(snapshot: dict[str, Any]) -> str:
     """Build a human-readable BURNIE report with verdict (plain Russian)."""
     senti = snapshot["sentiment"]
@@ -2545,7 +2570,7 @@ def format_alert(snapshot: dict[str, Any]) -> str:
         elif sig == "distribution":
             lines.append(f"🐋 Распределение: smart money продаёт ({tot_b} покупок / {tot_s} продаж) — осторожно.")
         elif tot_b == 0 and tot_s == 0:
-            lines.append("🐋 Накопление: smart money пока не зашёл — наблюдает.")
+            lines.append(f"🐋 Накопление: {_accum_watch_note()}")
         else:
             lines.append(f"🐋 Накопление: смешанно ({tot_b} покупок / {tot_s} продаж).")
 

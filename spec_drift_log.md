@@ -48,5 +48,6 @@
 | 2026-09-24T23:18 | briefings/2026-09-24.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов; CHRONOLOGY.md — whitelist) | spec_drift_log.md, код бота, tests | 12629b3 |
 | 2026-09-25T23:16 | briefings/2026-09-25.md | ежедневный chrono-коммит (данные-only, вне scenario-доменов; CHRONOLOGY.md — whitelist) | spec_drift_log.md, код бота, tests | 43180ab |
 | 2026-09-26T02:10 | burnie_sentiment_tracker.py | строка "SM не зашёл" вводила в заблуждение: он-чейн накопители есть (25 кош, +737K). Добавлен _accum_watch_note() из data/burnie_accum_watch.json | данные снапшота, cron-скрипты | |
-| 2026-09-27T12:32 | AGENTS.md (fleet boundary block append) | директива Сергея 27.09: жёсткие границы профилей | код, тесты, конфиги проекта |  |
-| 2026-09-27T12:33 | AGENTS.md | fleet boundary directive 27.09 | код, тесты, конфиги |  |
+| 2026-09-27T12:32 | AGENTS.md (fleet boundary block append) | директива Сергея 27.09: жёсткие границы профилей | код, тесты, конфиги проекта | ad89459 |
+| 2026-09-27T12:33 | AGENTS.md | fleet boundary directive 27.09 | код, тесты, конфиги | ad89459 |
+| 2026-09-29T05:35 | burnie_sentiment_tracker.py, magpie, scripts/burnie_accum_watch.py, scripts/burnie_cron.sh | inventory 29.09: коммит накопленной работы кронов (sentiment tracker) + возврат крон-скриптов в git для воспроизводимости, runtime-копии в профиле не трогаю | untracked | |
