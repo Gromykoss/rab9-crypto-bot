@@ -769,3 +769,5 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **29.09.2026 05:39** — ci(inventory 29.09): whitelist removed dead scripts and returned cron scripts in scenario map checker (`4c3e67d`)
 - **04.10.2026 12:19** — chore: finalize SHA closure 4c3e67d (inventory 29.09 staged work) (`35e09d8`)
 - **04.10.2026 13:15** — docs(AGENTS.md): аудит 02.10 п.3 — редакция/сжатие 301→138 строк, дубли gates/ADR слиты, инварианты дословно (`fd01f3b`)
+- **04.10.2026 13:15** — chore(SDG): SHA closure fd01f3b (AGENTS.md редакция 02.10) (`95ac3ff`)
+- **04.10.2026 12:30** — docs(AGENTS.md): аудит 02.10 п.3 (одобрено владельцем, ретрай write одобрен Директором): редакция/сжатие 301→138 строк (−54%, fd01f3b). Слиты дубли: Gates #2/#4/#5/#6 ↔ ADR-правила 3/5/7/8; MoA ↔ Loop Engineering; Buzz 5-шагов+запреты+примеры ↔ один блок; Старт сессии ↔ CONTEXT GATE. Инварианты дословно: gates 0-8, operators-таблица, spec_drift_gate, fleet boundaries 27.09, секреты. Пуш: 4c3e67d..95ac3ff (включая closure-хвост 35e09d8). Проверка: wc -l, git push gwt зелёный.

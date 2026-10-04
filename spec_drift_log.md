@@ -54,3 +54,4 @@
 | 2026-09-29T05:35 | LOG_DUMP_20260821_160833.txt, gen_qr.py, gen_qr_fresh.py, kpi_report.py, loop_stops.py, monitor_burnie.py, pair_trade_analyzer.py, pair_trade_collector.py, run_analysis.py | inventory 29.09 cleanup: git rm 8 мёртвых скриптов корня, magpie gitlink удалён, CHRONOLOGY запись | untracked || 5504c9b |
 | 2026-09-29T05:39 | .ci/check_scenario_map.py | inventory 29.09: whitelist для удалённых мёртвых скриптов и возвращённых крон-скриптов — разблокировка push | untracked || 4c3e67d |
 | 2026-10-04T12:19 | AGENTS.md | аудит 02.10 п.3 (одобрено владельцем): редакция, сжатие на 10-15% без потери инвариантов (gates, BURNIE-контур, секреты), слить дублирующие правила | gates-текст, spec_drift_gate, fleet-boundaries, секреты | fd01f3b |
+| 2026-10-04T12:30 | CHRONOLOGY.md | chrono-запись редакции AGENTS.md (fd01f3b) — аудиторский след | - | |
