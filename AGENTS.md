@@ -12,63 +12,15 @@
 
 ⚠️ DO NOT SKIP: read ALL rules in this file before acting. Самые нарушаемые правила — здесь, наверху.
 
-0. **CONTEXT GATE (MANDATORY):** перед ЛЮБЫМ действием — выбрать триггер и загрузить контекст:
-   ```bash
-   python3 ~/.hermes/scripts/context_loader.py rab9 <trigger> [--max-tokens 500]
-   ```
----
+0. **CONTEXT GATE (MANDATORY):** перед ЛЮБЫМ действием — `python3 ~/.hermes/scripts/context_loader.py rab9 <trigger> [--max-tokens 500]`. Триггеры: `session_start` → gates + last-3-days · `code_change` → gates + chronology · `signal_analysis` → signal-flow + chronology · `audit` → chronology + bugs · `default` → gates only.
 
-0.5. **CONTRACT INDEX GATE (05.09.2026):** единый вход сессии — PROJECT_MEMORY_GRAPH.md (корень). Boot Rule: граф + AGENTS Gates на старте, остальные доки по маршруту из графа. Изменил домен/инвариант → обнови граф + CHRONOLOGY; иначе запись «Contract index update: not needed» в CHRONOLOGY.
+0.5. **CONTRACT INDEX GATE (05.09.2026):** единый вход сессии — PROJECT_MEMORY_GRAPH.md (корень). Boot Rule: граф + AGENTS Gates на старте, остальные доки по маршруту из графа. Изменил домен/инвариант → обнови граф + CHRONOLOGY; иначе запись «Contract index update: not needed» в CHRONOLOGY. Старт сессии: 1) `~/rab9/CHRONOLOGY.md` (последние события), 2) `~/hermes-vault/30_Logs/Арсенал Hermes.md`, 3) этот файл.
 
-## 🗣️ Групповое общение в Buzz (multi-agent)
+## 🗣️ Buzz (multi-agent): правило ответа
 
-**Главное правило:** ты — один из нескольких агентов в общем рабочем пространстве. Отвечай **только** когда сообщение адресовано именно тебе.
+Отвечай **только** когда адресовано тебе (`@Project-RAB9`). Перед ответом: 1) прямое упоминание? нет → молчи; 2) не дублируй сказанное другим; 3) чужая зона → молчи; 4) обвинение → сначала сверься с данными, вину автоматически не принимай; 5) не уверен → «нужно проверить» или переадресуй. Без `@` → молчат все (кроме `default_profile`); слово **«тишина»** запрещено (эхо-петля).
 
-### Перед каждым ответом в Buzz-канале проходи 5 шагов:
-
-1. **Это мне?** Прямое `@ИмяПрофиля`? Нет → **не отвечай** (даже если тема твоя зона).
-2. **Что было раньше?** Прочитай канал; уже ответил кто-то — не дублируй.
-3. **Это чужая зона?** Адресовано другому агенту → **молчи**.
-4. **Это обвинение?** «ты ошибся» → сначала проверь, твоя ли зона; вину автоматически не принимай.
-5. **Я уверен?** Сомневаешься → «нужно проверить» или переадресуй.
-
-### Запрещено в групповом чате Buzz
-
-- Отвечать на сообщения, адресованные другим агентам.
-- Лезть в чужую зону «потому что могу помочь».
-- Повторять то, что уже сказал другой агент.
-- Использовать слово **«тишина»** (это триггер эхо-петли).
-- Отвечать на сообщения без упоминания (если не стоит `default_profile`).
-
-### ⛔ ПРАВИЛО ВОЗВРАТА В TELEGRAM (ОБЯЗАТЕЛЬНО)
-
-Если работаешь с Сергеем по своему проекту в своей Telegram-группе и понадобилось **уйти в Buzz** (уточнить у другого агента, решить инфраструктурную проблему):
-
-1. Ушёл в Buzz — решил вопрос — **ОБЯЗАТЕЛЬНО вернись в свою Telegram-группу**.
-2. Продолжи работу с Сергеем / доложи результат там, где начал.
-3. Buzz — **временный инструмент уточнения**, НЕ конечная точка. Не застревай: тебя ждёт ответ Сергею в Telegram.
-
-**Проверка перед отправкой в Buzz:** «Ухожу за уточнением → вернусь в Telegram и закрою вопрос с Сергеем». Нет ответа в Telegram = работа НЕ закончена.
-
-### Примеры правильного поведения
-
-- `@Project-GULAG проверь баланс` → отвечает только GULAG; `@Project-RobotMan ...` → GULAG молчит; без `@` → молчат все (кроме `default_profile`).
-
-**Цель:** каждый агент отвечает только за свою зону и только когда его позвали.
-
----
-
-
-   Вывод вставить в reasoning ДО действия. Триггеры:
-   - `session_start` → gates + last-3-days
-   - `code_change` → gates + chronology (код бота)
-   - `signal_analysis` → signal-flow + chronology (анализ сигналов)
-   - `audit` → chronology + bugs
-   - `default` → gates only
-
-0. **CNC-ПРАВИЛО — Codex/Grok = ИНЖЕНЕРЫ, НЕ ОТВЁРТКА (26.07.2026):** Codex и Grok Build — станки с ЧПУ. Делегируй ЦЕЛЬ, не инструкцию. ❌ «В rab9_bot.py, строка 42, замени X на Y» → ✅ «BURNIE показал памп на 40%. Разберись в rab9_bot.py и DexScreener. Пойми паттерн. Предложи фильтр.» Codex читает код, анализирует, ПОНИМАЕТ. Ты проверяешь результат. **Обязательное чтение:** `~/.hermes/docs/graph-harness-principles.md`.
-   **⛔ НИКОГДА `delegate_task` без `acp_command`** — spawn default-сабагента (DeepSeek-клон), пустая трата токенов.
-   **Правильные вызовы:** Codex = `delegate_task(acp_command='codex', goal=..., context=...)`, Grok = `delegate_task(acp_command='grok', acp_args=['agent', 'stdio'], goal=..., context=...)`.
+**Возврат в Telegram (ОБЯЗАТЕЛЬНО):** ушёл в Buzz за уточнением → вернись в свою Telegram-группу и закрой вопрос с Сергеем там. Нет ответа в Telegram = работа НЕ закончена. Пример: `@Project-GULAG проверь баланс` → отвечает только GULAG.
 
 1. **PRE-PATCH GATE (MANDATORY):** перед любым изменением кода — `grep -rn "имя" .`, показать grep пользователю, проследить логику в КАЖДОМ месте. Нет grep → патч не принят. Откат.
 2. **No production without approval:** сигналы в Песочницу (`-1003979753733`) только через approval gate. Не менять systemd unit.
@@ -76,199 +28,84 @@
 4. **НЕ байпасить** cabal_detector, wallet_intel, loop_verifier.
 5. **Never expose credentials:** `msf_token.txt`, `TELEGRAM_BOT_TOKEN`, API ключи — не коммитить, не логировать.
 6. **Раздельно с Алиханом:** директории, venv, боты, БД, ключи — всё раздельно.
-7. **⛔ X/Twitter WRITE-ОПЕРАЦИИ — ЗАПРЕЩЕНЫ (02.08.2026):** xurl reply/post/like/retweet/follow — не зона Rab9. Rab9 = крипто-анализ, не управление X-аккаунтами. Единственное исключение: `xurl --app my-app --auth oauth2 /2/...` в read-only режиме для X-радара (radar_x.py). Публикация постов — только через robot-man профиль. Нарушение привело к багу 01.08.2026: xurl reply с голым tweet ID вместо текста.
-
----
+7. **⛔ X/Twitter WRITE — ЗАПРЕЩЕНЫ (02.08.2026):** xurl reply/post/like/retweet/follow — не зона Rab9 (публикация — только robot-man). Исключение: `xurl --app my-app --auth oauth2 /2/...` read-only для X-радара (radar_x.py). Инцидент 01.08: голый tweet ID вместо текста в reply.
+8. **CNC-ПРАВИЛО (26.07.2026):** Codex/Grok Build — ИНЖЕНЕРЫ, не отвёртка: делегируй ЦЕЛЬ, не инструкцию (❌ «строка 42 замени X» → ✅ «BURNIE пампнул 40%, разберись и предложи фильтр»). Чтение: `~/.hermes/docs/graph-harness-principles.md`. **Никогда `delegate_task` без `acp_command`** (spawn default-сабагента = пустая трата токенов). Вызовы: Codex = `delegate_task(acp_command='codex', goal, context)`, Grok = `delegate_task(acp_command='grok', acp_args=['agent','stdio'], goal, context)`.
 
 ## ⚖️ ENFORCED-ЗАКОНЫ (operators/ — детерминировано в коде, 15.08.2026)
 
-Слой `operators/` зашивает поведение в enum-вердикты (`ALLOW/BLOCK/HOLD/DROP/REJECT/INCONCLUSIVE`), fail-closed. Чистые функции, stdlib-only, без side-effects. Детали: `operators/` в репо (узел «Operator Layer — Детерминирование профилей»).
+Слой `operators/` зашивает поведение в enum-вердикты (`ALLOW/BLOCK/HOLD/DROP/REJECT/INCONCLUSIVE`), fail-closed, чистые функции, stdlib-only. Детали: узел «Operator Layer» в PROJECT_MEMORY_GRAPH.md.
 
 | Закон | Оператор | Вердикты | Точка вшивания |
 |-------|----------|----------|----------------|
 | **DESTINATION_LOCK** | `check_destination()` | ALLOW / BLOCK | `msf_http.send_msf_pairresolve` (ранний return) + `handlers` (helper `destination_allowed` во все 5 send-путей) + `alerts.alert_loop` + `burnie.send_telegram` |
 | **REJECT_DEFAULT** | `check_verifier()` | ALLOW / REJECT / HOLD | `msf_http` verifier-gate (default `REJECT`, `except → suppress`, FLAG+`fixed_text`→ALLOW / FLAG без →HOLD) + `loop_verifier` 3 fail-ветки → `REJECT` |
-| **APPROVAL_REQUIRED** (только мутации) | `check_mutation()` | ALLOW / HOLD / BLOCK | готов как fail-closed грань для будущих CLI-мутаций (конфиг/systemd/deploy меняет Сергей вручную) |
-| **SAFETY_GATES** | `check_safety()` | ALLOW / DROP / INCONCLUSIVE | `msf_http.send_msf_pairresolve` + `handlers` (3 ручных анализа) + `msf_dedupe._is_junk`. DROP только на детерминированные scam-факты: `honeypot=fail` и `rugcheck=rugged`. `dead`/`high`/`unknown` → INCONCLUSIVE + пометка «⚠️ safety не подтверждена», НЕ молчание |
+| **APPROVAL_REQUIRED** (только мутации) | `check_mutation()` | ALLOW / HOLD / BLOCK | fail-closed грань для будущих CLI-мутаций (конфиг/systemd/deploy меняет Сергей вручную) |
+| **SAFETY_GATES** | `check_safety()` | ALLOW / DROP / INCONCLUSIVE | `msf_http.send_msf_pairresolve` + `handlers` (3 ручных анализа) + `msf_dedupe._is_junk` |
 
-**Ключевое про destination (15.08.2026):** автопилот — сигналы шлются **без approval на каждое событие**. Allowlist = **ДВА** чата: Cryptanalyst `-1004425561477` + Песочница `-1003979753733`. Approval нужен **только на мутации конфига/деплой**. Отправка в любой чат вне allowlist → `BLOCK`.
-
-**SAFETY-семантика (15.08.2026, проходы 1-4):** hard DROP = только подтверждённый scam (`honeypot=fail` по Jupiter, `rugcheck=rugged`). Эвристики (`phase=DEAD`, `rugcheck=high`) — НЕ DROP, а INCONCLUSIVE с честной пометкой в тексте, иначе автопилот ложно замолчит на легитимных тихих токенах (ранний вход). `build_compact_analysis_text` возвращает `(text, safety_flags)` из того же прогона (без повторного API), safety-факты читаются до verifier'а, предупреждение вшивается после verifier'а.
-
----
-
-## Старт сессии
-
-1. Прочитай `~/rab9/CHRONOLOGY.md` — последние события
-2. Прочитай `~/hermes-vault/30_Logs/Арсенал Hermes.md`
-3. Затем этот файл
+- **Destination:** автопилот шлёт без approval на событие; allowlist = **ДВА** чата: Cryptanalyst `-1004425561477` + Песочница `-1003979753733`. Вне allowlist → `BLOCK`. Approval — только на мутации конфига/деплой.
+- **Safety-семантика:** hard DROP = только подтверждённый scam (`honeypot=fail` Jupiter, `rugcheck=rugged`). Эвристики (`phase=DEAD`, `rugcheck=high`) → INCONCLUSIVE + честная пометка «⚠️ safety не подтверждена», НЕ молчание (иначе автопилот ложно замолчит на легитимных тихих токенах). `build_compact_analysis_text` возвращает `(text, safety_flags)` из того же прогона; предупреждение вшивается после verifier'а.
 
 ## Архитектура (v2 — 07.07.2026)
 
-### Поток сигналов
+**Поток сигналов:** Мемы (Telegram) → @msf_rab_bot → msf_listener.py (long-poll) → HTTP POST :8089/msf-signal → rab9_bot.py → cabal_detector (pre-check) → DexScreener (enrichment) → wallet_intel (cross-ref KABAL) → DeepSeek (primary, 128K) → loop_verifier (PASS/FLAG/FAIL) → Telegram-сигнал в Песочницу. Birdeye исключён 17.07.2026; DexScreener — единственный источник обогащения.
 
-Мемы (Telegram) → @msf_rab_bot → msf_listener.py (long-poll) → HTTP POST :8089/msf-signal → rab9_bot.py → cabal_detector (pre-check) → DexScreener (enrichment) → wallet_intel (cross-reference KABAL) → DeepSeek (primary, 128K) → loop_verifier (PASS/FLAG/FAIL) → Telegram-сигнал в Песочницу
+**LLM backend:** DeepSeek `deepseek-v4-pro` (128K, основной анализ) · Grok `grok-3-mini` xAI ($0.30/1M, 32K, research/X-радар). xAI напрямую; cron-модель glm-5.3-flash (Nous Portal).
 
-Примечание: Birdeye исключён 17.07.2026 (API key suspended). DexScreener — единственный источник обогащения.
+**Два Telegram-бота:** @msf_rab_bot (`msf_token.txt`) слушает Мемы, детектит адреса · @rab2610bot (`.env:TELEGRAM_BOT_TOKEN`) анализирует, шлёт в Песочницу.
 
-### LLM Backend
+**Компоненты:** RAB9 Core `rab9_bot.py` (systemd `rab9-crypto-hermes`) · MSF Listener `msf_listener.py` (system-юнит `msf-listener.service`, MainPID) · MSF HTTP `msf_http.py:8089` (внутри rab9_bot.py) · Cabal Detector `cabal_detector.py` (pre-check) · Wallet Intel `wallet_intel.py` (cross-ref KABAL, P≥80%) · 5 enrichment: radar_x, radar_gh, chart, onchain, meme_score (115 pts, 7-pillar v3.0) · Verifier: loop-verifier (PASS/FLAG/FAIL), REJECT default.
 
-| Модель | Провайдер | Стоимость | Контекст | Роль |
-|--------|-----------|-----------|----------|------|
-| **DeepSeek** | deepseek-v4-pro | — | 128K | Основной анализ |
-| Grok (grok-3-mini) | xAI API | $0.30/1M | 32K | Research / X-радар |
+**Сервер:** VPS Hostinger 72.60.16.105, Ubuntu 24.04, RAM 15 GB, диск 120/193 GB (62%). **БД:** SQLite `data/rab9_trades.db`. **API:** DexScreener (публичный), X API via xurl (OAuth2 read-only), DeepSeek, Grok/xAI.
 
-Primary: DeepSeek.
+**Loop Engineering (v0.18):** Trigger → Discover (DexScreener) → Delegate MAKER (DeepSeek) → Verify CHECKER (Grok, MoA `/moa deepseek-xai`) → Persist → Decide. Стоп-условия: PASS от обоих · max 3 enrichment-модуля · FLAG дважды → REJECT · MC > 5M / unknown → escalate. Maker ≠ Checker: DeepSeek предлагает, Grok проверяет.
 
-### Два Telegram-бота
-
-| Бот | Токен | Назначение |
-|-----|-------|-----------|
-| **@msf_rab_bot** | `msf_token.txt` | Слушает Мемы, детектит адреса |
-| **@rab2610bot** | `.env:TELEGRAM_BOT_TOKEN` | Анализирует, шлёт в Песочницу (`-1003979753733`) |
-
-### Компоненты
-
-| Компонент | Файл | Статус |
-|-----------|------|--------|
-| **RAB9 Core** | `rab9_bot.py` | systemd: `rab9-crypto-hermes` |
-| **MSF Listener** | `msf_listener.py` | systemd system-юнит `msf-listener.service` (active+enabled, MainPID) |
-| **MSF HTTP** | `msf_http.py :8089` | внутри rab9_bot.py |
-| **Cabal Detector** | `cabal_detector.py` | pre-check |
-| **Wallet Intel** | `wallet_intel.py` | cross-reference KABAL (P≥80%) |
-
-- 5 enrichment модулей: radar_x, radar_gh, chart, onchain, meme_score (115 pts, 7-pillar v3.0)
-- Verifier: loop-verifier (PASS/FLAG/FAIL), REJECT default
-- Loop engineering: trigger → process → verification → stop
-
-## Архитектура и инфраструктура
-
-### Сервер
-| Параметр | Значение |
-|----------|----------|
-| **Хост** | VPS Hostinger |
-| **IP** | 72.60.16.105 |
-| **ОС** | Ubuntu 24.04 |
-| **RAM** | 15 GB |
-| **Диск** | 120/193 GB (62%) |
-
-### База данных
-| Параметр | Значение |
-|----------|----------|
-| **Тип** | SQLite |
-| **Файл** | `data/rab9_trades.db` |
-| **Проверка** | `sqlite3 data/rab9_trades.db ".tables"` |
-
-### Внешние API
-| API | Назначение | Доступ |
-|-----|-----------|--------|
-| **DexScreener** | Обогащение токенов (цена, ликвидность, volume) | Публичный |
-| **X API (xurl)** | X-радар (radar_x.py) | OAuth2, read-only |
-| **DeepSeek API** | Primary LLM-анализ (128K контекст) | API key |
-| **Grok (xAI)** | MoA-верификация, research | API key |
-
-### Секреты и зависимости
-| Файл | Содержание |
-|------|-----------|
-| `msf_token.txt` | Токен @msf_rab_bot |
-| `.env` | `TELEGRAM_BOT_TOKEN`, API-ключи |
-
-## KPI (метрики проекта)
+## KPI
 
 | Метрика | Что меряет | Цель |
 |---------|-----------|------|
-| Сигналы/день | число MSF-сигналов, доведённых до анализа за 24ч | >0 (мемы молчат ≠ поломка) |
-| Точность верификатора | доля PASS/FLAG от loop_verifier, совпавшая с ручным исходом | ≥80% |
-| False-positive rate | доля REJECT/SKIP (thin-liq / MC>5M / scam) от всех обработанных | <15% |
+| Сигналы/день | MSF-сигналы, доведённые до анализа за 24ч | >0 (мемы молчат ≠ поломка) |
+| Точность верификатора | PASS/FLAG loop_verifier, совпавшие с ручным исходом | ≥80% |
+| False-positive rate | доля REJECT/SKIP (thin-liq / MC>5M / scam) | <15% |
 | Аптайм листенера | `systemctl is-active msf-listener` | 100% (MainPID жив) |
-| Latency | время от мема до сигнала в Песочницу | <5 мин |
+| Latency | мем → сигнал в Песочницу | <5 мин |
 
 ## Мемкоины
 
-- MC 1M+ = mid
-- GitHub = норма
-- X = ключевой сигнал
-- BURNIE: 80/100 SOLID
+- MC 1M+ = mid · GitHub = норма · X = ключевой сигнал · BURNIE: 80/100 SOLID
 
 ## Cron
 
 BURNIE sentiment tracker: script-first only (`python3 burnie_sentiment_tracker.py`). Cron prompt не пишет inline бизнес-логику — делегировать в Codex/Grok.
 
-## MoA верификация сигналов (v0.18)
+# Правила строительства
 
-При ручном анализе: `/moa deepseek-xai`
+**Общие правила (все проекты):** `skill_view('build')`. **Перед делегированием:** `skill_view('codex')` / `skill_view('grok-build-cli')`.
 
-DeepSeek (reference) — риск-анализ, supply, onchain.
-Grok (aggregator) — мемкоин-радар, тренды X.
+При делегировании Codex/Grok Build:
+1. **Read docs first** — этот AGENTS.md + CHRONOLOGY.md перед любым изменением; **Preserve user changes** — `git status` перед работой
+2. **Goal Mode** для задач >20 строк: делегируй ЦЕЛЬ, не инструкцию (см. gate #8)
+3. **Verification ladder** — `pytest -q` → MSF test signal → grep .env → `journalctl -u rab9 -n 10` → CHRONOLOGY.md
+4. **⛔ CHRONOLOGY АВТОМАТИЧЕСКИ** — после ЛЮБОГО фикса/инцидента сразу датированная запись (причина→что сделал→как проверил→файлы). Часть фикса, не «в конце сессии»
+5. Gates #2 (approval), #4 (не байпасить), #5 (секреты, включая Birdeye/DexScreener ключи), #6 (раздельно с Алиханом) — обязательны и при делегировании; **MSF-токены не логировать**
 
-Порог: оба agree → PASS. Расходятся → FLAG. REJECT default.
+### RAB9-специфичное
 
-Для cron: «Use /moa deepseek-xai preset to verify this signal with DeepSeek + Grok consensus.»
+- **Cabal detection:** каждый MSF-сигнал → `cabal_detector.analyze()` → CABAL_EXPLOSION/KOL_ACTIVATION → алерт в Песочницу ДО основного анализа.
+- **Wallet intel:** каждый MSF-сигнал → `wallet_intel.cross_reference_makers()` → KABAL-кошелёк (P≥80%) в топ-20 мейкерах → эскалация.
+- **Self-test перед отправкой:** локальный прогон на тестовом адресе, сверка с x_search, формат без кнопок и сырых данных, гэпы закрыть до отправки.
 
-## Loop Engineering (v0.18)
-
-**Цикл сигнала:**
-Trigger (@msf_rab_bot → msf_listener.py) → Discover (DexScreener) → Delegate MAKER (DeepSeek) → Verify CHECKER (Grok via MoA) → Persist (log + signal) → Decide (next or STOP)
-
-**Стоп-условия (loop brakes):**
-- goal met: PASS от обоих в MoA
-- budget spent: max 3 enrichment-модуля
-- stalled: FLAG дважды → REJECT
-- needs human: MC > 5M или unknown token → escalate
-
-**Maker ≠ Checker:** DeepSeek предлагает, Grok проверяет.
-
-# ⚠️ DO NOT SKIP: прочитай ВСЕ правила ниже перед любым действием
-
-## Правила строительства
-
-**Общие правила (все проекты):** `skill_view('build')`
-
-## Agent-Driven Development Rules (Codex CLI / Grok Build)
-
-**Загрузить перед делегированием:** `skill_view('codex')` / `skill_view('grok-build-cli')` (скиллы профиля).
-
-При делегировании задач в Codex CLI или Grok Build:
-
-1. **Read docs first** — прочитать этот AGENTS.md + `CHRONOLOGY.md` перед любым изменением
-2. **Use build plan** — для задач >20 строк кода: Goal Mode (делегируй ЦЕЛЬ, не инструкцию)
-3. **Preserve security** — НЕ байпасить cabal_detector, wallet_intel, loop_verifier. MSF-токены не логировать
-4. **Verification ladder** — `pytest -q` → MSF test signal → grep .env → `journalctl -u rab9 -n 10` → CHRONOLOGY.md
-5. **⛔ CHRONOLOGY АВТОМАТИЧЕСКИ** — после ЛЮБОГО фикса/инцидента сразу обнови CHRONOLOGY.md (датированная запись: причина→что сделал→как проверил→файлы). Не по напоминанию, не в конец сессии. Часть фикса.
-6. **Reproducible setup** — `pip install -r requirements.txt`, использовать xAI напрямую; cron-модель glm-5.3-flash (Nous Portal)
-7. **No production without approval** — сигналы в Песочницу (`-1003979753733`) только через approval gate. Не менять systemd unit
-8. **Never expose credentials** — `msf_token.txt`, `TELEGRAM_BOT_TOKEN`, Birdeye/DexScreener ключи — не коммитить
-9. **Preserve user changes** — `git status` перед работой, не перезаписывать чужие правки
-
-### RAB9-специфичные
-
-#### Cabal detection — обязательный этап
-Каждый MSF-сигнал → `cabal_detector.analyze()` → если CABAL_EXPLOSION/KOL_ACTIVATION → алерт в Песочницу ДО основного анализа.
-
-#### Wallet intelligence — cross-reference
-Каждый MSF-сигнал → `wallet_intel.cross_reference_makers()` → если KABAL-кошелёк (P≥80%) в топ-20 мейкерах → эскалация.
-
-#### Self-test перед отправкой
-- Локальный прогон на тестовом адресе
-- Сравнить с x_search
-- Проверить формат: без кнопок, без сырых данных
-- Гэпы закрыть до отправки
-
-#### Инфраструктура RAB9 (при старте)
+### Инфраструктура RAB9 (при старте)
 - RAB9 жив? `systemctl status rab9-crypto-hermes` (active)
-- MSF HTTP жив? `curl http://localhost:8089/health` (200)
-- MSF HTTP снаружи? `curl http://72.60.16.105:8089/health` (200)
-- MSF Listener жив? `systemctl status msf-listener.service` (MainPID=листенер, active). НЕ `systemctl --user start` — user-scope дубль (hermes-agent/venv) `disabled`, поднимет второй long-poll = 409.
+- MSF HTTP жив? `curl http://localhost:8089/health` (200) и снаружи `curl http://72.60.16.105:8089/health` (200)
+- MSF Listener жив? `systemctl status msf-listener.service` (MainPID=листенер, active). НЕ `systemctl --user start` — user-scope дубль поднимет второй long-poll = 409.
 - Сигналы идут? `journalctl -u rab9-crypto-hermes | grep "MSF analysis started" | tail -5`
-- Telegram-бот отвечает? Тестовый адрес в Песочницу
-- База трейдов жива? `sqlite3 data/rab9_trades.db "SELECT COUNT(*) FROM pair_trades"`
+- Telegram-бот отвечает? Тестовый адрес в Песочницу · БД жива? `sqlite3 data/rab9_trades.db "SELECT COUNT(*) FROM pair_trades"`
 
 ## Правила Сергея
 
 - «rtk примени» = сразу внедрять
 - Кратко: Да/Нет/В архив/В работу/Применяй/Используй
-- Самотест и «раздельно с Алиханом» — уже в CRITICAL GATES (#4, #6), не дублировать
-
+- Самотест и «раздельно с Алиханом» — уже в CRITICAL GATES, не дублировать
 
 ## SPEC DRIFT GATE (перед любой spec-affecting мутацией)
 Spec-affecting мутация = правка кода/данных/конфига/спеки узла. Отчёты/посты/сбор/чтение — мимо гейта.

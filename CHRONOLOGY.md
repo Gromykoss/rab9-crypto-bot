@@ -767,3 +767,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **29.09.2026 05:40** — ops: инвентаризация+уборка (директива владельца): удалены 8 мёртвых скриптов корня (~918 LOC, 5504c9b), magpie gitlink выведен из индекса (копия в hermes-backups), _archive/ и LOG_DUMP — в hermes-backups; крон-скрипты burnie_cron.sh и burnie_accum_watch.py возвращены в git (runtime-копии в профиле оставлены для совместимости путей jobs.json); uncommitted burnie_sentiment_tracker.py закоммичен (86310b7)
 - **29.09.2026 05:36** — docs(chrono): inventory cleanup record 29.09 (`bcf6d6d`)
 - **29.09.2026 05:39** — ci(inventory 29.09): whitelist removed dead scripts and returned cron scripts in scenario map checker (`4c3e67d`)
+- **04.10.2026 12:19** — chore: finalize SHA closure 4c3e67d (inventory 29.09 staged work) (`35e09d8`)
