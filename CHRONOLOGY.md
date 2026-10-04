@@ -768,3 +768,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **29.09.2026 05:36** — docs(chrono): inventory cleanup record 29.09 (`bcf6d6d`)
 - **29.09.2026 05:39** — ci(inventory 29.09): whitelist removed dead scripts and returned cron scripts in scenario map checker (`4c3e67d`)
 - **04.10.2026 12:19** — chore: finalize SHA closure 4c3e67d (inventory 29.09 staged work) (`35e09d8`)
+- **04.10.2026 13:15** — docs(AGENTS.md): аудит 02.10 п.3 — редакция/сжатие 301→138 строк, дубли gates/ADR слиты, инварианты дословно (`fd01f3b`)
