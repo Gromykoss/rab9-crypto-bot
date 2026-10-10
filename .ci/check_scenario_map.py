@@ -38,6 +38,8 @@ WHITELIST = (
     "gen_qr.py",
     "gen_qr_fresh.py",
     "kpi_report.py",
+    # MGT-audit 10.10: .kpi-proposal/ removed (dead since 15.08)
+    ".kpi-proposal/**",
     "loop_stops.py",
     "monitor_burnie.py",
     "pair_trade_analyzer.py",

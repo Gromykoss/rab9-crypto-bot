@@ -57,3 +57,4 @@
 | 2026-10-04T12:30 | CHRONOLOGY.md | chrono-запись редакции AGENTS.md (fd01f3b) — аудиторский след | - | |
 | 2026-10-06T22:52 | CHRONOLOGY.md | RETURN директора (daily-audit 06.10, порог 36h): запись текущего состояния BURNIE; дисциплина — хронология в день изменения | - | d357e6c |
 | 2026-10-10T06:52 | .kpi-proposal/ | аудит MGT 09.10 L6: мёртвый артефакт KPI/E2E (крон удалён владельцем 26.09) — git rm | code/, cron/ | f36cfab |
+| 2026-10-10T06:54 | .ci/check_scenario_map.py | whitelist += .kpi-proposal/** (inventory-паттерн 29.09: удалённый мёртвый артефакт не должен блокировать GWT) | logic проверки, другие пути | |
