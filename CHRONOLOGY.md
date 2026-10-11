@@ -799,3 +799,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **11.10.2026 11:25** — docs(cdd): standalone-analyzer design.md (Sink abstraction, /analyze, demolition plan) (`0b5bcd5`)
 - **11.10.2026 11:29** — docs(cdd): design fixes D-A1..A5 (sink schema, to_thread, rotation, outcome criteria, import-guard) (`037310f`)
 - **11.10.2026 11:30** — docs(cdd): standalone-analyzer tasks.md (7 vertical tasks, quiz confirmed) (`d295035`)
+- **11.10.2026 11:33** — docs(cdd): tasks.md N1/N2 notes from review 7f997f9a (`a6dfa93`)

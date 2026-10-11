@@ -59,7 +59,7 @@ CATALYST_QUERY = (
 CATALYST_MIN_FOLLOWERS = 5000
 CATALYST_LARGE_FOLLOWERS = 50_000
 CATALYST_MEGA_FOLLOWERS = 500_000
-CATALYST_MAX_RESULTS = 25
+CATALYST_MAX_RESULTS = 20  # экономия X API: было 25 (директива владельца 11.10)
 
 # Типы «офиц. касания» для hard_alert (event-first).
 OFFICIAL_TOUCH_TYPES = frozenset({
@@ -568,56 +568,12 @@ def fetch_fresh_official_interactions(
                 )
         hot.sort(key=lambda c: (-int(c.get("followers") or 0)))
 
-        # 3. Quotes: кто процитировал свежий пост офиц. аккаунта (is:quote)
-        # Цитата крупного аккаунта = сильный катализатор (комментирует, значит следит).
-        if hot_ids:
-            q_query = urllib.parse.quote(f"is:quote @{ACCOUNT} -is:retweet")
-            q_path = (
-                "/2/tweets/search/recent?query=" + q_query
-                + "&max_results=20"
-                + "&tweet.fields=created_at,author_id,public_metrics,referenced_tweets"
-                + "&expansions=author_id&user.fields=username,name,public_metrics,verified"
-            )
-            q_code, q_payload, _ = run_xurl([q_path], timeout=timeout)
-            if q_code == 0 and isinstance(q_payload, dict):
-                for post in (q_payload.get("data") or []):
-                    if not isinstance(post, dict):
-                        continue
-                    u = _user_of(post, q_payload)
-                    pm = u.get("public_metrics") or {}
-                    fol = int(pm.get("followers_count") or 0)
-                    if fol < CATALYST_MIN_FOLLOWERS:
-                        continue
-                    uname = u.get("username") or ""
-                    w = account_weight(fol, verified=bool(u.get("verified")), username=uname)
-                    q_likes = int((post.get("public_metrics") or {}).get("like_count") or 0)
-                    q_rt = int((post.get("public_metrics") or {}).get("retweet_count") or 0)
-                    # Фильтр мёртвых цитат (0/0 от мелкого аккаунта ≠ катализатор)
-                    if is_dead_quote(
-                        likes=q_likes,
-                        rt=q_rt,
-                        followers=fol,
-                        known=bool(w.get("known") or w.get("politician")),
-                    ):
-                        continue
-                    pid = str(post.get("id") or "")
-                    hot.append(
-                        {
-                            "user": uname,
-                            "followers": fol,
-                            "verified": bool(u.get("verified")),
-                            "tier": w["tier"],
-                            "type": "quote_fresh",
-                            "text": "Цитата свежего поста @{}: {}".format(
-                                ACCOUNT, compact_text(str(post.get("text") or ""), 80)
-                            ),
-                            "id": pid,
-                            "url": f"https://x.com/{uname}/status/{pid}" if uname and pid else "",
-                            "likes": q_likes,
-                            "rt": q_rt,
-                            "post_id": hot_ids[0],
-                        }
-                    )
+        # 3. Quotes: ОТКЛЮЧЕНЫ 11.10 (экономия X API, директива владельца):
+        #    −1 вызов/прогон, −20 читаемых твитов. Цитаты крупных аккаунтов
+        #    по-прежнему ловятся catalyst-сканом (is:quote входит в CATALYST_QUERY
+        #    через @official/retweets_of охват) — потери сенсора минимальны.
+        # (блок quotes удалён 11.10 — экономия X API)
+
         # Dedup по url (retweeted_by может вернуть один аккаунт дважды — по 2 горячим постам)
         seen_urls: set[str] = set()
         uniq_hot = []
