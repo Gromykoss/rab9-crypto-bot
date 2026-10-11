@@ -38,5 +38,5 @@
 ## Границы интеграции
 
 - Читает: `.env:RAB9_HTTP_SECRET`.
-- Пишет: только в ingress `/msf-signal` и свой stdout-лог. Не пишет в БД/файлы данных.
+- Пишет: только в ingress `/msf-signal`, свой stdout-лог и персистентный файл неудач `data/ingress_failed.jsonl` (см. ingress-failure-handling). БД и остальные файлы данных не трогает.
 - Затрагиваемые файлы: новый `pumpportal_listener.py`, новый `pumpportal-listener.service`, `.gitignore` (offset-стейт при необходимости), CHRONOLOGY.md, spec_drift_log.md.
