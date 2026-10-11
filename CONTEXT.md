@@ -1,6 +1,7 @@
 # CONTEXT.md — язык проекта RAB9 (BURNIE)
 
 > Шаг 1 CDD, создан 2026-10-11 для фичи pumpportal-ingress. Не перезаписывать — только diff + согласование.
+> Дифф для фичи 2 (standalone-analyzer): 2026-10-11.
 
 ## Сущности
 
@@ -36,3 +37,15 @@
 
 - Сигнал: обнаружен (вход) → принят (HTTP 200) → проанализирован (PASS/FLAG/FAIL/REJECT) → доставлен или подавлен.
 - Вход: активен / отключён владельцем (демонтаж: код удалён, история в git).
+
+## Сущности и связи (фича 2, standalone-analyzer)
+
+| Сущность | Смысл | Идентификатор |
+|----------|-------|---------------|
+| Standalone-анализатор | ядро без Telegram-слоя: HTTP :8089 + пайплайн + sink | systemd `rab9-analyzer` (новый юнит, заменяет rab9-crypto-hermes) |
+| Sink | локальная точка выдачи вердиктов для доставки агентом | data/analyses_out/ (jsonl + файл на сигнал) |
+| Дайджест | пачка REJECT/SKIP, доставляемая раз в N часов | запись sink типа digest |
+| Исход | замер вердикта через 24ч (2x/умер/флэт) | data/verdict_outcomes.jsonl |
+| Демонтаж MSF | удаление msf_listener.py и юнита msf-listener.service (выключает владелец) | git-история |
+
+Связи: Ingress HTTP → Standalone-анализатор (контракт :8089/msf-signal без изменений) → Sink → RAB9-агент → чат Cryptanalyst. cabal_detector / wallet_intel / loop_verifier / operators — без изменений.
