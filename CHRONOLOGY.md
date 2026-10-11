@@ -786,3 +786,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **11.10.2026 06:59** — docs(drift): SHA 95c37c1 fill for pumpportal-ingress spec intent (`8671e5d`)
 - **11.10.2026 07:25** — docs(cdd): pumpportal-ingress v0.2 (scope narrowed per review e61ce676) + analysis-filters draft + delta (`d712b79`)
 - **11.10.2026 07:29** — docs(cdd): websockets dep pinned (16.0) in proposal + requirements (reviewer note) (`f375693`)
+- **11.10.2026 07:42** — fix(cdd): review minors F-v02-1/F-v02-2 — websockets==16.0 pin, proposal write-scope aligned (`dc8ec47`)
