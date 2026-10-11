@@ -1,10 +1,8 @@
-# Spec: pumpportal-ingress — v0.2 FROZEN (2026-10-11, сужение после ревью 95c37c1)
+# Spec: pumpportal-ingress — v0.3 FROZEN (2026-10-11, кит-прогон 891d0d9b)
 
-> v0.1 → v0.2: по ревью (F1/F2) скоуп сужен до сигнального listener'а. Требования
-> R4-R9 (каскад t=0, risk-профиль, social-weight, outcome-loop, delivery, rate cap)
-> перенесены в draft `openspec/specs/analysis-filters.md` (фича 2, standalone-analyzer).
-> Delta: openspec/specs/pumpportal-ingress-delta.md.
-> Files теперь полон: listener + unit — трассируемость требование→файл 1:1.
+> v0.2 → v0.3: по агрегации китов добавлены (1) наблюдаемый критерий живой подписки
+> (ack-сообщение сервера + таймаут), (2) WS keepalive-политика. Остальное без изменений.
+> Delta: openspec/specs/pumpportal-ingress-delta.md (v0.1→v0.2) + секция v0.2→v0.3 ниже.
 
 Purpose: замена умершего MSF-пуш-входа. PumpPortal WS `subscribeMigration` →
 Ingress HTTP `:8089/msf-signal`. Пайплайн анализа этой спекой НЕ затрагивается.
@@ -41,6 +39,24 @@ THEN отложенные события переотправлены, при у
 GIVEN активное соединение
 WHEN WS закрывается или падает recv
 THEN активная подписка восстановлена не позднее 70с от обрыва, события после реконнекта обрабатываются
+
+### Requirement: subscription-liveness
+Система SHALL считать подписку активной ТОЛЬКО после получения ack-сообщения сервера (подтверждение подписки) и SHALL логировать событие «subscription active» при каждом подтверждении; отсутствие ack в течение конфигурируемого таймаута (старт 30с) после коннекта SHALL трактоваться как неудача и вести к reconnect по backoff. Активность подписки SHALL быть наблюдаема по логу без доступа к сетевому трафику.
+#### Scenario: ack получен
+GIVEN соединение установлено и send subscribeMigration выполнен
+WHEN сервер присылает подтверждение подписки
+THEN в логе зафиксировано «subscription active» с текущей меткой времени
+#### Scenario: ack не пришёл
+GIVEN соединение установлено
+WHEN ack не получен за PPP_SUB_ACK_TIMEOUT_S
+THEN соединение закрыто инициировано reconnect по backoff-политике
+
+### Requirement: ws-keepalive
+Система SHALL держать WS keepalive включённым (ping interval и ping timeout — конфигурируемые параметры, старт 20с/20с) и SHALL трактовать истечение ping-таймаута (half-open соединение) как обрыв с переходом к reconnect-политике.
+#### Scenario: half-open соединение
+GIVEN соединение, у которого peer не отвечает на ping
+WHEN ping timeout истёк
+THEN соединение закрыто локально и запущен reconnect-цикл
 
 ### Requirement: secret-hygiene
 Система SHALL читать секрет только из `.env:RAB9_HTTP_SECRET` и SHALL NOT логировать его или писать в файлы данных.

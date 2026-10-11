@@ -25,6 +25,10 @@
 | PPP_RECONNECT_CAP_S | 60 | resilient-connection |
 | PPP_FAILED_FILE | data/ingress_failed.jsonl | ingress-failure-handling |
 | PPP_INGRESS_URL | http://127.0.0.1:8089 (база для /msf-signal и /health) | migration-ingest |
+| PPP_SUB_ACK_TIMEOUT_S | 30 | subscription-liveness (v0.3) |
+| PPP_WS_PING_INTERVAL_S | 20 | ws-keepalive (v0.3) |
+| PPP_WS_PING_TIMEOUT_S | 20 | ws-keepalive (v0.3) |
+| PPP_REPLAY_DELAY_S | 1 | ingress-failure-handling (кит-фикс) |
 
 ## Потоки данных
 
@@ -39,6 +43,11 @@
    атомарно: tmp+rename, chmod 600 tmp) — частичный успех не даёт ни потери, ни дублей
    (дубли съест дедуп, но per-line ack их исключает); файл > 10К строк (аномалия) →
    ротация в ingress_failed.<ts>.jsonl с лог-алертом.
+   КИТ-ФИКСЫ (агрегация 891d0d9b): (a) каждая строка журнала несёт уникальный `id`
+   (uuid4) + `ts` — трассировка при ротации/переотправке; (b) append/ack-перезапись
+   завершается fsync — персистентность переживает не только рестарт, но и crash; (c)
+   replay-backoff: пауза PPP_REPLAY_DELAY_S (старт 1с) между переотправками — не
+   долбить recovering ingress очередью.
 4. **WS-обрыв:** исключение recv/connect → backoff 1с×2 до капа 60с → reconnect →
    re-subscribe (подписка не персистентна на стороне сервера).
 
