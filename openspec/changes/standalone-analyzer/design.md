@@ -26,6 +26,16 @@ class Sink:
     async def digest_timer(self) -> None   # фоновая корутина: окно 4ч, порог ≥3
 ```
 
+Машиночитаемость (D-A1, ревью 031351b4): каждая jsonl-строка sink — валидный JSON
+со схемой: `{id, ts, type, address, token, text, digest_meta?}`; для type=digest
+обязательно `digest_meta = {window_start, window_end, threshold, counts: {verdict,
+reject, alert, escalate}, entries: [{id, type, address, token, title}]}` — чтец
+(RAB9-агент) парсит jsonl без знания внутренностей анализатора.
+Асинхронность (D-A2): все fsync/tmp+rename операции sink — через
+`asyncio.to_thread` (унификация с фичей 1, блокировка event loop запрещена).
+Ротация jsonl (D-A3): analyses.jsonl > 5MB или > 20К строк → rename в
+`analyses.<ts>.jsonl` + лог; пер-вердиктные .md — >500 файлов (как было).
+
 `send_msf_pairresolve(sink, address)` — сигнатура меняется с Application на Sink;
 каждый `application.bot.send_message(...)` → `await sink.write("verdict"/"alert"/...)`.
 `start_msf_http_server(sink, loop)` — аналогично. ROUTING: `check_destination`
@@ -58,6 +68,12 @@ t0-интервал, пороги L1).
   (декс-обогащение уже там) — флаги в вердикт.
 - outcome-loop: отдельная корутина, раз в час сканирует sink-вердикты старше 24ч →
   data/verdict_outcomes.jsonl.
+  Замер исхода (D-A4, ревью 031351b4) — источник: DexScreener (ликвидность + цена,
+  бесплатный, уже в стэке); точка отсчёта: цена и ликвидность на момент вердикта
+  (фиксируются в sink-записи вердикта); критерии:
+  `2x` — цена ≥ 2× отсчётной; `умер` — ликвидность < конфиг-порога (старт $5K) ИЛИ
+  цена < 25% отсчётной; `флэт` — всё остальное. Замер неоднозначный (DexScreener
+  отдал пусто по токену) = `умер` с пометкой confidence=low.
 - digest: НЕ отправляет ничего — только пишет digest-запись в sink (доставку делает
   агент, читающий sink по крону своего профиля).
 
@@ -92,5 +108,10 @@ WorkingDirectory, After=network-online.target. Ставит владелец;
 | sink-contract | sink.py + ротация |
 | manual-analyze-endpoint | /analyze в MsfSignalHandler |
 | digest-composition | sink.digest_timer (окно/порог конфиг) |
-| telegram-demolition | раздел «Демонтаж» |
+| telegram-demolition | раздел «Демонтаж» (тест import-guard — D-A5, см. tasks) |
 | analysis-filters v1.0 | раздел «Analysis-filters вшивание» |
+
+D-A5 (ревью 031351b4): spec-сценарий «прогон не импортирует Telegram-модули»
+закрывается import-guard тестом:sys.modules-проверка после импорта analyzer_main —
+'telegram' отсутствует в sys.modules и в исходниках импортируемых модулей
+(grep-guard). Задача фиксируется в tasks.md T-демонтаж.
