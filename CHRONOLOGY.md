@@ -797,3 +797,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **11.10.2026 10:09** — docs(chrono): pumpportal-ingress accepted — unit installed, active (T5 done) (`e3dd862`)
 - **11.10.2026 11:12** — docs(cdd): feature 2 specs FROZEN (standalone-analyzer v1.0 + analysis-filters v1.0) + ADR-0001 + proposal (`7992df9`)
 - **11.10.2026 11:25** — docs(cdd): standalone-analyzer design.md (Sink abstraction, /analyze, demolition plan) (`0b5bcd5`)
+- **11.10.2026 11:29** — docs(cdd): design fixes D-A1..A5 (sink schema, to_thread, rotation, outcome criteria, import-guard) (`037310f`)
