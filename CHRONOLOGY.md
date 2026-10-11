@@ -795,3 +795,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 
 | 2026-10-11T10:10 | Фича pumpportal-ingress ПРИНЯТА (CDD шаги 1-8, кит-прогон Ревьюэра): спека v0.3 FROZEN (subscription-liveness + ws-keepalive по агрегации китов), design+tasks ревью закрыты, имплементация pumpportal_listener.py + 7 GWT-тестов (suite 25 passed), live smoke 'subscription active' 0.5с, T5 — юнит pumpportal-listener.service установлен владельцем, MainPID 526279 active, subscription active в journalctl (10:09:25). SDG-интенты: 26b6730/95c37c1/d712b79/dc8ec47/6bc6f72/ed9e71f/e28c2e8/854d4ad. Остаточное: наблюдение 48ч (частота миграций, rate cap), фича 2 standalone-analyzer в backlog.
 - **11.10.2026 10:09** — docs(chrono): pumpportal-ingress accepted — unit installed, active (T5 done) (`e3dd862`)
+- **11.10.2026 11:12** — docs(cdd): feature 2 specs FROZEN (standalone-analyzer v1.0 + analysis-filters v1.0) + ADR-0001 + proposal (`7992df9`)
