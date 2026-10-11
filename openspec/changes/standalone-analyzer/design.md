@@ -11,6 +11,22 @@ alerts.py (логика классификации — delivery меняется
 msf_listener.py, config.TELEGRAM_BOT_TOKEN/GROUP_ID (заменяются sink-конфигом).
 Юниты: `rab9-crypto-hermes` → `rab9-analyzer` (новый файл), `msf-listener.service` — владельцем.
 
+## Конфигурация (N1/N2 ревью рефриза 5d8f5703)
+
+Endpoint health-check = GET `http://127.0.0.1:8089/health` (существующий msf_http.do_GET).
+Стартовые значения analysis-filters — явно:
+
+| Переменная (.env) | Старт | Источник |
+|---|---|---|
+| ANALYZER_T0_INTERVAL_MIN | 20 (методика: 15-30) | t0-cascade |
+| ANALYZER_DIGEST_WINDOW_H | 4 | delivery-discipline |
+| ANALYZER_DIGEST_THRESHOLD | 3 | delivery-discipline |
+| ANALYZER_RATE_CAP_H | 15 | rate-cap |
+| ANALYZER_KABAL_CAP_H | 5 | signal-state-routing |
+| ANALYZER_QUEUE_MAX | 500 | bounded-очереди |
+| ANALYZER_OUTCOME_DEAD_LIQ_USD | 5000 | outcome-loop («умер») |
+| ANALYZER_OUTCOME_AFTER_H | 24 | outcome-loop |
+
 ## Ядро решения: Sink вместо application.bot
 
 Точка боли: `msf_http.send_msf_pairresolve(application, address)` и
