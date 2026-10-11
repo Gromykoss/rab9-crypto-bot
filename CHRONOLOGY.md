@@ -791,3 +791,6 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **11.10.2026 07:55** — docs(cdd): pumpportal-ingress tasks.md (5 vertical tasks, quiz confirmed) (`ed9e71f`)
 - **11.10.2026 08:00** — docs(cdd): tasks.md N1 fix (systemd MUST NOT wording) per review fd4f038c (`aac4d98`)
 - **11.10.2026 09:46** — docs(cdd): spec v0.3 (subscription-liveness + ws-keepalive per whale-run) + design kit-fixes (`e28c2e8`)
+- **11.10.2026 09:50** — feat(ingress): pumpportal_listener per spec v0.3 + GWT tests + systemd unit file (`854d4ad`)
+
+| 2026-10-11T10:10 | Фича pumpportal-ingress ПРИНЯТА (CDD шаги 1-8, кит-прогон Ревьюэра): спека v0.3 FROZEN (subscription-liveness + ws-keepalive по агрегации китов), design+tasks ревью закрыты, имплементация pumpportal_listener.py + 7 GWT-тестов (suite 25 passed), live smoke 'subscription active' 0.5с, T5 — юнит pumpportal-listener.service установлен владельцем, MainPID 526279 active, subscription active в journalctl (10:09:25). SDG-интенты: 26b6730/95c37c1/d712b79/dc8ec47/6bc6f72/ed9e71f/e28c2e8/854d4ad. Остаточное: наблюдение 48ч (частота миграций, rate cap), фича 2 standalone-analyzer в backlog.
