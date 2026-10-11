@@ -800,3 +800,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **11.10.2026 11:29** — docs(cdd): design fixes D-A1..A5 (sink schema, to_thread, rotation, outcome criteria, import-guard) (`037310f`)
 - **11.10.2026 11:30** — docs(cdd): standalone-analyzer tasks.md (7 vertical tasks, quiz confirmed) (`d295035`)
 - **11.10.2026 11:33** — docs(cdd): tasks.md N1/N2 notes from review 7f997f9a (`a6dfa93`)
+- **11.10.2026 13:13** — perf(x-api): sentiment tracker cut 14->5 calls/day (catalyst 25->20, quotes block removed, cron 2->1/day) (`68d28aa`)
