@@ -17,6 +17,10 @@ MUST NOT (из Gates + спек):
   jsonl-строка валидна по схеме D-A1. GWT «вердикт в sink».
 
 ## T2 — Рефакторинг ядра на Sink [блокирует T3]
+> N1 (ревью 7f997f9a): самая рискованная задача — промежуточные коммиты поэтапно
+> внутри окна, pre-patch grep воспроизводится на каждом шаге.
+> N2 (ревью 7f997f9a): outcome-loop ходит в DexScreener — учитывать rate-лимиты
+> бесплатного тира (кэш ответов, паузы между замерами; часовой цикл это допускает).
 - [ ] Pre-patch grep: все application.bot.send_message в msf_http.py/handlers-путях
       пайплайна — каждая точка показана и заменена на sink.write с корректным type.
 - [ ] Сигнатура send_msf_pairresolve(application,address) → (sink,address);
