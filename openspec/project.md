@@ -7,7 +7,8 @@ CDD-процесс: cdd-suite v1.2.0 (8 шагов, стоп-гейты, фри�
 | Дата | Фича | Версия | Карточка |
 |------|------|--------|----------|
 | — | llm-fallback | унаследована до CDD-канона | openspec/specs/llm-intel.md |
-| 2026-10-11 | pumpportal-ingress | **v0.1** FROZEN | openspec/specs/pumpportal-ingress.md |
+| 2026-10-11 | pumpportal-ingress | **v0.2** FROZEN (сужение по ревью e61ce676; v0.1 → delta) | openspec/specs/pumpportal-ingress.md + -delta.md |
+| — | analysis-filters | v0.0 DRAFT (фича 2, НЕ заморожена) | openspec/specs/analysis-filters.md |
 
 ## Правила
 

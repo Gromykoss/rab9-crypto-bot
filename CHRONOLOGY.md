@@ -783,3 +783,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **11.10.2026 03:15** — chore(cleanup): MGT inventory 11.10 — dead code/artifacts removed, sentiment jsonl to data/, requirements synced (`26b6730`)
 - **11.10.2026 03:15** — docs(chrono): cleanup MGT 11.10 (26b6730) record (`c3382d3`)
 - **11.10.2026 06:59** — docs(cdd): pumpportal-ingress spec v0.1 FROZEN + proposal + selection methodology (Researcher amendments) (`95c37c1`)
+- **11.10.2026 06:59** — docs(drift): SHA 95c37c1 fill for pumpportal-ingress spec intent (`8671e5d`)
