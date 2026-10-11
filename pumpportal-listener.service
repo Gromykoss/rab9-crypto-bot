@@ -1,0 +1,15 @@
+[Unit]
+Description=RAB9 PumpPortal Listener (pump.fun migrations -> ingress :8089)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hermes-workspace/rab9
+ExecStart=/home/hermes-workspace/rab9/venv/bin/python /home/hermes-workspace/rab9/pumpportal_listener.py
+Restart=always
+RestartSec=5
+EnvironmentFile=-/home/hermes-workspace/rab9/.env
+
+[Install]
+WantedBy=multi-user.target

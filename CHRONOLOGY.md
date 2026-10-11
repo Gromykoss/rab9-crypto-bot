@@ -790,3 +790,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **11.10.2026 07:51** — docs(cdd): design fixes D1-D3 (to_thread+timeout, PPP_INGRESS_URL, per-line ack+rotation) (`6bc6f72`)
 - **11.10.2026 07:55** — docs(cdd): pumpportal-ingress tasks.md (5 vertical tasks, quiz confirmed) (`ed9e71f`)
 - **11.10.2026 08:00** — docs(cdd): tasks.md N1 fix (systemd MUST NOT wording) per review fd4f038c (`aac4d98`)
+- **11.10.2026 09:46** — docs(cdd): spec v0.3 (subscription-liveness + ws-keepalive per whale-run) + design kit-fixes (`e28c2e8`)
