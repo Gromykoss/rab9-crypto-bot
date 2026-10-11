@@ -437,7 +437,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                             if acc:
                                 x_account_info = f"X: @{acc['username']} — {acc['followers']:,} подписчиков, {acc['tweets']:,} твитов"
                                 # Check community sentiment file
-                                sentiment_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "community_sentiment.jsonl")
+                                sentiment_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "community_sentiment.jsonl")
                                 if os.path.exists(sentiment_file):
                                     with open(sentiment_file) as sf:
                                         sf_lines = sf.readlines()
@@ -680,7 +680,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     # Community sentiment — only for BURNIE
     community_sentiment = "neutral"
     try:
-        sentiment_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "community_sentiment.jsonl")
+        sentiment_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "community_sentiment.jsonl")
         if os.path.exists(sentiment_path) and token_name.upper() == "BURNIE":
             with open(sentiment_path) as sf:
                 sf_lines = sf.readlines()
@@ -809,7 +809,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         if radar_context:
             grok_prompt += f"\nСоцсети/X:\n{radar_context[:800]}\n"
         # Community sentiment — BURNIE only
-        sentiment_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "community_sentiment.jsonl")
+        sentiment_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "community_sentiment.jsonl")
         try:
             if os.path.exists(sentiment_path) and token_name.upper() == "BURNIE":
                 with open(sentiment_path) as sf:

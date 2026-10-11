@@ -35,7 +35,7 @@ RAB9_DIR = Path("/home/hermes-workspace/rab9")
 XURL_BIN = shutil.which("xurl") or (
     "/home/hermes-workspace/.local/lib/node_modules/@xdevplatform/xurl/binary/xurl"
 )
-OUTFILE = RAB9_DIR / "community_sentiment.jsonl"
+OUTFILE = RAB9_DIR / "data" / "community_sentiment.jsonl"
 ACCOUNT = "BurnieSendersX"
 NEGATIVE_QUERY = (
     'BURNIE (rug OR scam OR dump OR dumped OR warning OR abandoned OR dead '

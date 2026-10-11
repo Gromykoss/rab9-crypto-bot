@@ -12,7 +12,6 @@ LLM-анализ токена с graceful degradation: deepseek -> grok -> templ
 
 ## Neighbor Risks
 - `msf_analysis`
-- `structured_reflection`
 
 ## Known Traps
 - OpenRouter API key error считается LLM-error даже при provider=`deepseek`: это историческая дыра и регресс-тест.

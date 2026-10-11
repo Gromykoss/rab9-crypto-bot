@@ -262,11 +262,6 @@ def check_diff_coverage(scenarios, changed, base):
         for path in changed
         if not whitelisted(path)
         and path not in covered
-        and not (
-            path.startswith("openspec/specs/")
-            and path.endswith(".md")
-            and changes_only_no_ci(base, path)
-        )
     ]
     if uncovered:
         fail_check(["files outside mapped domains and whitelist:"] + [f"  {path}" for path in uncovered])
