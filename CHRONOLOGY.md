@@ -784,3 +784,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **11.10.2026 03:15** — docs(chrono): cleanup MGT 11.10 (26b6730) record (`c3382d3`)
 - **11.10.2026 06:59** — docs(cdd): pumpportal-ingress spec v0.1 FROZEN + proposal + selection methodology (Researcher amendments) (`95c37c1`)
 - **11.10.2026 06:59** — docs(drift): SHA 95c37c1 fill for pumpportal-ingress spec intent (`8671e5d`)
+- **11.10.2026 07:25** — docs(cdd): pumpportal-ingress v0.2 (scope narrowed per review e61ce676) + analysis-filters draft + delta (`d712b79`)

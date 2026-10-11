@@ -14,6 +14,7 @@
 - Конвертация события → POST `http://localhost:8089/msf-signal` `{chain:"solana", address}` + `X-RAB9-SECRET` (из `.env`, как у msf_listener).
 - Ресилиенс: автопереподключение WS с backoff, логинг, один процесс.
 - Юнит-файл `pumpportal-listener.service` (ставит владелец; я код + файл юнита в репо).
+- Зависимость: `websockets==16.0` (уже в venv ~/rab9/venv, добавлена в requirements.txt при рефризе v0.2).
 - Валидация адреса на входе до POST (та же логика `is_msf_solana_address`).
 - SDG-интент перед мутацией; тест-сигнал через ingress для приёмки.
 

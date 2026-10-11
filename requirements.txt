@@ -4,5 +4,6 @@ requests
 requests-oauthlib
 httpx
 pydantic
+websockets
 # dev-only
 pytest
