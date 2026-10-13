@@ -810,3 +810,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **13.10.2026 13:18** — feat(analyzer): standalone-analyzer per spec v1.2 — sink, state machine, /analyze, demolition T1-T6 (`a69d2b6`)
 - **13.10.2026 13:19** — chore(ci): whitelist standalone-analyzer domain files (`f7b1f3e`)
 - **13.10.2026 13:19** — docs(drift): SHA fill a69d2b6 (имплементация) + whitelist SHA (`5a1365a`)
+- **13.10.2026 13:22** — chore(ci): whitelist additions (msf_http/config/msf_listener/.gitignore) (`b4602ae`)
