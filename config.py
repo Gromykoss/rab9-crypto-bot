@@ -5,8 +5,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_GROUP_ID = os.getenv("TELEGRAM_GROUP_ID")
+TELEGRAM_GROUP_ID = os.getenv("TELEGRAM_GROUP_ID")  # destination allowlist (v1.2: не бот)
 
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 BIRDEYE_API_KEY = os.getenv("BIRDEYE_API_KEY")

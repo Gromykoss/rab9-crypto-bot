@@ -1,0 +1,15 @@
+[Unit]
+Description=RAB9 Standalone Analyzer (ingress :8089 + pipeline + sink)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hermes-workspace/rab9
+ExecStart=/home/hermes-workspace/rab9/venv/bin/python /home/hermes-workspace/rab9/analyzer_main.py
+Restart=always
+RestartSec=5
+EnvironmentFile=-/home/hermes-workspace/rab9/.env
+
+[Install]
+WantedBy=multi-user.target

@@ -21,3 +21,7 @@ data/
 .hermes/
 msf_offset.txt
 backups/
+data/analyses_out/
+data/t0_queue.jsonl
+data/analysis_queue.jsonl
+data/verdict_outcomes.jsonl

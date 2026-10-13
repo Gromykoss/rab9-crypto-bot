@@ -4,11 +4,11 @@ import logging
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import requests
+
 
 class ReuseThreadingHTTPServer(ThreadingHTTPServer):
     allow_reuse_address = True
-
-from telegram.ext import Application
 
 from address_validation import is_msf_solana_address
 from config import RAB9_HTTP_HOST, RAB9_HTTP_PORT, RAB9_HTTP_SECRET, TELEGRAM_GROUP_ID
@@ -38,7 +38,7 @@ def _verifier_available(verification: dict | None) -> bool:
     return not any(marker in note for marker in unavailable_markers)
 
 
-async def send_msf_pairresolve(application: Application, address: str):
+async def send_msf_pairresolve(sink, address: str, manual: bool = False):
     logger.info("MSF analysis started for: %s", address)
     destination = check_destination(TELEGRAM_GROUP_ID)
     if destination.verdict != Verdict.ALLOW:
@@ -50,28 +50,19 @@ async def send_msf_pairresolve(application: Application, address: str):
     from msf_dedupe import check_dedupe
 
     if should_skip(address, cooldown_minutes=15):
-        # Prefer rich 24h recap over silent drop
+        # v1.2: SKIP = строка дайджеста (не полный отчёт)
         recap = check_dedupe(address)
-        if recap:
-            logger.info("COOLDOWN recap sent for %s", address[:12])
-            for chunk in split_text(recap):
-                await application.bot.send_message(
-                    chat_id=TELEGRAM_GROUP_ID,
-                    text=chunk,
-                    disable_web_page_preview=True,
-                )
-        else:
-            msg = (
+        msg = (
+            recap
+            if recap
+            else (
                 f"🔄 Уже смотрел этот токен <15 мин назад.\n"
                 f"Адрес: `{address[:8]}…{address[-4:]}`\n"
                 f"🔗 https://dexscreener.com/solana/{address}"
             )
-            logger.info("COOLDOWN short notice for %s", address[:12])
-            await application.bot.send_message(
-                chat_id=TELEGRAM_GROUP_ID,
-                text=msg,
-                disable_web_page_preview=True,
-            )
+        )
+        logger.info("COOLDOWN skip line for %s", address[:12])
+        await sink.write("reject", address, "?", msg)
         return "sent"
 
     # ── Cabal detection (pre-analysis) ──
@@ -87,12 +78,8 @@ async def send_msf_pairresolve(application: Application, address: str):
                 for s in pat.get("signals", [])[:3]:
                     alert_lines.append(f"  • {s}")
             alert = "\n".join(alert_lines)
-            await application.bot.send_message(
-                chat_id=TELEGRAM_GROUP_ID,
-                text=alert,
-                disable_web_page_preview=True,
-            )
-            logger.info("CABAL alert sent: %s", cabal["phase"])
+            await sink.write("alert", address, cabal.get("symbol", "?"), alert)
+            logger.info("CABAL alert to sink: %s", cabal["phase"])
     except Exception as e:
         logger.warning("Cabal detector error (continuing): %s", e)
 
@@ -178,18 +165,44 @@ async def send_msf_pairresolve(application: Application, address: str):
         if any(kw in line for kw in ["Кабал", "Кабалы", "Инфраструктура", "⚠️", "GMGN"]):
             logger.info("INTEL: %s", line.strip())
 
-    # ALWAYS send the report (no silent drop after analysis)
-    for chunk in split_text(text):
-        await application.bot.send_message(
-            chat_id=TELEGRAM_GROUP_ID,
-            text=chunk,
-            disable_web_page_preview=True,
-        )
-    logger.info("MSF report delivered to %s (%d chars)", TELEGRAM_GROUP_ID, len(text))
+    # ALWAYS record the report (no silent drop after analysis)
+    baseline = _extract_baseline(address)
+    await sink.write(
+        "verdict",
+        address,
+        token_name,
+        text,
+        manual=manual,
+        baseline=baseline,
+    )
+    logger.info("MSF report written to sink (%d chars)", len(text))
     return "sent"
 
 
-def start_msf_http_server(application: Application, loop: asyncio.AbstractEventLoop):
+def _extract_baseline(address: str) -> dict:
+    """Outcome-бейзлайн (v1.2): price/liquidity на момент вердикта (DexScreener)."""
+    try:
+        r = requests.get(
+            f"https://api.dexscreener.com/tokens/v1/solana/{address}",
+            timeout=10,
+        )
+        pairs = (r.json() or []) if r.status_code == 200 else []
+        best = max(
+            (p for p in pairs if isinstance(p, dict)),
+            key=lambda p: float((p.get("liquidity") or {}).get("usd") or 0),
+            default=None,
+        )
+        if best:
+            return {
+                "price_usd": best.get("priceUsd"),
+                "liquidity_usd": (best.get("liquidity") or {}).get("usd"),
+            }
+    except Exception as exc:
+        logger.warning("baseline fetch failed: %s", type(exc).__name__)
+    return {}
+
+
+def start_msf_http_server(sink, loop: asyncio.AbstractEventLoop, signal_coro=None):
     class MsfSignalHandler(BaseHTTPRequestHandler):
         def log_message(self, format, *args):
             logger.info("MSF HTTP: " + format, *args)
@@ -208,52 +221,69 @@ def start_msf_http_server(application: Application, loop: asyncio.AbstractEventL
             else:
                 self.send_json(404, {"ok": False, "error": "not_found"})
 
-        def do_POST(self):
-            if self.path != "/msf-signal":
-                self.send_json(404, {"ok": False, "error": "not_found"})
-                return
-
+        def _parse_signal(self):
+            """Общая авторизация/валидация /msf-signal и /analyze. None при ошибке."""
             if not RAB9_HTTP_SECRET or self.headers.get("X-RAB9-SECRET") != RAB9_HTTP_SECRET:
                 self.send_json(401, {"ok": False, "error": "unauthorized"})
-                return
-
+                return None
             try:
                 length = int(self.headers.get("Content-Length") or "0")
             except ValueError:
                 self.send_json(400, {"ok": False, "error": "invalid_content_length"})
-                return
-
+                return None
             try:
                 payload = json.loads(self.rfile.read(length).decode("utf-8"))
             except Exception:
                 self.send_json(400, {"ok": False, "error": "invalid_json"})
-                return
-
+                return None
             chain = str(payload.get("chain") or "").lower()
             address = str(payload.get("address") or "").strip()
-
             if chain != "solana":
                 self.send_json(400, {"ok": False, "error": "unsupported_chain"})
-                return
-
+                return None
             if not is_msf_solana_address(address):
                 self.send_json(400, {"ok": False, "error": "invalid_address"})
-                return
+                return None
+            return address
 
-            future = asyncio.run_coroutine_threadsafe(
-                send_msf_pairresolve(application, address),
-                loop,
-            )
-
-            try:
-                status = future.result(timeout=90)
-            except Exception as error:
-                logger.exception("MSF signal processing failed: %s", error)
-                self.send_json(500, {"ok": False, "error": "processing_failed"})
-                return
-
-            status = status or "error"
-            self.send_json(200, {"ok": status == "sent", "status": status})
+        def do_POST(self):
+            if self.path == "/msf-signal":
+                address = self._parse_signal()
+                if address is None:
+                    return
+                # v1.2: POST → t0-каскад (signal_coro), полный прогон только на ANALYZED
+                coro = (signal_coro or send_msf_pairresolve)(address)
+                future = asyncio.run_coroutine_threadsafe(coro, loop)
+                try:
+                    status = future.result(timeout=90)
+                except Exception as error:
+                    logger.exception("MSF signal processing failed: %s", error)
+                    self.send_json(500, {"ok": False, "error": "processing_failed"})
+                    return
+                status = status or "error"
+                self.send_json(200, {"ok": status == "sent", "status": status})
+            elif self.path == "/analyze":
+                # Ручной анализ (v1.2: минует t0-каскад, manual=true)
+                address = self._parse_signal()
+                if address is None:
+                    return
+                future = asyncio.run_coroutine_threadsafe(
+                    send_msf_pairresolve(sink, address, manual=True),
+                    loop,
+                )
+                try:
+                    status = future.result(timeout=90)
+                except Exception as error:
+                    logger.exception("Manual analyze failed: %s", error)
+                    self.send_json(500, {"ok": False, "error": "processing_failed"})
+                    return
+                status = status or "error"
+                # verdict-текст берём из последней sink-записи этого адреса
+                last = [r for r in sink.read_new() if r.get("address") == address]
+                verdict_text = last[-1]["text"] if last else ""
+                self.send_json(200, {"ok": status == "sent", "status": status, "verdict": verdict_text})
+            else:
+                self.send_json(404, {"ok": False, "error": "not_found"})
 
     server = ReuseThreadingHTTPServer((RAB9_HTTP_HOST, RAB9_HTTP_PORT), MsfSignalHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True, name="rab9-msf-http")
