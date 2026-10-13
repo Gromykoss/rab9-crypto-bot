@@ -85,6 +85,10 @@ WHITELIST = (
     "handlers.py",
     "keyboards.py",
     "alerts.py",
+    "msf_listener.py",
+    "msf_http.py",
+    "config.py",
+    ".gitignore",
     # сигнал-пайплайн без scenario-карточек (легаси-домен, карта не покрывает)
     "msf_analysis.py",
 )
