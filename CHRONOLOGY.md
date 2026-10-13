@@ -804,3 +804,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **11.10.2026 14:52** — docs(cdd): spec pair v1.1 harmonized (state machine, dedup semantics, safety priority, delivery contract) per whale-run (`dd91cc6`)
 - **11.10.2026 14:57** — docs(cdd): design notes — health URL + explicit analysis-filters .env defaults (`3c5c43f`)
 - **13.10.2026 12:10** — docs(chrono): session 11.10 records flush (staged 45h hygiene, директива) (`fc539bb`)
+- **13.10.2026 12:13** — chore(ci): scenario-map whitelist for inventory 11.10 + CDD meta; llm-intel card-change override (`02758d2`)
