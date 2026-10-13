@@ -31,13 +31,20 @@ MUST NOT (из Gates + спек):
   GWT «сигнал обработан без Telegram».
 
 ## T3 — analyzer_main + digest + outcome [после T2, параллельно T4]
+> N1 (ре-чек v1.2 9795826c): негатив-тест «каскад не пишет ключ дедупа» — обязателен.
+> N2 (ре-чек v1.2): rate-cap/KABAL — на ПЕРЕХОДЕ QUEUED→ANALYZED, не на входе в QUEUED.
+> Машина состояний канон (v1.2): полный прогон только в ANALYZED; дедуп-ключ на
+> входе в ANALYZED; SKIP=строка дайджеста; type=manual упразднён (manual=true флаг);
+> verdict-запись несёт outcome-бейзлайн (price_usd, liquidity_usd, manual).
 - [ ] analyzer_main.py: Sink → start_msf_http_server → digest_timer (окно/порог
       ANALYZER_* из .env) → outcome-loop (раз в час).
 - [ ] digest_timer: накопление по окну, порог ≥3, digest-запись с digest_meta
       (схема D-A1); пустое окно — тишина.
-- [ ] outcome-loop: замер исхода по D-A4 (DexScreener отсчёт из sink-записи
-      вердикта; 2x / умер [liq<конфиг или цена<25%] / флэт; пусто = умер
-      confidence=low) → data/verdict_outcomes.jsonl.
+- [ ] outcome-loop: замер исхода по D-A4 (DexScreener отсчёт ИЗ sink-записи вердикта
+      — price_usd/liquidity_usd бейзлайн v1.2; 2x / умер [liq<конфиг или цена<25%] /
+      флэт; пусто = умер confidence=low) → data/verdict_outcomes.jsonl.
+- [ ] НЕГАТИВ-ТЕСТ N1: полный каскад мигранта (T0→перепроверка) не создаёт записи
+      в дедупе (msf_dedupe state не изменён каскадом); ключ появляется только на ANALYZED.
 - Критерий готовности: тесты digest-сборки (порог, пустое окно) и outcome-замера
   на моках DexScreener (2x/умер/флэт/confidence=low). GWT «дайджест собран»,
   «исход зафиксирован», «пустое окно».
@@ -50,9 +57,11 @@ MUST NOT (из Gates + спек):
 
 ## T5 — Analysis-filters вшивание [после T3]
 - [ ] t0-каскад: очередь data/t0_queue.jsonl (персистентная, переживает рестарт),
-      перепроверка по конфиг-интервалу; выжившие → очередь анализа.
-- [ ] rate cap: счётчик/час, персистентная очередь data/analysis_queue.jsonl,
-      приоритет ликвидность+KABAL (вне очереди).
+      перепроверка по ANALYZER_T0_INTERVAL_MIN; выжившие (L1-пороги на переходе
+      T0_PENDING→QUEUED) → очередь анализа.
+- [ ] rate cap + KABAL-бакет: НА ПЕРЕХОДЕ QUEUED→ANALYZED (N2, не на входе в
+      QUEUED); персистентная очередь data/analysis_queue.jsonl; dedup-ключ пишется
+      на входе в ANALYZED (v1.2).
 - [ ] social-weight: приоритет по живому X-аккаунту (из декс-обогащения).
 - Критерий готовности: тесты каскада (выжил/умер/рестарт очереди — GWT), rate cap
   (переполнение не теряется, переживает рестарт), digest-строка умершего токена.
