@@ -808,3 +808,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **13.10.2026 12:44** — docs(cdd): spec v1.2 (state machine canon, dedup at ANALYZED, SKIP=digest line, manual flag + outcome baseline) (`7dd722a`)
 - **13.10.2026 12:58** — docs(cdd): tasks T3/T5 v1.2 updates (N1 dedup negative test, N2 rate-cap placement) (`f48cae7`)
 - **13.10.2026 13:18** — feat(analyzer): standalone-analyzer per spec v1.2 — sink, state machine, /analyze, demolition T1-T6 (`a69d2b6`)
+- **13.10.2026 13:19** — chore(ci): whitelist standalone-analyzer domain files (`f7b1f3e`)
