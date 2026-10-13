@@ -75,6 +75,16 @@ WHITELIST = (
     "pumpportal-listener.service",
     "tests/test_pumpportal_listener.py",
     "requirements.txt",
+    # standalone-analyzer (фича 2): GWT-биндинг домена — после код-спот-чека;
+    # удалённые Telegram-модули (never change again)
+    "sink.py",
+    "analyzer_main.py",
+    "rab9-analyzer.service",
+    "tests/test_standalone_analyzer.py",
+    "rab9_bot.py",
+    "handlers.py",
+    "keyboards.py",
+    "alerts.py",
     # сигнал-пайплайн без scenario-карточек (легаси-домен, карта не покрывает)
     "msf_analysis.py",
 )
