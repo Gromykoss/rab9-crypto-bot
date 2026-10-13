@@ -66,6 +66,7 @@ def test_rate_gate_on_transition(monkeypatch, tmp_path):
     q.write_text("\n".join(json.dumps(r) for r in recs) + "\n")
     monkeypatch.setattr(am, "ANALYSIS_QUEUE", q)
     monkeypatch.setattr(am, "RATE_CAP_H", 15)
+    monkeypatch.setattr(am, "RATE_LOG", tmp_path / "analysis_rate.jsonl")
 
     sink = Mock()
     sink.write = AsyncMock(return_value="x")

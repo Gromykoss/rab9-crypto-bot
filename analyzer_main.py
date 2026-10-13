@@ -31,6 +31,7 @@ DATA = BASE / "data"
 T0_QUEUE = DATA / "t0_queue.jsonl"
 ANALYSIS_QUEUE = DATA / "analysis_queue.jsonl"
 OUTCOMES = DATA / "verdict_outcomes.jsonl"
+RATE_LOG = DATA / "analysis_rate.jsonl"
 DIGEST_CURSOR = BASE / "data" / "analyses_out" / "digest_cursor.json"
 
 
@@ -133,19 +134,23 @@ async def _is_kabal(address: str) -> bool:
 
 
 # ── QUEUED → ANALYZED: rate cap + KABAL-бакет на ПЕРЕХОДЕ (N2) ──
+def _ts_of(raw: str) -> float:
+    try:
+        return float(json.loads(raw).get("ts") or 0)
+    except (ValueError, AttributeError):
+        return 0.0
+
+
 async def rate_gate(sink: Sink):
     entries = _load(ANALYSIS_QUEUE)
     if not entries:
         return
     hour_ago = time.time() - 3600
-    done_this_hour = 0
-    kabal_this_hour = 0
-    # счётчик из записей дедупа за час (лёгкий: sink-verdicts)
-    for rec in sink.read_new():
-        if rec.get("type") == "verdict" and rec.get("ts", 0) >= hour_ago:
-            if rec.get("manual"):
-                continue
-            done_this_hour += 1
+    # N1-minor hardening: счётчик из rate-журнала ANALYZED (устойчив к ротации sink)
+    done_this_hour = sum(
+        1 for raw in _load(RATE_LOG)
+        if _ts_of(raw) >= hour_ago
+    )
     best, best_i, best_p = None, -1, -1.0
     for i, raw in enumerate(entries):
         try:
@@ -163,6 +168,7 @@ async def rate_gate(sink: Sink):
         return
     # ANALYZED: дедуп-ключ пишется ВНУТРИ полного прогона (record_analysis)
     _rewrite(ANALYSIS_QUEUE, [l for i, l in enumerate(entries) if i != best_i])
+    _append(RATE_LOG, {"ts": time.time(), "address": address})
     log.info("ANALYZED start: %s (priority=%.0f, done=%d/%d)", address[:12], best_p, done_this_hour, RATE_CAP_H)
     await send_msf_pairresolve(sink, address)
 
