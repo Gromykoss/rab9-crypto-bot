@@ -17,6 +17,10 @@ LLM-анализ токена с graceful degradation: deepseek -> grok -> templ
 - OpenRouter API key error считается LLM-error даже при provider=`deepseek`: это историческая дыра и регресс-тест.
 - Template fallback не выдумывает данные, а собирает карточку только из live/template kwargs.
 - `ask_llm` не вызывает второго провайдера, если первичный ответ валидный.
+- Neighbor `structured_reflection` удалён 11.10 (мёртвый код, cleanup MGT).
+
+tests update: not needed
+
 
 ## Update Rule
 Менял LLM-цепочку, шаблон или anti-rug штрафы -> обнови `tests/test_llm_fallback.py` и эту карточку.

@@ -51,6 +51,32 @@ WHITELIST = (
     "burnie_sentiment_tracker.py",
     "scripts/burnie_cron.sh",
     "scripts/burnie_accum_watch.py",
+    # inventory 11.10: deleted dead artifacts (never change again, commit 26b6730)
+    "structured_reflection.py",
+    "tests/test_structured_reflection.py",
+    "birdeye_eval_prompt.txt",
+    "grok_manipulation_research_*.txt",
+    "grok_manipulation_research_result.md",
+    "grok_research_prompt.txt",
+    "grok_manipulation_research_stderr.log",
+    "mascot_cyberpunk*.png",
+    "rab9_qr_*.png",
+    "rab9_wallet_report_*.txt",
+    "grove.lock",
+    ".memory-engine/**",
+    "openspec/specs/reflection-loop.md",
+    "openspec/changes/**",
+    # CDD meta (specs are the source of the map, not its subjects)
+    "openspec/**",
+    "CONTEXT.md",
+    # pumpportal-ingress (фича 1): GWT-binding домена — на закрытии фичи 2 (T6);
+    # ops runtime как burnie_sentiment_tracker (unit tests есть, маркеры — TODO T6)
+    "pumpportal_listener.py",
+    "pumpportal-listener.service",
+    "tests/test_pumpportal_listener.py",
+    "requirements.txt",
+    # сигнал-пайплайн без scenario-карточек (легаси-домен, карта не покрывает)
+    "msf_analysis.py",
 )
 
 
