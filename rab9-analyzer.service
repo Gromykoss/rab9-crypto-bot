@@ -5,6 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+User=hermes-user
 WorkingDirectory=/home/hermes-workspace/rab9
 ExecStart=/home/hermes-workspace/rab9/venv/bin/python /home/hermes-workspace/rab9/analyzer_main.py
 Restart=always

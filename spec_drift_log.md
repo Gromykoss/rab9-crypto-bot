@@ -84,3 +84,4 @@
 | 2026-10-13T13:19 | .ci/check_scenario_map.py | whitelist standalone-analyzer домена (sink/analyzer_main/юнит/тесты) + удалённые Telegram-модули; GWT-биндинг TODO после код-спот-чека | operators/, кроны | f7b1f3e |
 | 2026-10-13T13:20 | .ci/check_scenario_map.py | whitelist дополнение: msf_listener/msf_http/config/.gitignore (легаси-домены, карта не покрывает) | operators/, кроны |b4602ae |
 | 2026-10-13T17:15 | analyzer_main.py, tests/test_standalone_analyzer.py | N1-minor hardening (спот-чек f63c0cfe): rate-счётчик из персистентного журнала data/analysis_rate.jsonl (устойчив к ротации sink) | operators/, systemd | |
+| 2026-10-13T17:20 | rab9-analyzer.service | T7: User=hermes-user (delivery-reader file access, ownership fix) | operators/, кроны | |
