@@ -814,3 +814,6 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **13.10.2026 13:22** — docs(drift): SHA fill whitelist-2 (`dce1a5b`)
 - **13.10.2026 13:22** — docs(drift): SHA fill a69d2b6 for имплементация (13:17) (`b269602`)
 - **13.10.2026 17:15** — refactor(analyzer): rate-cap counter from persistent rate log (N1-minor hardening) (`c989542`)
+- **13.10.2026 17:20** — fix(unit): run analyzer as hermes-user (delivery-reader file access) (`9d708f8`)
+- **17.10.2026 12:06** — cdd: пин процесса cdd-suite v1.2.0→v1.4.0 (обязательная эскалация вне гейтов) (`e01f11a`)
+- **17.10.2026 12:06** — docs(drift): SHA fill e01f11a for пин cdd-suite v1.4.0 (`392d31f`)
