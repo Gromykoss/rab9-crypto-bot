@@ -86,3 +86,4 @@
 | 2026-10-13T17:15 | analyzer_main.py, tests/test_standalone_analyzer.py | N1-minor hardening (спот-чек f63c0cfe): rate-счётчик из персистентного журнала data/analysis_rate.jsonl (устойчив к ротации sink) | operators/, systemd | |
 | 2026-10-13T17:20 | rab9-analyzer.service | T7: User=hermes-user (delivery-reader file access, ownership fix) | operators/, кроны | |
 | 2026-10-17T12:05 | openspec/project.md | пин CDD-процесса cdd-suite v1.2.0→v1.4.0 (владелец «1 делай 2 делай»; аудит дрейф-контроля 17.10, п.20): добавлена секция обязательной эскалации вне гейтов | спеки, код, systemd, кроны |e01f11a |
+| 2026-10-20T03:31 | cron 59d37ee6a323, 6f66589c53e8 | platform-lane восстановлена оператором (TELEGRAM_BOT_TOKEN мультиплекс в .env, пины provider/model сброшены): оба крона возвращены на no-agent + deliver=origin, штатная доставка | operators/ | |
