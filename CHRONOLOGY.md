@@ -829,3 +829,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 
 - **19.10 09:07 UTC** — ops(units): по команде владельца отключены стейл-юниты msf-listener.service и rab9-crypto-hermes.service (disable --now; ExecStart на несуществующие msf_listener.py/rab9_bot.py — остатки рефакторинга a69d2b6). Верифицировано: inactive+disabled, 0 рестартов после 09:06:59, лог-шум каждые 5-10с прекращён. Юнит-файлы остались в /etc/systemd/system/ — откат: systemctl enable --now <unit> (после восстановления entrypoints). Активный контур rab9: pumpportal-listener + rab9-analyzer (оба active).
 - **19.10.2026 09:07** — ops(units): disable stale msf-listener + rab9-crypto-hermes (dead entrypoints from a69d2b6 refactor), owner-approved; reversible via systemctl enable (`96fa43b`)
+- **20.10.2026 03:31** — docs(drift): platform-lane restored by operator — crons back to no-agent/origin (`333a89e`)

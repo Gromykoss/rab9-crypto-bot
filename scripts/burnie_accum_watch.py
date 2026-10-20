@@ -15,7 +15,7 @@ from pathlib import Path
 MINT = "CGEDT9QZDvvH5GmVkWJH2BXiMJqMJySC9ihWyr7Spump"
 GMGN = "/home/hermes-workspace/.hermes/node/bin/gmgn-cli"
 HERE = Path(__file__).resolve().parent
-SNAP = HERE / "data" / "burnie_accum_watch.json"
+SNAP = HERE.parent / "data" / "burnie_accum_watch.json"
 
 ALERT_NET_USD = 1000      # докупка от $1K
 ALERT_SELL_PCT = 0.25     # продал >25% своего net-объёма
