@@ -94,3 +94,4 @@
 | 2026-10-21T03:28 | burnie_sentiment_tracker.py | X API tier упал до Free 18.10 ~15:00 (поиск с операторами=401, single-term=200; подтверждено матрицей запросов) — NEGATIVE_QUERY→'BURNIE' + клиентский фильтр, CATALYST_QUERY→'retweets_of:ACC' (живой оператор); ретрай 401 в run_xurl | operators/ | |
 | 2026-10-21T03:44 | .ci/check_scenario_map.py | whitelist evals/deploy-gate + scripts/deploy.sh (артефакты директора, мандат 20-21.10; вердикт 21.10 — добавляй и допушивай) | operators/, кроны | |
 | 2026-10-21T05:02 | burnie_sentiment_tracker.py | Free-адаптация снята (Pay-Per-Use реактивирован, верификация Джуниора app 33087436): NEGATIVE_QUERY/CATALYST_QUERY возвращены к полным операторным запросам; 401-ретрай оставлен (гигиена) | operators/ | |
+| 2026-10-21T13:05 | scripts/burnie_accum_watch.py | ретрай на gmgn 429 (IP rate limit общий на VPS): 3 попытки, пауза 35с×attempt, выход с предупреждением если не отпустило | operators/, кроны | |

@@ -9,6 +9,7 @@ net_buy_usd и sells с сохранёнными; DexScreener → цена/MC.
 import json
 import subprocess
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -22,10 +23,18 @@ ALERT_SELL_PCT = 0.25     # продал >25% своего net-объёма
 
 
 def fetch_traders():
-    out = subprocess.run(
-        [GMGN, "token", "traders", "--chain", "sol", "--address", MINT],
-        capture_output=True, text=True, timeout=90,
-    )
+    # gmgn rate limit — общий на IP VPS (429 RETE_LIMIT_EXCEEDED): ретрай с паузой
+    # до сброса окна (лимит в ошибке ~30с; ждём 35с + ретрай до 3 раз).
+    for attempt in range(1, 4):
+        out = subprocess.run(
+            [GMGN, "token", "traders", "--chain", "sol", "--address", MINT],
+            capture_output=True, text=True, timeout=90,
+        )
+        if out.returncode == 0 or "RATE_LIMIT_EXCEEDED" not in (out.stderr or ""):
+            break
+        wait = 35 * attempt
+        print(f"⚠️ gmgn 429 RATE_LIMIT_EXCEEDED (attempt {attempt}) — retry in {wait}s")
+        time.sleep(wait)
     if out.returncode != 0:
         print(f"⚠️ gmgn-cli traders fail rc={out.returncode}: {out.stderr[:200]}")
         sys.exit(0)
