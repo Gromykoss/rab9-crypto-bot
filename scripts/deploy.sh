@@ -33,6 +33,15 @@ for f in rab9_bot.py cabal_detector.py wallet_intel.py msf_listener.py; do
         green "  $f OK" || red "  $f ОШИБКА"
 done
 
+# ── EVAL GATE (fleet standard eval-gates, 20.10.2026, kind: service) ──
+info "Eval gate (kind: service)..."
+if python3 "$HOME/.hermes/scripts/eval_runner.py" "$DIR/evals/deploy-gate/eval.yaml" > /dev/null 2>&1; then
+    green "Eval gate PASS"
+else
+    red "Eval gate FAIL — вердикт: $DIR/evals/deploy-gate/.evals/latest.json"
+    exit 2
+fi
+
 # 4. Рестарт сервиса
 info "Рестарт rab9-crypto-hermes..."
 sudo systemctl restart rab9-crypto-hermes

@@ -1,0 +1,9 @@
+name: rab9-deploy-gate
+kind: service
+run_cmd: python3 scorer.py
+metrics_path: metrics.json
+thresholds:
+  files_present: {min: 1.0}
+  syntax_ok: {min: 1.0}
+run_timeout: 60
+artifact_dir: .evals
