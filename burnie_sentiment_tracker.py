@@ -38,8 +38,9 @@ XURL_BIN = shutil.which("xurl") or (
 OUTFILE = RAB9_DIR / "data" / "community_sentiment.jsonl"
 ACCOUNT = "BurnieSendersX"
 NEGATIVE_QUERY = (
-    'BURNIE (rug OR scam OR dump OR dumped OR warning OR abandoned OR dead '
-    'OR "exit liquidity") -is:retweet'
+    # 20.10: tier Free (подписка слетела) — только single-term поиск (операторы = 401).
+    # Негатив фильтруем КЛИЕНТСКИ (rug/scam/dump по тексту уже в term_count).
+    'BURNIE'
 )
 # Исторический bullish-запрос (CLI). 3-й X-вызов заменён на CATALYST_QUERY (raw API).
 BULLISH_QUERY = (
@@ -51,9 +52,9 @@ BULLISH_QUERY = (
 # retweets_of ловит RT крупных аккаунтов; -is:retweet только на organic-ветке.
 # Лайки крупных аккаунтов X API v2 не отдаёт search'ем (нужен liking_users per-tweet → лишние вызовы).
 CATALYST_QUERY = (
-    f"(retweets_of:{ACCOUNT} OR "
-    f"((@{ACCOUNT} OR to:{ACCOUNT} OR BURNIE) -is:retweet)) "
-    f"-from:{ACCOUNT}"
+    # 20.10 tier Free: retweets_of — единственный живой оператор (проверено 200),
+    # все прочие операторы = 401. Офиц.-посты берёт fetch_fresh_official_interactions.
+    f"retweets_of:{ACCOUNT}"
 )
 # Порог «не пустышка»: <1k фолловеров = шум; ≥5k = KOL; ≥50k = large; ≥500k = mega.
 CATALYST_MIN_FOLLOWERS = 5000
@@ -373,15 +374,20 @@ AI_BUY_TERMS = (
 
 
 def run_xurl(args: list[str], timeout: int = 45) -> tuple[int, dict[str, Any] | None, str]:
-    proc = subprocess.run(
-        [XURL_BIN, *args],
-        cwd=str(RAB9_DIR),
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        check=False,
-    )
-    raw = (proc.stdout or proc.stderr or "").strip()
+    # Retry на переходящий 401 (X-side auth glitch 18-20.10: тот же эндпоинт/токен
+    # отдаёт 401, через секунды — 200; ретрай после паузы лечит прогон).
+    for attempt in (1, 2, 3):
+        proc = subprocess.run(
+            [XURL_BIN, *args],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        raw = (proc.stdout or proc.stderr or "").strip()
+        if proc.returncode == 0 or "Unauthorized" not in raw:
+            break
+        time.sleep(2 * attempt)
     try:
         payload = json.loads(raw) if raw else None
     except json.JSONDecodeError:

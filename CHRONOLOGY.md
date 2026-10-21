@@ -833,3 +833,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **20.10.2026 18:15** — fix(accum): snapshot path to data/ (stale-since-25.09 bug) (`da8e113`)
 - **21.10.2026 03:05** — eval-gate: kind=service deploy-gate (fleet standard eval-gates, 20.10) (`eecb119`)
 - **21.10.2026 03:06** — eval-gate fix: resolve module paths from __file__ (runner cwd = eval dir) (`8dea5eb`)
+- **21.10.2026 03:09** — eval-gate: REQUIRED list = live core (post-13.10 refactor reality) (`61fd46d`)
