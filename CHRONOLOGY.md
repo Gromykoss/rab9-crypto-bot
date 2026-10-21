@@ -837,3 +837,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **21.10.2026 03:28** — fix(x-api): adapt queries to Free tier (single-term + retweets_of), 401-retry in run_xurl (`7737b76`)
 - **21.10.2026 03:44** — chore(ci): whitelist eval-gate artifacts (director mandate 20-21.10) (`0ca6c7e`)
 - **21.10.2026 05:02** — fix(x-api): remove Free adaptation — full operator queries restored (Pay-Per-Use reactivated) (`0106153`)
+- **21.10.2026 13:05** — fix(accum): retry on gmgn 429 IP-rate-limit (35s backoff x3) (`09a5f13`)
