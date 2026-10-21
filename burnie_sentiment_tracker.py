@@ -387,7 +387,7 @@ def run_xurl(args: list[str], timeout: int = 45) -> tuple[int, dict[str, Any] | 
         raw = (proc.stdout or proc.stderr or "").strip()
         if proc.returncode == 0 or "Unauthorized" not in raw:
             break
-        time.sleep(2 * attempt)
+        time.sleep(10 * attempt)
     try:
         payload = json.loads(raw) if raw else None
     except json.JSONDecodeError:
