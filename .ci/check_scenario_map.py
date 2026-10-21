@@ -89,6 +89,9 @@ WHITELIST = (
     "msf_http.py",
     "config.py",
     ".gitignore",
+    # evals/deploy-gate + deploy.sh (флотовый стандарт eval-gates, мандат владельца 20-21.10, замкнуты 6f6e8f8)
+    "evals/**",
+    "scripts/deploy.sh",
     # сигнал-пайплайн без scenario-карточек (легаси-домен, карта не покрывает)
     "msf_analysis.py",
 )

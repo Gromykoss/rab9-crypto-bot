@@ -92,3 +92,4 @@
 | 2026-10-21T03:06 | evals/deploy-gate/scorer.py | фикс резолва путей: ROOT от __file__ (раннер cwd=eval dir), скорер видел файлы как missing | operators/, cron, scripts/deploy.sh | 8dea5eb |
 | 2026-10-21T03:08 | evals/deploy-gate/scorer.py | REQUIRED по факту: rab9_bot/msf_listener/handlers удалены 13.10 (deploy.sh протух, юнит disabled) — живое ядро burnie_sentiment_tracker + enforced-тройка | operators/, cron, scripts/deploy.sh | 61fd46d |
 | 2026-10-21T03:28 | burnie_sentiment_tracker.py | X API tier упал до Free 18.10 ~15:00 (поиск с операторами=401, single-term=200; подтверждено матрицей запросов) — NEGATIVE_QUERY→'BURNIE' + клиентский фильтр, CATALYST_QUERY→'retweets_of:ACC' (живой оператор); ретрай 401 в run_xurl | operators/ | |
+| 2026-10-21T03:44 | .ci/check_scenario_map.py | whitelist evals/deploy-gate + scripts/deploy.sh (артефакты директора, мандат 20-21.10; вердикт 21.10 — добавляй и допушивай) | operators/, кроны | |
