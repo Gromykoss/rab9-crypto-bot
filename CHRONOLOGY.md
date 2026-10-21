@@ -835,3 +835,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **21.10.2026 03:06** — eval-gate fix: resolve module paths from __file__ (runner cwd = eval dir) (`8dea5eb`)
 - **21.10.2026 03:09** — eval-gate: REQUIRED list = live core (post-13.10 refactor reality) (`61fd46d`)
 - **21.10.2026 03:28** — fix(x-api): adapt queries to Free tier (single-term + retweets_of), 401-retry in run_xurl (`7737b76`)
+- **21.10.2026 03:44** — chore(ci): whitelist eval-gate artifacts (director mandate 20-21.10) (`0ca6c7e`)
