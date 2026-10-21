@@ -13,8 +13,11 @@ from pathlib import Path
 # Путь к модулям — от __file__ (раннер исполняет scorer с cwd = директория eval):
 # evals/deploy-gate/scorer.py → parents[2] = корень rab9
 ROOT = Path(__file__).resolve().parents[2]
-REQUIRED = ["rab9_bot.py", "msf_listener.py", "cabal_detector.py",
-            "wallet_intel.py", "msf_http.py", "handlers.py"]
+# Живое ядро (факт 21.10): rab9_bot/msf_listener/handlers удалены при рефакторинге
+# 13.10 (deploy.sh частично протух — юнит rab9-crypto-hermes disabled);
+# деплоится и живёт: BURNIE-трекер + enforced-тройка.
+REQUIRED = ["burnie_sentiment_tracker.py", "msf_http.py",
+            "cabal_detector.py", "wallet_intel.py"]
 
 syntax_errors = []
 for f in REQUIRED:
