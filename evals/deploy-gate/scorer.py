@@ -10,16 +10,20 @@ import json
 import py_compile
 from pathlib import Path
 
+# Путь к модулям — от __file__ (раннер исполняет scorer с cwd = директория eval):
+# evals/deploy-gate/scorer.py → parents[2] = корень rab9
+ROOT = Path(__file__).resolve().parents[2]
 REQUIRED = ["rab9_bot.py", "msf_listener.py", "cabal_detector.py",
             "wallet_intel.py", "msf_http.py", "handlers.py"]
 
 syntax_errors = []
 for f in REQUIRED:
-    if not Path(f).is_file():
+    p = ROOT / f
+    if not p.is_file():
         syntax_errors.append(f"{f}: missing")
         continue
     try:
-        py_compile.compile(f, doraise=True)
+        py_compile.compile(str(p), doraise=True)
     except py_compile.PyCompileError as e:
         syntax_errors.append(f"{f}: {e}")
 

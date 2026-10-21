@@ -831,3 +831,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **19.10.2026 09:07** — ops(units): disable stale msf-listener + rab9-crypto-hermes (dead entrypoints from a69d2b6 refactor), owner-approved; reversible via systemctl enable (`96fa43b`)
 - **20.10.2026 03:31** — docs(drift): platform-lane restored by operator — crons back to no-agent/origin (`333a89e`)
 - **20.10.2026 18:15** — fix(accum): snapshot path to data/ (stale-since-25.09 bug) (`da8e113`)
+- **21.10.2026 03:05** — eval-gate: kind=service deploy-gate (fleet standard eval-gates, 20.10) (`eecb119`)
