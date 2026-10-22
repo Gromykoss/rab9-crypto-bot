@@ -842,3 +842,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **21.10.2026 15:09** — fix(x-api): 401 retry patience 5x10s (billing glitch window) (`55beb03`)
 - **22.10.2026 02:36** — fix(x-api): Free adaptation back (stable 401 on operators) + P1 wallet-watch ontology (`b3641cf`)
 - **22.10.2026 07:09** — feat(wallet-watch): dual subscription + wallet events to sink (v1.0) (`55e7556`)
+- **22.10.2026 07:10** — docs(drift): SHA fill wallet-watch (`75f8c5e`)

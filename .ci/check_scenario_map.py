@@ -92,6 +92,9 @@ WHITELIST = (
     # evals/deploy-gate + deploy.sh (флотовый стандарт eval-gates, мандат владельца 20-21.10, замкнуты 6f6e8f8)
     "evals/**",
     "scripts/deploy.sh",
+    # wallet-watch P1 (конфиг-watchlist, трекнут add -f)
+    "data/wallet_watch.json",
+    "data/wallet_events.jsonl",
     # сигнал-пайплайн без scenario-карточек (легаси-домен, карта не покрывает)
     "msf_analysis.py",
 )
