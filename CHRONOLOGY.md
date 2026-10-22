@@ -849,3 +849,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **22.10.2026 08:11** — fix(wallet-watch): full key 206 chars + case-insensitive ack (2/2 subscriptions live) (`5d5a4f0`)
 - **22.10.2026 08:17** — fix(tests): wallet tests write to tmp journal (test pollution cleaned) (`b19f83e`)
 - **22.10.2026 08:19** — fix(tests): BASE_DIR monkeypatch in wallet test (`5f1d145`)
+- **22.10.2026 08:41** — feat(radar+wallet): P1 wallet-watch v1.0 + P2 accumulation-radar v1.0 (`6f1b500`)
