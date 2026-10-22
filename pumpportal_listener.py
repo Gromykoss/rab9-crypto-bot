@@ -47,6 +47,7 @@ PPP_FAILED_FILE = os.path.join(
     BASE_DIR, _env("PPP_FAILED_FILE", "data/ingress_failed.jsonl")
 )
 PPP_HTTP_TIMEOUT_S = 10  # requests default = infinite — запрещён (design)
+PPP_API_KEY = os.getenv("PPP_API_KEY", "")  # funded ключ PumpPortal (≥0.02 SOL) — нужен для accountTrade
 
 WALLET_FILE = os.path.join(BASE_DIR, "data", "wallet_watch.json")
 
@@ -209,9 +210,12 @@ async def _session() -> None:
         wallets = read_wallets()  # перечитывается при каждом реконнекте (v1.0)
         subs = [{"method": "subscribeMigration"}]
         acks_expected = 1
-        if wallets:
+        if wallets and PPP_API_KEY:
+            # accountTrade требует funded ключ (0.02 SOL) — без него PumpPortal отдаёт отказ (21.10)
             subs.append({"method": "subscribeAccountTrade", "keys": wallets})
             acks_expected = 2
+        elif wallets and not PPP_API_KEY:
+            log.warning("wallet-watch: PPP_API_KEY пуст — accountTrade недоступен на anon-тире, только migration")
         for sub in subs:
             await ws.send(json.dumps(sub))
         # subscription-liveness: ждём ack'и ВСЕХ подписок
