@@ -102,3 +102,4 @@
 | 2026-10-22T07:07 | pumpportal_listener.py, data/wallet_watch.json, tests/test_pumpportal_listener.py, tests/test_standalone_analyzer.py | фича P1 wallet-watch v1.0: двойная подписка WS (migration+accountTrade, перечитывание списка при реконнекте), маршрут txType→wallet_events.jsonl+sink(type=wallet, без дедупа), 3 теста GWT; import-guard почищен | operators/, data/wallet_watch.json | b3641cf |
 | 2026-10-22T07:09 | pumpportal_listener.py, data/wallet_watch.json, tests/test_pumpportal_listener.py, tests/test_standalone_analyzer.py | wallet-watch v1.0: двойная подписка + wallet-события в sink (коррекция после дубля-заполнения предыдущей строки) | operators/ | 55e7556 |
 | 2026-10-22T07:10 | .ci/check_scenario_map.py | whitelist wallet-watch конфигов (data/wallet_watch.json трекнут add -f) | operators/ | |
+| 2026-10-22T07:11 | pumpportal-listener.service | юнит как hermes-user (symmetria c rab9-analyzer, file ownership) | operators/ | |
