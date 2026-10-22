@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# RAB9 Crypto — Deploy Script
+# RAB9 Crypto — Deploy Script (standalone-analyzer era, 22.10.2026)
 # Правила: бэкап → diff → линт → деплой → рестарт → smoke.
+# 22.10: приведён к живой архитектуре после рефакторинга 13.10 (a69d2b6):
+# rab9_bot.py / handlers.py / msf_listener.py удалены, юнит rab9-crypto-hermes
+# disabled 19.10 → деплой и рестарт живут в rab9-analyzer.service.
 set -euo pipefail
 
 DIR="/home/hermes-workspace/rab9"
@@ -19,16 +22,16 @@ if ! git diff-index --quiet HEAD -- 2>/dev/null; then
     exit 1
 fi
 
-# 2. Бэкап ключевых файлов
+# 2. Бэкап ключевых файлов (живое ядро = scorer REQUIRED + точка входа юнита)
 info "Бэкап..."
-for f in rab9_bot.py msf_listener.py cabal_detector.py wallet_intel.py msf_http.py handlers.py; do
+for f in analyzer_main.py msf_http.py cabal_detector.py wallet_intel.py burnie_sentiment_tracker.py; do
     [ -f "$f" ] && cp "$f" "$f.bak.$BACKUP_TS"
 done
 green "Бэкап готов"
 
 # 3. Линт
 info "Линт..."
-for f in rab9_bot.py cabal_detector.py wallet_intel.py msf_listener.py; do
+for f in analyzer_main.py msf_http.py cabal_detector.py wallet_intel.py burnie_sentiment_tracker.py; do
     python3 -c "import py_compile; py_compile.compile('$f', doraise=True)" 2>/dev/null && \
         green "  $f OK" || red "  $f ОШИБКА"
 done
@@ -42,13 +45,13 @@ else
     exit 2
 fi
 
-# 4. Рестарт сервиса
-info "Рестарт rab9-crypto-hermes..."
-sudo systemctl restart rab9-crypto-hermes
+# 4. Рестарт сервиса (rab9-crypto-hermes disabled 19.10 → живой юнит rab9-analyzer)
+info "Рестарт rab9-analyzer.service..."
+sudo systemctl restart rab9-analyzer.service
 sleep 2
-systemctl is-active --quiet rab9-crypto-hermes && green "Сервис active" || red "Сервис НЕ active!"
+systemctl is-active --quiet rab9-analyzer.service && green "Сервис active" || red "Сервис НЕ active!"
 
-# 5. Health check
+# 5. Health check (ingress :8089 — analyzer)
 info "Health check..."
 sleep 1
 HEALTH=$(curl -s --max-time 5 http://localhost:8089/health 2>/dev/null)
