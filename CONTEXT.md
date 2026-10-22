@@ -49,3 +49,13 @@
 | Демонтаж MSF | удаление msf_listener.py и юнита msf-listener.service (выключает владелец) | git-история |
 
 Связи: Ingress HTTP → Standalone-анализатор (контракт :8089/msf-signal без изменений) → Sink → RAB9-агент → чат Cryptanalyst. cabal_detector / wallet_intel / loop_verifier / operators — без изменений.
+
+## Сущности и связи (фича P1, wallet-watch)
+
+| Сущность | Смысл | Идентификатор |
+|----------|-------|---------------|
+| Отслеживаемый кошелёк | адрес Solana, движения которого пушатся в дайджест | data/wallet_watch.json (список адресов) |
+| Движение кошелька | покупка/продажа/перевод отслеживаемого кошелька | событие subscribeAccountTrade (PumpPortal WS) |
+| Wallet-событие в sink | запись type=wallet в analyses_out | строка jsonl D-A1 |
+
+Связь: pumpportal_listener (тот же WS-коннект) → подписка subscribeAccountTrade → события → sink(type=wallet, немедленно в дайджест) → RAB9-агент → чат. Дедуп 24ч НЕ применяется к wallet-событиям (движения того же кошелька — легитимные повторы).

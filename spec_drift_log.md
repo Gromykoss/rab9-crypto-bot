@@ -97,3 +97,4 @@
 | 2026-10-21T13:05 | scripts/burnie_accum_watch.py | ретрай на gmgn 429 (IP rate limit общий на VPS): 3 попытки, пауза 35с×attempt, выход с предупреждением если не отпустило | operators/, кроны | |
 | 2026-10-21T13:07 | cron 6f66589c53e8 | развод окон gmgn-тиков (директор: 429 13:00 = наложение price_watch 12:00 → accum 13:00): accum смещён на :30 (1:30/7:30/13:30/17:30) | operators/, burnie_sentiment_tracker.py | |
 | 2026-10-21T15:09 | burnie_sentiment_tracker.py | ретрай 401 усилен 5x10с (X-side биллинг-глюк: окно >12с, 15:00-тик не вытянул) | operators/, кроны, systemd | |
+| 2026-10-22T02:36 | burnie_sentiment_tracker.py, CONTEXT.md | tier снова Free (флэп 20-21.10, операторы 401 стабильно даже с ретраем) — Free-адаптация постоянная; CONTEXT.md + wallet-watch P1 онтология | operators/ | |

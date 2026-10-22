@@ -38,10 +38,10 @@ XURL_BIN = shutil.which("xurl") or (
 OUTFILE = RAB9_DIR / "data" / "community_sentiment.jsonl"
 ACCOUNT = "BurnieSendersX"
 NEGATIVE_QUERY = (
-    'BURNIE (rug OR scam OR dump OR dumped OR warning OR abandoned OR dead '
-    'OR "exit liquidity") -is:retweet'
+    # 21.10: tier Free СТАБИЛЬНО (флэп туда-обратно 20-21.10) — single-term + клиентский
+    # фильтр. Вернуть операторные запросы только после устойчивого 200 в матрице.
+    'BURNIE'
 )
-# 20.10 Free-адаптация снята 21.10: Pay-Per-Use реактивирован (верифицировано Джуниором, app 33087436)
 # Исторический bullish-запрос (CLI). 3-й X-вызов заменён на CATALYST_QUERY (raw API).
 BULLISH_QUERY = (
     'BURNIE (toly OR anatoly OR buy OR signal OR primed OR send OR sending '
@@ -52,9 +52,9 @@ BULLISH_QUERY = (
 # retweets_of ловит RT крупных аккаунтов; -is:retweet только на organic-ветке.
 # Лайки крупных аккаунтов X API v2 не отдаёт search'ем (нужен liking_users per-tweet → лишние вызовы).
 CATALYST_QUERY = (
-    f"(retweets_of:{ACCOUNT} OR "
-    f"((@{ACCOUNT} OR to:{ACCOUNT} OR BURNIE) -is:retweet)) "
-    f"-from:{ACCOUNT}"
+    # 21.10: tier Free стабильно — retweets_of единственный живой оператор;
+    # офиц.-посты добирает fetch_fresh_official_interactions (timeline).
+    f"retweets_of:{ACCOUNT}"
 )
 # Порог «не пустышка»: <1k фолловеров = шум; ≥5k = KOL; ≥50k = large; ≥500k = mega.
 CATALYST_MIN_FOLLOWERS = 5000
