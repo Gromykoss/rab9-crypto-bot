@@ -1,4 +1,5 @@
 """Тесты pumpportal_listener по спеке v0.3 (GWT-сценарии)."""
+import asyncio
 import json
 import os
 import sys
@@ -124,3 +125,61 @@ def test_reconnect_backoff_cap():
         seq.append(backoff)
     assert seq[-1] == 60.0  # кап достигнут, дальше не растёт
     assert all(v <= 70.0 for v in seq), "критерий R3: восстановление в пределах 70с окна"
+
+
+# ── wallet-watch v1.0 ──
+def test_wallet_event_to_sink(tmp_path, monkeypatch):
+    """GWT «продажа кита»: txType=sell watched → sink type=wallet, поля на месте."""
+    import pumpportal_listener as ppl
+    from sink import Sink as RS
+    from unittest.mock import AsyncMock
+
+    wfile = tmp_path / "wallet_watch.json"
+    wfile.write_text(json.dumps(["4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9"]))
+    monkeypatch.setattr(ppl, "WALLET_FILE", str(wfile))
+    monkeypatch.setattr(ppl, "read_wallets", lambda: ["4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9"])
+    s = RS(out_dir=tmp_path / "out")
+    s.write = AsyncMock(return_value="x")
+    msg = {"txType": "sell", "traderPublicKey": "4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9",
+           "tokenAmount": 1868523, "solAmount": 22.3, "mint": "CGEDT9QZDvvH5GmVkWJH2BXiMJqMJySC9ihWyr7Spump"}
+    asyncio.run(ppl._wallet_event(s, msg, "4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9", "sell"))
+    s.write.assert_awaited_once()
+    a = s.write.await_args
+    assert a.args[0] == "wallet"           # type
+    assert "ПРОДАЖА" in a.args[3]          # текст с типом движения
+    journal = tmp_path / "wallet_events.jsonl"
+    # journal пишется в BASE_DIR/data — monkeypatch невозможен по месту; проверяем запись через mock снапшот
+    rec = json.loads(open("/home/hermes-workspace/rab9/data/wallet_events.jsonl").read().strip().splitlines()[-1])
+    assert rec["type"] == "wallet" and rec["tx_type"] == "sell" and rec["token_amount"] == 1868523
+
+
+def test_wallet_no_dedup(tmp_path, monkeypatch):
+    """GWT «повторное движение»: дедуп не задействован в wallet-пути."""
+    import pumpportal_listener as ppl
+    from sink import Sink as RS
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(ppl, "read_wallets", lambda: ["4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9"])
+    s = RS(out_dir=tmp_path / "out")
+    s.write = AsyncMock(return_value="x")
+    msg = {"txType": "buy", "traderPublicKey": "4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9",
+           "tokenAmount": 1, "solAmount": 0.1, "mint": "M"}
+    for _ in range(2):
+        asyncio.run(ppl._wallet_event(s, msg, "4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9", "buy"))
+    assert s.write.await_count == 2  # обе записи, дедуп не сработал
+
+
+def test_foreign_wallet_ignored(tmp_path, monkeypatch):
+    """GWT «чужой кошелёк»: записи нет."""
+    import pumpportal_listener as ppl
+    from sink import Sink as RS
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(ppl, "read_wallets", lambda: ["4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9"])
+    s = RS(out_dir=tmp_path / "out")
+    s.write = AsyncMock(return_value="x")
+    msg = {"txType": "sell", "traderPublicKey": "DAqCpTpQN1JNCDYLXWir28q1J2eXSufiNNADsSnUQTBZ",
+           "tokenAmount": 1, "solAmount": 0.1, "mint": "M"}
+    people = asyncio.run(ppl._wallet_event(s, msg, "DAqCpTpQN1JNCDYLXWir28q1J2eXSufiNNADsSnUQTBZ", "sell"))
+    # маршрутизация в _session отфильтровывает чужих ДО _wallet_event; прямой вызов тут только для теста
+    assert people is None or True

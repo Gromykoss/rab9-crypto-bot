@@ -840,3 +840,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **21.10.2026 13:05** — fix(accum): retry on gmgn 429 IP-rate-limit (35s backoff x3) (`09a5f13`)
 - **21.10.2026 13:07** — docs(drift): spread gmgn tick windows (accum :30) per director sweep (`6d9b0cb`)
 - **21.10.2026 15:09** — fix(x-api): 401 retry patience 5x10s (billing glitch window) (`55beb03`)
+- **22.10.2026 02:36** — fix(x-api): Free adaptation back (stable 401 on operators) + P1 wallet-watch ontology (`b3641cf`)

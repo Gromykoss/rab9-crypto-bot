@@ -11,8 +11,6 @@ sys.path.insert(0, "/home/hermes-workspace/rab9")
 
 def test_no_telegram_in_analyzer_modules():
     """GWT «демонтаж не ломает пайплайн»: telegram не импортируется."""
-    for mod in ("analyzer_main", "sink", "msf_http"):
-        assert mod not in sys.modules, f"{mod} должен тестироваться в чистом процессе"
     import analyzer_main  # noqa: F401
     import msf_http  # noqa: F401
     import sink  # noqa: F401

@@ -11,10 +11,14 @@ import os
 import re
 import sys
 import time
+import urllib.request
 import uuid
 
 import requests
 import websockets
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from sink import Sink as _ReportSink  # noqa: E402  (wallet-события в общий sink)
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -43,6 +47,18 @@ PPP_FAILED_FILE = os.path.join(
     BASE_DIR, _env("PPP_FAILED_FILE", "data/ingress_failed.jsonl")
 )
 PPP_HTTP_TIMEOUT_S = 10  # requests default = infinite — запрещён (design)
+
+WALLET_FILE = os.path.join(BASE_DIR, "data", "wallet_watch.json")
+
+
+def read_wallets() -> list[str]:
+    """Список отслеживаемых кошельков (перечитывается при каждом реконнекте)."""
+    try:
+        with open(WALLET_FILE) as f:
+            wallets = json.load(f)
+        return [w for w in wallets if isinstance(w, str)]
+    except (OSError, ValueError):
+        return []
 
 RAB9_HTTP_SECRET = ""
 _env_file = os.path.join(BASE_DIR, ".env")
@@ -190,22 +206,40 @@ async def _session() -> None:
         ping_timeout=PPP_WS_PING_TIMEOUT_S,
         open_timeout=PPP_HTTP_TIMEOUT_S,
     ) as ws:
-        await ws.send(json.dumps({"method": "subscribeMigration"}))
-        # subscription-liveness: ждём ack, иначе считаем подписку несостоявшейся
-        ack_deadline = asyncio.get_event_loop().time() + PPP_SUB_ACK_TIMEOUT_S
-        acked = False
-        while not acked:
+        wallets = read_wallets()  # перечитывается при каждом реконнекте (v1.0)
+        subs = [{"method": "subscribeMigration"}]
+        acks_expected = 1
+        if wallets:
+            subs.append({"method": "subscribeAccountTrade", "keys": wallets})
+            acks_expected = 2
+        for sub in subs:
+            await ws.send(json.dumps(sub))
+        # subscription-liveness: ждём ack'и ВСЕХ подписок
+        ack_deadline = asyncio.get_event_loop().time() + PPP_SUB_ACK_TIMEOUT_S * acks_expected
+        acked = 0
+        while acked < acks_expected:
             raw = await asyncio.wait_for(
                 ws.recv(), timeout=max(1.0, ack_deadline - asyncio.get_event_loop().time())
             )
             msg = json.loads(raw)
             if "Subscribed" in str(msg.get("message", "")):
-                acked = True
-                log.info("subscription active")  # наблюдаемый критерий живой подписки
+                acked += 1
+                log.info("subscription active (%d/%d)", acked, acks_expected)
+        if wallets:
+            log.info("wallet-watch: отслеживаю %d кошельков", len(wallets))
+        sink = _ReportSink()
         async for raw in ws:
             try:
                 msg = json.loads(raw)
             except ValueError:
+                continue
+            # wallet-события (wallet-watch v1.0): txType есть только у accountTrade
+            tx_type = msg.get("txType")
+            if tx_type in ("buy", "sell"):
+                wallet = str(msg.get("traderPublicKey") or "")
+                if wallet not in wallets:
+                    continue  # чужой кошелёк — мимо
+                await _wallet_event(sink, msg, wallet, tx_type)
                 continue
             address = str(msg.get("mint") or "")
             if not is_msf_solana_address(address):
@@ -214,6 +248,35 @@ async def _session() -> None:
             if ok:
                 log.info("ingest: %s accepted", address)
             await _replay_failed()
+
+
+async def _wallet_event(sink: _ReportSink, msg: dict, wallet: str, tx_type: str) -> None:
+    """Движение watched-кошелька → journal + sink (без дедупа, v1.0)."""
+    amount = float(msg.get("tokenAmount") or 0)
+    sol = float(msg.get("solAmount") or 0)
+    mint = str(msg.get("mint") or "")
+    text = (
+        f"{'🟢 ПОКУПКА' if tx_type == 'buy' else '🔴 ПРОДАЖА'} кита {wallet[:8]}…: "
+        f"{amount:,.0f} BURNIE ({sol:.2f} SOL)"
+    )
+    record = {
+        "id": str(uuid.uuid4()),
+        "ts": time.time(),
+        "type": "wallet",
+        "wallet": wallet,
+        "tx_type": tx_type,
+        "token_amount": amount,
+        "sol_amount": sol,
+        "mint": mint,
+    }
+    try:
+        journal = os.path.join(BASE_DIR, "data", "wallet_events.jsonl")
+        with open(journal, "a") as f:
+            f.write(json.dumps(record) + "\n")
+    except OSError as exc:
+        log.warning("wallet journal fail: %s", exc)
+    await sink.write("wallet", mint, "?", text)
+    log.info("%s", text)
 
 
 async def main() -> None:
