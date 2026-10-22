@@ -34,6 +34,8 @@ def _env(name: str, default: str) -> str:
     return os.environ.get(name, default)
 
 PPP_WS_URL = _env("PPP_WS_URL", "wss://pumpportal.fun/api/data")
+PPP_API_KEY = _env("PPP_API_KEY", "")
+PPP_WS_URL = (PPP_WS_URL + "?api-key=" + PPP_API_KEY) if PPP_API_KEY else PPP_WS_URL
 PPP_INGRESS_URL = _env("PPP_INGRESS_URL", "http://127.0.0.1:8089")
 PPP_MAX_POST_ATTEMPTS = int(_env("PPP_MAX_POST_ATTEMPTS", "3"))
 PPP_POST_BACKOFF_S = float(_env("PPP_POST_BACKOFF_S", "2"))
@@ -47,7 +49,6 @@ PPP_FAILED_FILE = os.path.join(
     BASE_DIR, _env("PPP_FAILED_FILE", "data/ingress_failed.jsonl")
 )
 PPP_HTTP_TIMEOUT_S = 10  # requests default = infinite — запрещён (design)
-PPP_API_KEY = os.getenv("PPP_API_KEY", "")  # funded ключ PumpPortal (≥0.02 SOL) — нужен для accountTrade
 
 WALLET_FILE = os.path.join(BASE_DIR, "data", "wallet_watch.json")
 
@@ -226,9 +227,9 @@ async def _session() -> None:
                 ws.recv(), timeout=max(1.0, ack_deadline - asyncio.get_event_loop().time())
             )
             msg = json.loads(raw)
-            if "Subscribed" in str(msg.get("message", "")):
+            if "subscribed" in str(msg.get("message", "")).lower() or "Successfully subscribed" in str(msg.get("message", "")):
                 acked += 1
-                log.info("subscription active (%d/%d)", acked, acks_expected)
+                log.info("subscription active (%d/%d): %s", acked, acks_expected, str(msg.get("message"))[:60])
         if wallets:
             log.info("wallet-watch: отслеживаю %d кошельков", len(wallets))
         sink = _ReportSink()

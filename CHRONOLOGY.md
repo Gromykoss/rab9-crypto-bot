@@ -845,3 +845,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **22.10.2026 07:10** — docs(drift): SHA fill wallet-watch (`75f8c5e`)
 - **22.10.2026 07:10** — chore(ci): whitelist wallet-watch config paths (`274119d`)
 - **22.10.2026 07:11** — fix(unit): pumpportal-listener as hermes-user (`6837e55`)
+- **22.10.2026 07:14** — fix(wallet-watch): accountTrade requires funded PPP key — churn guard, PPP_API_KEY env (`48b9743`)

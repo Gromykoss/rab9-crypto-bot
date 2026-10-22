@@ -104,3 +104,4 @@
 | 2026-10-22T07:10 | .ci/check_scenario_map.py | whitelist wallet-watch конфигов (data/wallet_watch.json трекнут add -f) | operators/ | |
 | 2026-10-22T07:11 | pumpportal-listener.service | юнит как hermes-user (symmetria c rab9-analyzer, file ownership) | operators/ | |
 | 2026-10-22T07:14 | pumpportal_listener.py | БЛОКЕР PumpPortal: accountTrade требует funded ключ 0.02 SOL (анонимный тир отказывает) — без ключа только migration; PPP_API_KEY в .env ждёт | operators/ | |
+| 2026-10-22T08:11 | pumpportal_listener.py | wallet-watch ЖИВ: ключ 206 симв. в .env (был обрезан до 189), ack-чек регистронезависим (Successfully subscribed to keys = 2/2), unit hermes-user; journalctl 08:11 1/2+2/2 подтверждено | operators/ | |
