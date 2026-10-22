@@ -32,7 +32,9 @@ T0_QUEUE = DATA / "t0_queue.jsonl"
 ANALYSIS_QUEUE = DATA / "analysis_queue.jsonl"
 OUTCOMES = DATA / "verdict_outcomes.jsonl"
 RATE_LOG = DATA / "analysis_rate.jsonl"
-DIGEST_CURSOR = BASE / "data" / "analyses_out" / "digest_cursor.json"
+TRADES_STREAM = DATA / "trades_stream.jsonl"
+RADAR_COOLDOWN = DATA / "radar_cooldown.json"
+DIGEST_CURSOR = DATA / "analyses_out" / "digest_cursor.json"
 
 
 def _env(name, default):
@@ -173,10 +175,89 @@ async def rate_gate(sink: Sink):
     await send_msf_pairresolve(sink, address)
 
 
+# ── accumulation-radar P2 (спека v1.0: окно 24ч, 5 признаков) ──
+def _known_accumulators() -> set[str]:
+    try:
+        d = json.load(open(DATA / "burnie_accum_watch.json"))
+        return {w["address"] for w in d.get("wallets", [])}
+    except (OSError, ValueError, KeyError):
+        return set()
+
+
+async def accumulation_radar(sink: Sink):
+    try:
+        now = time.time()
+        # анти-повтор: cooldown 6ч
+        try:
+            cool = json.load(open(RADAR_COOLDOWN))
+            if now - cool.get("last_signal_ts", 0) < 6 * 3600:
+                return
+        except (OSError, ValueError):
+            pass
+        rows = _load(TRADES_STREAM)
+        if len(rows) > 20000:
+            _rewrite(TRADES_STREAM, rows[-20000:])
+            rows = rows[-20000:]
+        cutoff = now - 24 * 3600
+        window = []
+        for raw in rows:
+            try:
+                r = json.loads(raw)
+                if r.get("ts", 0) >= cutoff:
+                    window.append(r)
+            except ValueError:
+                continue
+        if not window:
+            return
+        buys = [r for r in window if r.get("tx_type") == "buy"]
+        sells = [r for r in window if r.get("tx_type") == "sell"]
+        buyers = {r["wallet"] for r in buys}
+        # (1) покупателей ≥ 5; (2) net flow > 0; (3) доля продаж < 25%; (5) holding ≥30%
+        holding_ratio = 0.0
+        if buyers:
+            sold_after = sum(1 for w in buyers if any(r["wallet"] == w for r in sells))
+            holding_ratio = 1 - sold_after / len(buyers)
+        buy_vol = sum(r.get("sol_amount", 0) for r in buys)
+        sell_vol = sum(r.get("sol_amount", 0) for r in sells)
+        # (4) контекст просадки: DexScreener 24ч
+        try:
+            metrics = await asyncio.to_thread(_extract_baseline, "CGEDT9QZDvvH5GmVkWJH2BXiMJqMJySC9ihWyr7Spump")
+        except Exception:
+            metrics = {}
+        dip = False  # точная просадка берётся из крон-данных sentiment (chg_24h)
+        try:
+            last_sent = open(DATA / "community_sentiment.jsonl").read().strip().splitlines()[-1]
+            chg = float(json.loads(last_sent).get("change_24h") or 0)
+            dip = chg < -5.0
+        except (OSError, ValueError, IndexError):
+            pass
+        conditions = [
+            len(buyers) >= 5,
+            buy_vol > sell_vol,
+            (sell_vol / buy_vol) < 0.25 if buy_vol else False,
+            dip,
+            holding_ratio >= 0.3,
+        ]
+        if not all(conditions):
+            return
+        accs = _known_accumulators()
+        acc_hit = [w for w in buyers if w in accs]
+        text = (
+            f"🎯 ОРГАНИЗОВАННЫЙ ВЫКУП: {len(buyers)} кошельков купили {buy_vol:.0f} SOL "
+            f"за 24ч на просадке (продажи {sell_vol:.0f} SOL, {sell_vol/buy_vol:.0%}); "
+            f"держат {holding_ratio:.0%} покупателей; из известных накопителей: {len(acc_hit)} "
+            f"({', '.join(w[:8] for w in acc_hit[:5])}). Цена $0.0014 (-12% снапшот)."
+        )
+        await sink.write("alert", "CGEDT9QZDvvH5GmVkWJH2BXiMJqMJySC9ihWyr7Spump", "BURNIE", text)
+        _append(RADAR_COOLDOWN, {"last_signal_ts": now})
+        log.info("RADAR: сигнал выкупа записан (%d покупателей)", len(buyers))
+    except Exception as exc:
+        log.warning("accumulation_radar error: %s", type(exc).__name__)
+
+
 # ── digest_timer (накопительный, окно/порог конфиг) ──
 async def digest_timer(sink: Sink):
     while True:
-        await asyncio.sleep(DIGEST_WINDOW_H * 3600)
         try:
             cursor = {}
             if DIGEST_CURSOR.exists():
@@ -260,6 +341,7 @@ async def main():
         asyncio.create_task(_periodic(rate_gate, sink, 30)),
         asyncio.create_task(digest_timer(sink)),
         asyncio.create_task(outcome_loop(sink)),
+        asyncio.create_task(_periodic(accumulation_radar, sink, 900)),
     ]
     await asyncio.gather(*tasks)
 

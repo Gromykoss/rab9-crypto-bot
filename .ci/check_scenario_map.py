@@ -95,6 +95,9 @@ WHITELIST = (
     # wallet-watch P1 (конфиг-watchlist, трекнут add -f)
     "data/wallet_watch.json",
     "data/wallet_events.jsonl",
+    "data/trades_stream.jsonl",
+    "data/radar_cooldown.json",
+    "data/wallet_events.jsonl",
     # сигнал-пайплайн без scenario-карточек (легаси-домен, карта не покрывает)
     "msf_analysis.py",
 )

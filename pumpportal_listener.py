@@ -49,6 +49,7 @@ PPP_FAILED_FILE = os.path.join(
     BASE_DIR, _env("PPP_FAILED_FILE", "data/ingress_failed.jsonl")
 )
 PPP_HTTP_TIMEOUT_S = 10  # requests default = infinite — запрещён (design)
+BURNIE_MINT = _env("PPP_TRADE_MINT", "CGEDT9QZDvvH5GmVkWJH2BXiMJqMJySC9ihWyr7Spump")  # accumulation-radar поток
 
 WALLET_FILE = os.path.join(BASE_DIR, "data", "wallet_watch.json")
 
@@ -214,9 +215,13 @@ async def _session() -> None:
         if wallets and PPP_API_KEY:
             # accountTrade требует funded ключ (0.02 SOL) — без него PumpPortal отдаёт отказ (21.10)
             subs.append({"method": "subscribeAccountTrade", "keys": wallets})
-            acks_expected = 2
+            acks_expected += 1
         elif wallets and not PPP_API_KEY:
             log.warning("wallet-watch: PPP_API_KEY пуст — accountTrade недоступен на anon-тире, только migration")
+        if PPP_API_KEY:
+            # accumulation-radar P2: полный поток сделок BURNIE (funded ключ)
+            subs.append({"method": "subscribeTokenTrade", "keys": [BURNIE_MINT]})
+            acks_expected += 1
         for sub in subs:
             await ws.send(json.dumps(sub))
         # subscription-liveness: ждём ack'и ВСЕХ подписок
@@ -238,13 +243,16 @@ async def _session() -> None:
                 msg = json.loads(raw)
             except ValueError:
                 continue
-            # wallet-события (wallet-watch v1.0): txType есть только у accountTrade
+            # wallet-события: txType есть у accountTrade и tokenTrade
             tx_type = msg.get("txType")
             if tx_type in ("buy", "sell"):
-                wallet = str(msg.get("traderPublicKey") or "")
-                if wallet not in wallets:
-                    continue  # чужой кошелёк — мимо
-                await _wallet_event(sink, msg, wallet, tx_type)
+                wallet = str(msg.get("traderPublicKey") or msg.get("user") or "")
+                mint = str(msg.get("mint") or "")
+                # accumulation-radar: каждая сделка BURNIE → персистентный поток
+                if mint == BURNIE_MINT:
+                    _trade_stream(msg, wallet, tx_type)
+                if wallet in wallets:
+                    await _wallet_event(sink, msg, wallet, tx_type)
                 continue
             address = str(msg.get("mint") or "")
             if not is_msf_solana_address(address):
@@ -253,6 +261,24 @@ async def _session() -> None:
             if ok:
                 log.info("ingest: %s accepted", address)
             await _replay_failed()
+
+
+def _trade_stream(msg: dict, wallet: str, tx_type: str) -> None:
+    """Сделка BURNIE → персистентный поток (accumulation-radar P2, без дедупа)."""
+    record = {
+        "ts": time.time(),
+        "wallet": wallet,
+        "tx_type": tx_type,
+        "token_amount": float(msg.get("tokenAmount") or 0),
+        "sol_amount": float(msg.get("solAmount") or 0),
+    }
+    try:
+        path = os.path.join(BASE_DIR, "data", "trades_stream.jsonl")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a") as f:
+            f.write(json.dumps(record) + "\n")
+    except OSError as exc:
+        log.warning("trades_stream fail: %s", exc)
 
 
 async def _wallet_event(sink: _ReportSink, msg: dict, wallet: str, tx_type: str) -> None:

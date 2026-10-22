@@ -92,3 +92,57 @@ def test_sink_baseline_and_manual(tmp_path):
     assert rec["manual"] is True
     assert rec["baseline"]["price_usd"] == "0.001"
     assert rec["type"] == "verdict"  # type=manual упразднён (v1.2)
+
+
+def test_accumulation_radar_signals(tmp_path, monkeypatch):
+    """GWT «выкуп на просадке»: 5 признаков → sink alert + cooldown."""
+    import analyzer_main as am
+    from unittest.mock import AsyncMock, Mock
+    import time as _time
+
+    stream = tmp_path / "trades_stream.jsonl"
+    now = _time.time()
+    rows = []
+    for i in range(6):
+        rows.append(json.dumps({"ts": now - 3600, "wallet": f"wallet{i}", "tx_type": "buy", "sol_amount": 10, "token_amount": 1000}))
+    stream.write_text("\n".join(rows) + "\n")
+    monkeypatch.setattr(am, "TRADES_STREAM", stream)
+    monkeypatch.setattr(am, "RADAR_COOLDOWN", tmp_path / "radar_cooldown.json")
+    monkeypatch.setattr(am, "_known_accumulators", lambda: {"wallet1", "wallet2"})
+    monkeypatch.setattr(am, "_extract_baseline", lambda a: {"price_usd": "0.001", "liquidity_usd": 200000})
+
+    # просадка в sentiment-снапшоте
+    sent = tmp_path / "community_sentiment.jsonl"
+    sent.write_text(json.dumps({"change_24h": -12.0, "sentiment": "pos"}) + "\n")
+    monkeypatch.setattr(am, "DATA", tmp_path)
+
+    sink = Mock(); sink.write = AsyncMock(return_value="x")
+    asyncio.run(am.accumulation_radar(sink))
+    sink.write.assert_awaited_once()
+    a = sink.write.await_args
+    assert a.args[0] == "alert" and "ОРГАНИЗОВАННЫЙ ВЫКУП" in a.args[3]
+
+
+def test_accumulation_radar_no_signal_on_selling(tmp_path, monkeypatch):
+    """GWT «обычный рынок»: продавцы 60% → сигнала нет."""
+    import analyzer_main as am
+    from unittest.mock import AsyncMock, Mock
+    import time as _time
+
+    stream = tmp_path / "trades_stream.jsonl"
+    now = _time.time()
+    rows = []
+    for i in range(6):
+        rows.append(json.dumps({"ts": now - 3600, "wallet": f"wallet{i}", "tx_type": "buy", "sol_amount": 10, "token_amount": 1000}))
+    for i in range(6):
+        rows.append(json.dumps({"ts": now - 1800, "wallet": f"wallet{i}", "tx_type": "sell", "sol_amount": 9, "token_amount": 900}))
+    stream.write_text("\n".join(rows) + "\n")
+    monkeypatch.setattr(am, "TRADES_STREAM", stream)
+    monkeypatch.setattr(am, "RADAR_COOLDOWN", tmp_path / "radar_cooldown.json")
+    monkeypatch.setattr(am, "_known_accumulators", set())
+    monkeypatch.setattr(am, "_extract_baseline", lambda a: {"price_usd": "0.001", "liquidity_usd": 200000})
+    monkeypatch.setattr(am, "DATA", tmp_path)
+
+    sink = Mock(); sink.write = AsyncMock(return_value="x")
+    asyncio.run(am.accumulation_radar(sink))
+    sink.write.assert_not_awaited()
