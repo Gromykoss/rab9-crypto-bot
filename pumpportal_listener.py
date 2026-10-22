@@ -276,6 +276,7 @@ async def _wallet_event(sink: _ReportSink, msg: dict, wallet: str, tx_type: str)
     }
     try:
         journal = os.path.join(BASE_DIR, "data", "wallet_events.jsonl")
+        os.makedirs(os.path.dirname(journal), exist_ok=True)
         with open(journal, "a") as f:
             f.write(json.dumps(record) + "\n")
     except OSError as exc:

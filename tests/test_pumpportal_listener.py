@@ -149,7 +149,7 @@ def test_wallet_event_to_sink(tmp_path, monkeypatch):
     assert "ПРОДАЖА" in a.args[3]          # текст с типом движения
     journal = tmp_path / "wallet_events.jsonl"
     # journal пишется в BASE_DIR/data — monkeypatch невозможен по месту; проверяем запись через mock снапшот
-    rec = json.loads(open("/home/hermes-workspace/rab9/data/wallet_events.jsonl").read().strip().splitlines()[-1])
+    rec = json.loads(open(str(tmp_path / "data" / "wallet_events.jsonl")).read().strip().splitlines()[-1])
     assert rec["type"] == "wallet" and rec["tx_type"] == "sell" and rec["token_amount"] == 1868523
 
 
@@ -159,6 +159,7 @@ def test_wallet_no_dedup(tmp_path, monkeypatch):
     from sink import Sink as RS
     from unittest.mock import AsyncMock
 
+    monkeypatch.setattr(ppl, "BASE_DIR", str(tmp_path))
     monkeypatch.setattr(ppl, "read_wallets", lambda: ["4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9"])
     s = RS(out_dir=tmp_path / "out")
     s.write = AsyncMock(return_value="x")
@@ -175,6 +176,7 @@ def test_foreign_wallet_ignored(tmp_path, monkeypatch):
     from sink import Sink as RS
     from unittest.mock import AsyncMock
 
+    monkeypatch.setattr(ppl, "BASE_DIR", str(tmp_path))
     monkeypatch.setattr(ppl, "read_wallets", lambda: ["4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9"])
     s = RS(out_dir=tmp_path / "out")
     s.write = AsyncMock(return_value="x")
