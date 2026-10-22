@@ -231,6 +231,8 @@ async def accumulation_radar(sink: Sink):
             dip = chg < -5.0
         except (OSError, ValueError, IndexError):
             pass
+        # (2) metrics используется в тексте алерта (цена живая, не зашитая)
+        price_text = f"${float(metrics.get('price_usd') or 0):.6f}"
         conditions = [
             len(buyers) >= 5,
             buy_vol > sell_vol,
@@ -246,7 +248,7 @@ async def accumulation_radar(sink: Sink):
             f"🎯 ОРГАНИЗОВАННЫЙ ВЫКУП: {len(buyers)} кошельков купили {buy_vol:.0f} SOL "
             f"за 24ч на просадке (продажи {sell_vol:.0f} SOL, {sell_vol/buy_vol:.0%}); "
             f"держат {holding_ratio:.0%} покупателей; из известных накопителей: {len(acc_hit)} "
-            f"({', '.join(w[:8] for w in acc_hit[:5])}). Цена $0.0014 (-12% снапшот)."
+            f"({', '.join(w[:8] for w in acc_hit[:5])}). Цена {price_text}."
         )
         await sink.write("alert", "CGEDT9QZDvvH5GmVkWJH2BXiMJqMJySC9ihWyr7Spump", "BURNIE", text)
         _append(RADAR_COOLDOWN, {"last_signal_ts": now})

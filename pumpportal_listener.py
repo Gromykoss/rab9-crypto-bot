@@ -315,7 +315,7 @@ async def main() -> None:
     backoff = PPP_RECONNECT_BACKOFF_S
     while True:
         try:
-            log.info("connecting %s (backoff %.0fs)", PPP_WS_URL, backoff)
+            log.info("connecting %s (backoff %.0fs)", PPP_WS_URL.replace(PPP_API_KEY, "***") if PPP_API_KEY else PPP_WS_URL, backoff)
             await _session()
             backoff = PPP_RECONNECT_BACKOFF_S  # чистое закрытие — сброс backoff
         except asyncio.TimeoutError:

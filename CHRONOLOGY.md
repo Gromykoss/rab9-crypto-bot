@@ -850,3 +850,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **22.10.2026 08:17** — fix(tests): wallet tests write to tmp journal (test pollution cleaned) (`b19f83e`)
 - **22.10.2026 08:19** — fix(tests): BASE_DIR monkeypatch in wallet test (`5f1d145`)
 - **22.10.2026 08:41** — feat(radar+wallet): P1 wallet-watch v1.0 + P2 accumulation-radar v1.0 (`6f1b500`)
+- **22.10.2026 08:41** — docs(drift): SHA fill 6f1b500 (`34a5335`)
