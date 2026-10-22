@@ -847,3 +847,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **22.10.2026 07:11** — fix(unit): pumpportal-listener as hermes-user (`6837e55`)
 - **22.10.2026 07:14** — fix(wallet-watch): accountTrade requires funded PPP key — churn guard, PPP_API_KEY env (`48b9743`)
 - **22.10.2026 08:11** — fix(wallet-watch): full key 206 chars + case-insensitive ack (2/2 subscriptions live) (`5d5a4f0`)
+- **22.10.2026 08:17** — fix(tests): wallet tests write to tmp journal (test pollution cleaned) (`b19f83e`)

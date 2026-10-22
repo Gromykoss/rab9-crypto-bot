@@ -137,6 +137,7 @@ def test_wallet_event_to_sink(tmp_path, monkeypatch):
     wfile = tmp_path / "wallet_watch.json"
     wfile.write_text(json.dumps(["4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9"]))
     monkeypatch.setattr(ppl, "WALLET_FILE", str(wfile))
+    monkeypatch.setattr(ppl, "BASE_DIR", str(tmp_path))
     monkeypatch.setattr(ppl, "read_wallets", lambda: ["4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9"])
     s = RS(out_dir=tmp_path / "out")
     s.write = AsyncMock(return_value="x")
