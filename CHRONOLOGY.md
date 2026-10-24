@@ -853,3 +853,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **22.10.2026 08:41** — docs(drift): SHA fill 6f1b500 (`34a5335`)
 - **22.10.2026 08:47** — fix(radar): live price in alert, metrics used, api-key masked in log (`f4e14e6`)
 - **22.10.2026 11:19** — fix(deploy): scripts/deploy.sh приведён к живой архитектуре standalone-analyzer (эскалация rab9, решение владельца «восстанови/удали на своё усмотрение» → restore): бэкап/линт = живое ядро (analyzer_main, msf_http, cabal_detector, wallet_intel, burnie_sentiment_tracker = scorer REQUIRED), рестарт rab9-crypto-hermes (disabled 19.10) → rab9-analyzer.service; health :8089 и smoke проверены живыми, eval-gate PASS; sha заполняется в spec_drift_log
+- **22.10.2026 11:21** — fix(deploy): deploy.sh to standalone-analyzer era — live core backup/lint, restart rab9-analyzer.service (`7000952`)

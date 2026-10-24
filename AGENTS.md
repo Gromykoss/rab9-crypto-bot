@@ -14,22 +14,21 @@
 
 0. **CONTEXT GATE (MANDATORY):** перед ЛЮБЫМ действием — `python3 ~/.hermes/scripts/context_loader.py rab9 <trigger> [--max-tokens 500]`. Триггеры: `session_start` → gates + last-3-days · `code_change` → gates + chronology · `signal_analysis` → signal-flow + chronology · `audit` → chronology + bugs · `default` → gates only.
 
-0.5. **CONTRACT INDEX GATE (05.09.2026):** единый вход сессии — PROJECT_MEMORY_GRAPH.md (корень). Boot Rule: граф + AGENTS Gates на старте, остальные доки по маршруту из графа. Изменил домен/инвариант → обнови граф + CHRONOLOGY; иначе запись «Contract index update: not needed» в CHRONOLOGY. Старт сессии: 1) `~/rab9/CHRONOLOGY.md` (последние события), 2) `~/hermes-vault/30_Logs/Арсенал Hermes.md`, 3) этот файл.
+0.5. **CONTRACT INDEX GATE (05.09.2026):** единый вход сессии — PROJECT_MEMORY_GRAPH.md (корень). Boot Rule: граф + AGENTS Gates на старте, остальные доки по маршруту из графа. Изменил домен/инвариант → обнови граф + CHRONOLOGY; иначе запись «Contract index update: not needed» в CHRONOLOGY. Старт сессии: 1) `~/rab9/CHRONOLOGY.md` (последние события), 2) этот файл.
 
 ## 🗣️ Buzz (multi-agent): правило ответа
 
 Отвечай **только** когда адресовано тебе (`@Project-RAB9`). Перед ответом: 1) прямое упоминание? нет → молчи; 2) не дублируй сказанное другим; 3) чужая зона → молчи; 4) обвинение → сначала сверься с данными, вину автоматически не принимай; 5) не уверен → «нужно проверить» или переадресуй. Без `@` → молчат все (кроме `default_profile`); слово **«тишина»** запрещено (эхо-петля).
 
-**Возврат в Telegram (ОБЯЗАТЕЛЬНО):** ушёл в Buzz за уточнением → вернись в свою Telegram-группу и закрой вопрос с Сергеем там. Нет ответа в Telegram = работа НЕ закончена. Пример: `@Project-GULAG проверь баланс` → отвечает только GULAG.
+**Возврат в Telegram (ОБЯЗАТЕЛЬНО):** ушёл в Buzz за уточнением → вернись в свою Telegram-группу и закрой вопрос с Сергеем там. Нет ответа в Telegram = работа НЕ закончена. Пример: `@Project-robot-man проверь баланс` → отвечает только robot-man.
 
 1. **PRE-PATCH GATE (MANDATORY):** перед любым изменением кода — `grep -rn "имя" .`, показать grep пользователю, проследить логику в КАЖДОМ месте. Нет grep → патч не принят. Откат.
 2. **No production without approval:** сигналы в Песочницу (`-1003979753733`) только через approval gate. Не менять systemd unit.
 3. **REJECT default:** MoA — оба agree → PASS, расходятся → FLAG, иначе REJECT.
 4. **НЕ байпасить** cabal_detector, wallet_intel, loop_verifier.
 5. **Never expose credentials:** `msf_token.txt`, `TELEGRAM_BOT_TOKEN`, API ключи — не коммитить, не логировать.
-6. **Раздельно с Алиханом:** директории, venv, боты, БД, ключи — всё раздельно.
-7. **⛔ X/Twitter WRITE — ЗАПРЕЩЕНЫ (02.08.2026):** xurl reply/post/like/retweet/follow — не зона Rab9 (публикация — только robot-man). Исключение: `xurl --app my-app --auth oauth2 /2/...` read-only для X-радара (radar_x.py). Инцидент 01.08: голый tweet ID вместо текста в reply.
-8. **CNC-ПРАВИЛО (26.07.2026):** Codex/Grok Build — ИНЖЕНЕРЫ, не отвёртка: делегируй ЦЕЛЬ, не инструкцию (❌ «строка 42 замени X» → ✅ «BURNIE пампнул 40%, разберись и предложи фильтр»). Чтение: `~/.hermes/docs/graph-harness-principles.md`. **Никогда `delegate_task` без `acp_command`** (spawn default-сабагента = пустая трата токенов). Вызовы: Codex = `delegate_task(acp_command='codex', goal, context)`, Grok = `delegate_task(acp_command='grok', acp_args=['agent','stdio'], goal, context)`.
+6. **⛔ X/Twitter WRITE — ЗАПРЕЩЕНЫ (02.08.2026):** xurl reply/post/like/retweet/follow — не зона Rab9 (публикация — только robot-man). Исключение: `xurl --app my-app --auth oauth2 /2/...` read-only для X-радара (radar_x.py). Инцидент 01.08: голый tweet ID вместо текста в reply.
+7. **CNC-ПРАВИЛО (26.07.2026):** Codex/Grok Build — ИНЖЕНЕРЫ, не отвёртка: делегируй ЦЕЛЬ, не инструкцию (❌ «строка 42 замени X» → ✅ «BURNIE пампнул 40%, разберись и предложи фильтр»). Чтение: `~/.hermes/docs/graph-harness-principles.md`. **Никогда `delegate_task` без `acp_command`** (spawn default-сабагента = пустая трата токенов). Вызовы: Codex = `delegate_task(acp_command='codex', goal, context)`, Grok = `delegate_task(acp_command='grok', acp_args=['agent','stdio'], goal, context)`.
 
 ## ⚖️ ENFORCED-ЗАКОНЫ (operators/ — детерминировано в коде, 15.08.2026)
 
@@ -83,10 +82,10 @@ BURNIE sentiment tracker: script-first only (`python3 burnie_sentiment_tracker.p
 
 При делегировании Codex/Grok Build:
 1. **Read docs first** — этот AGENTS.md + CHRONOLOGY.md перед любым изменением; **Preserve user changes** — `git status` перед работой
-2. **Goal Mode** для задач >20 строк: делегируй ЦЕЛЬ, не инструкцию (см. gate #8)
+2. **Goal Mode** для задач >20 строк: делегируй ЦЕЛЬ, не инструкцию (см. gate #7)
 3. **Verification ladder** — `pytest -q` → MSF test signal → grep .env → `journalctl -u rab9 -n 10` → CHRONOLOGY.md
 4. **⛔ CHRONOLOGY АВТОМАТИЧЕСКИ** — после ЛЮБОГО фикса/инцидента сразу датированная запись (причина→что сделал→как проверил→файлы). Часть фикса, не «в конце сессии»
-5. Gates #2 (approval), #4 (не байпасить), #5 (секреты, включая Birdeye/DexScreener ключи), #6 (раздельно с Алиханом) — обязательны и при делегировании; **MSF-токены не логировать**
+5. Gates #2 (approval), #4 (не байпасить), #5 (секреты, включая Birdeye/DexScreener ключи) — обязательны и при делегировании; **MSF-токены не логировать**
 
 ### RAB9-специфичное
 
@@ -105,7 +104,7 @@ BURNIE sentiment tracker: script-first only (`python3 burnie_sentiment_tracker.p
 
 - «rtk примени» = сразу внедрять
 - Кратко: Да/Нет/В архив/В работу/Применяй/Используй
-- Самотест и «раздельно с Алиханом» — уже в CRITICAL GATES, не дублировать
+- Самотест — уже в CRITICAL GATES, не дублировать
 
 ## SPEC DRIFT GATE (перед любой spec-affecting мутацией)
 Spec-affecting мутация = правка кода/данных/конфига/спеки узла. Отчёты/посты/сбор/чтение — мимо гейта.
