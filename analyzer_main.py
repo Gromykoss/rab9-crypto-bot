@@ -43,6 +43,7 @@ def _env(name, default):
 T0_INTERVAL_MIN = int(_env("ANALYZER_T0_INTERVAL_MIN", "20"))
 DIGEST_WINDOW_H = float(_env("ANALYZER_DIGEST_WINDOW_H", "4"))
 DIGEST_THRESHOLD = int(_env("ANALYZER_DIGEST_THRESHOLD", "3"))
+DIGEST_POLL_S = float(_env("ANALYZER_DIGEST_POLL_S", "60"))
 RATE_CAP_H = int(_env("ANALYZER_RATE_CAP_H", "15"))
 KABAL_CAP_H = int(_env("ANALYZER_KABAL_CAP_H", "5"))
 QUEUE_MAX = int(_env("ANALYZER_QUEUE_MAX", "500"))
@@ -259,18 +260,13 @@ async def accumulation_radar(sink: Sink):
 
 # ── digest_timer (накопительный, окно/порог конфиг) ──
 async def digest_timer(sink: Sink):
+    offset = 0  # байтовый курсор analyses.jsonl (инкрементальное чтение)
     while True:
         try:
-            cursor = {}
-            if DIGEST_CURSOR.exists():
-                cursor = json.loads(DIGEST_CURSOR.read_text())
-            last_id = cursor.get("last_digest_id")
-            records = [r for r in sink.read_new(last_id) if r.get("type") != "digest"]
-            # отсчёт только после последнего digest
-            if last_id and records and records[0].get("id") == last_id:
-                records = records[1:]
+            records, offset = await asyncio.to_thread(sink.read_new_from, offset)
+            records = [r for r in records if r.get("type") != "digest"]
             if len(records) < DIGEST_THRESHOLD:
-                log.info("digest: %d записей < порога %d — тишина", len(records), DIGEST_THRESHOLD)
+                await asyncio.sleep(DIGEST_POLL_S)
                 continue
             counts = {"verdict": 0, "reject": 0, "alert": 0}
             entries = []

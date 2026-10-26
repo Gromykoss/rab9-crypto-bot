@@ -103,6 +103,38 @@ class Sink:
         await asyncio.to_thread(_rotate_check_sync)
         return record["id"]
 
+    def read_new_from(self, offset: int = 0) -> tuple[list[dict], int]:
+        """Инкрементальное чтение jsonl с байтового смещения.
+
+        Возвращает (записи, новый offset). offset = размер файла на момент
+        чтения; обрезается до последней полной строки (защита от частичной
+        записи). Offset больше размера файла (ротация/обрезка) → сброс в 0.
+        Синхронный — вызывать через asyncio.to_thread.
+        """
+        if not self.jsonl.exists():
+            return [], 0
+        size = self.jsonl.stat().st_size
+        if offset > size:
+            offset = 0
+        out = []
+        with open(self.jsonl, "rb") as f:
+            if offset:
+                f.seek(offset)
+            data = f.read()
+        cut = data.rfind(b"\n")
+        if cut == -1:
+            return [], offset  # ни одной полной строки
+        new_offset = offset + cut + 1
+        for line in data[: cut + 1].splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                out.append(json.loads(line))
+            except ValueError:
+                continue
+        return out, new_offset
+
     def read_new(self, last_id: str | None = None) -> list[dict]:
         """Записи после last_id (для delivery-reader). None → все."""
         if not self.jsonl.exists():

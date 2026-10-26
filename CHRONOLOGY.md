@@ -859,3 +859,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 
 - **24.10.2026 02:02** — docs: purge GULAG/Alikhan ghosts from AGENTS.md (отделы удалены 21.10): rule «раздельно с Алиханом» out (gates 7-8→6-7), boot Арсенал ref out, пример → @Project-robot-man (`bf831fe`)
 - **24.10.2026 02:02** — docs: CHRONOLOGY — 24.10 MGT ghost-purge entry (sha-fill bf831fe) (`fbed8ce`)
+- **24.10.2026 02:07** — chrono: fix sha-fill collision with drift_commit auto-chrono (unsplit line, empty sha parens) (`cc315ad`)
