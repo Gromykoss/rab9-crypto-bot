@@ -52,9 +52,12 @@ BULLISH_QUERY = (
 # retweets_of ловит RT крупных аккаунтов; -is:retweet только на organic-ветке.
 # Лайки крупных аккаунтов X API v2 не отдаёт search'ем (нужен liking_users per-tweet → лишние вызовы).
 CATALYST_QUERY = (
-    # 21.10: tier Free стабильно — retweets_of единственный живой оператор;
-    # офиц.-посты добирает fetch_fresh_official_interactions (timeline).
-    f"retweets_of:{ACCOUNT}"
+    # 26.10: X API Free-тир отобрал и retweets_of (401 Unauthorized; как и OR /
+    # has: / is: / @mention — проверено живьём). Живые операторы: bare keyword,
+    # from:, to:. Берём bare handle: classify_interaction() размечает
+    # reply/mention/RT офиц., вес KOL фильтрует мелочь; RT-детект крупных
+    # добирает fetch_fresh_official_interactions (4-й вызов, работает).
+    ACCOUNT
 )
 # Порог «не пустышка»: <1k фолловеров = шум; ≥5k = KOL; ≥50k = large; ≥500k = mega.
 CATALYST_MIN_FOLLOWERS = 5000
