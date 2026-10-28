@@ -861,3 +861,8 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **24.10.2026 02:02** — docs: CHRONOLOGY — 24.10 MGT ghost-purge entry (sha-fill bf831fe) (`fbed8ce`)
 - **24.10.2026 02:07** — chrono: fix sha-fill collision with drift_commit auto-chrono (unsplit line, empty sha parens) (`cc315ad`)
 - **26.10.2026 04:02** — fix(analyzer): digest_timer busy-loop — sleep + инкрементальный byte-offset read (`7e7f7f0`)
+- **26.10.2026 18:52** — fix(sentiment): CATALYST_QUERY retweets_of -> bare handle (X Free tier 401 on advanced operators, 26.10) (`a278c1f`)
+
+- **27.10.2026 08:30** — ops(cron): доставку всех 3 BURNIE-кронов переключили local→telegram (владелец «почему отчёты не приходят»); у 59d37ee6a323 настройка позже слетела в buzz — Hermes-аудит 28.10 (в профиле rab9 нет telegram-платформы, delivery_failed с 28 прогонов); окно 26–28.10 отчёты дублировались владельцу вручную в чат
+- **27.10.2026 15:00** — research(sm): полный прогон 25 кошельков accum-watch (GMGN, RPC 429) — 14 найдено, все в плюсе, продаж 0; топ-1 4EMfevH3 4.49%→6.87% (+$179K, крупнейшая докупка за историю наблюдений); новые SM: 6YtSGY75y +$44K, Hd6ppNBaAW +$31.5K; единственный продавец EHg7Bstm9y (бандлер) перекрыт топ-1
+- **28.10.2026 10:30** — ops(credits): X API баланс $1.68 (Auto Recharge off), xAI $7.34 — владельцу показаны обе консоли; решение по пополнению за ним, кроны продолжают с частичными 401
