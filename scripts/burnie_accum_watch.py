@@ -63,6 +63,73 @@ def fetch_price():
         return None
 
 
+def fetch_holders():
+    # Топ-100 холдеров: для авто-пополнения watch-списка новыми китами (29.10).
+    out: subprocess.CompletedProcess | None = None
+    for attempt in range(1, 4):
+        out = subprocess.run(
+            [GMGN, "token", "holders", "--chain", "sol", "--address", MINT],
+            capture_output=True, text=True, timeout=90,
+        )
+        if out.returncode == 0 or "RATE_LIMIT_EXCEEDED" not in (out.stderr or ""):
+            break
+        wait = 35 * attempt
+        print(f"⚠️ gmgn 429 RATE_LIMIT_EXCEEDED (attempt {attempt}) — retry in {wait}s")
+        time.sleep(wait)
+    if out.returncode != 0:
+        print(f"⚠️ gmgn-cli holders fail rc={out.returncode}: {out.stderr[:200]}")
+        return []
+    return json.loads(out.stdout).get("list") or []
+
+
+NEW_WALLET_MIN_PCT = 0.9    # ≥0.9% саплая
+NEW_WALLET_MIN_NET = 10000  # и net-buy ≥ $10K (не спекулянт-однодневка)
+
+
+def enroll_new_wallets(snap: dict, by_addr: dict) -> list[str]:
+    """Авто-пополнение watch: новый холдер ≥0.9% + net-buy ≥$10K → в снапшот с tag=new-<date>.
+
+    Решение Сергея 29.10 («осень, горячее время, реагировать быстро»): новое
+    накопление не должно месяцами жить вне радара. Возвращает строки-алерты.
+    """
+    added = []
+    known = {w["address"] for w in snap["wallets"]}
+    today = time.strftime("%Y%m%d")
+    for h in fetch_holders():
+        # GMGN holders: поле address/account_address НЕ консистентно по строкам
+        # (то владелец, то токен-аккаунт). Владелец = тот, кто есть в traders-map
+        # (by_addr ключи = владельцы); иначе candidate = address.
+        cands = [c for c in (h.get("address"), h.get("account_address")) if c]
+        a = next((c for c in cands if c in by_addr), None) or h.get("address")
+        # Владелец уже в watch (в любом из полей) — не дублируем токен-аккаунтом
+        if any(c in known for c in cands):
+            continue
+        if not a or a == MINT or a in known:
+            continue
+        if h.get("addr_type") == 2 or h.get("exchange"):
+            continue  # пул/биржа — не кит
+        pct = round((h.get("amount_percentage") or 0) * 100, 2)
+        cur = by_addr.get(a)
+        if pct < NEW_WALLET_MIN_PCT or not cur or cur["net"] < NEW_WALLET_MIN_NET:
+            continue
+        w = {
+            "address": a, "pct": pct, "baseline_pct": pct,
+            "net_buy_usd": round(cur["net"]), "avg_buy_usd": 0,
+            "buys": h.get("accu_tx_count_buy") or 0, "sells": cur["sells"],
+            "tag": f"new-{today}",
+        }
+        snap["wallets"].append(w)
+        known.add(a)
+        added.append(
+            f"🆕 НОВЫЙ КИТ В WATCH: {a}\n"
+            f"   {pct}% саплая, накопил ${cur['net']:,.0f} (покупок {w['buys']}, продаж {w['sells']}). "
+            f"Вне старого списка 25.09 — раньше был невидим."
+        )
+    if added:
+        snap["wallets"].sort(key=lambda x: -x.get("pct", 0))
+    return added
+
+
 def main():
     snap = json.loads(SNAP.read_text())
     by_addr = {}
@@ -73,10 +140,12 @@ def main():
         bu = h.get("buy_volume_cur") or 0.0
         su = h.get("sell_volume_cur") or 0.0
         ba = h.get("buy_amount_cur") or 0.0
-        by_addr[h.get("account_address", "")] = {
-            "net": bu - su, "sells": h.get("sell_tx_count_cur") or 0,
-            "bu": bu, "su": su, "ba": ba,
-        }
+        cur = {"net": bu - su, "sells": h.get("sell_tx_count_cur") or 0,
+               "bu": bu, "su": su, "ba": ba}
+        # GMGN: address/account_address местами инвертированы по строкам —
+        # индексируем ОБА ключа одним cur, чтобы резолв владельца всегда находил.
+        for key in filter(None, (h.get("address"), h.get("account_address"))):
+            by_addr[key] = cur
 
     def _avg_entry(cur):
         return cur["bu"] / cur["ba"] if cur["ba"] else None
@@ -89,6 +158,10 @@ def main():
         return f", средняя входа ${avg:.5f} ({'+' if pnl >= 0 else ''}{pnl:.0f}% к рынку)"
 
     p = fetch_price()
+
+    # Авто-пополнение новыми китами ДО основного цикла: зачисленные сразу попадают
+    # в сверку этого же прогона (baseline = текущие значения, алерт на след. тик).
+    new_alerts = enroll_new_wallets(snap, by_addr)
 
     lines = []
     for w in snap["wallets"]:
@@ -112,6 +185,7 @@ def main():
 
     px = f"цена ${p['price']} (24ч {p['chg24h']}%), MC ${p['mc']:,.0f}, liq ${p['liq']:,.0f}" if p else "н/д"
 
+    lines = new_alerts + lines
     if lines:
         print(f"BURNIE watch ({px})")
         print("\n".join(lines))

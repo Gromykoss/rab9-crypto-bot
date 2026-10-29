@@ -870,3 +870,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **29.10.2026 03:45** — feat(sentiment): noise-catalyst filter — non-crypto accounts don't inflate virality (29.10, решение Сергея) (`6d454bf`)
 
 - **29.10.2026 09:30** — feat(sentiment): noise-catalyst filter (решение Сергея «отчёт не раздувает реальность»): не-крипто аккаунты (mtntallpaul, MAGA/gun-rights, RT сатиры по своей теме) исключены из virality-скоринга — атрибуция 27.10 показала их RT не двигают цену (h1 −7.5%); в отчёте помечаются «шумовой сигнал». Self-test: noise-only virality=0 (было 9), с реальным крипто-KOL = 15 (`6d454bf`)
+- **29.10.2026 03:45** — chrono: 29.10 noise-catalyst filter entry (`c94a7e4`)
