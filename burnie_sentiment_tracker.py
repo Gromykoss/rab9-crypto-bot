@@ -1700,6 +1700,20 @@ KNOWN_INFLUENCERS = (
     "alphaagentcallz",
 )
 
+# 29.10 (решение Сергея «отчёт не должен раздувать реальность»): не-крипто аккаунты
+# (полит-комментаторы, MAGA-активисты и т.п.), ретвитящие сатиру BURNIE по своим
+# темам, — ШУМОВОЙ катализатор. Историческая атрибуция 27.10 подтвердила: их RT
+# не двигают цену (h1 −7.5%). Виральность они НЕ поднимают; в отчёте помечаются
+# «(не крипто-аудитория, шумовой сигнал)».
+NOISE_DOMAIN_ACCOUNTS = frozenset({
+    "mtntallpaul",  # Paul Yeager — gun-rights/MAGA activist, 0 крипто-контента (аудит 29.10)
+})
+
+
+def is_noise_catalyst(c: dict) -> bool:
+    """Шумовой катализатор: не-крипто аккаунт без known/politician статуса."""
+    return (c.get("user") or "").lower() in NOISE_DOMAIN_ACCOUNTS
+
 
 def fetch_kol_mentions() -> dict[str, Any]:
     """Fallback KOL-скан (radar_x OAuth1), если catalyst scan в build_snapshot пуст.
@@ -1975,32 +1989,38 @@ def compute_weighted_score(snapshot: dict[str, Any]) -> dict[str, Any]:
     kol = snapshot.get("kol_mentions") or []
     eng = snapshot.get("kol_engagement") or {}
     if catalysts:
-        # База: число сигналов, capped
-        S["virality"] = min(10, len(catalysts) * 3)
-        tiers = {c.get("tier") for c in catalysts}
-        types = {c.get("type") for c in catalysts}
-        if "politician" in tiers:
-            S["virality"] = min(15, S["virality"] + 10)  # политик = высший приоритет
-        elif "known" in tiers or "mega" in tiers:
-            S["virality"] = min(15, S["virality"] + 8)  # Маск/Трамп/Toly-уровень
-        elif "large" in tiers:
-            S["virality"] = min(15, S["virality"] + 5)  # ≥50k fol
-        elif "kol" in tiers:
-            S["virality"] = min(15, S["virality"] + 3)
-        # Тип взаимодействия: RT офиц. сильнее bare-упоминания
-        if "rt_fresh" in types:
-            S["virality"] = min(15, S["virality"] + 4)  # свежий RT = самый ранний сигнал
-        elif "rt_official" in types:
-            S["virality"] = min(15, S["virality"] + 3)
-        elif "quote_fresh" in types or "quote_official" in types or "reply_official" in types:
-            S["virality"] = min(15, S["virality"] + 2)
-        elif "bare_burnie" in types:
-            S["virality"] = min(15, S["virality"] + 2)  # двусмысленное слово BURNIE
-        if "like_spike" in types:
-            S["virality"] = min(15, S["virality"] + 3)  # аномальный всплеск лайков
-        likes = eng.get("likes", 0)
-        if likes >= 50:
-            S["virality"] = min(15, S["virality"] + 2)
+        # 29.10: шумовые (не крипто) катализаторы не поднимают виральность —
+        # решение Сергея «отчёт не раздувает реальность».
+        real = [c for c in catalysts if not is_noise_catalyst(c)]
+        if not real:
+            S["virality"] = 0
+        else:
+            # База: число сигналов, capped
+            S["virality"] = min(10, len(real) * 3)
+            tiers = {c.get("tier") for c in real}
+            types = {c.get("type") for c in real}
+            if "politician" in tiers:
+                S["virality"] = min(15, S["virality"] + 10)  # политик = высший приоритет
+            elif "known" in tiers or "mega" in tiers:
+                S["virality"] = min(15, S["virality"] + 8)  # Маск/Трамп/Toly-уровень
+            elif "large" in tiers:
+                S["virality"] = min(15, S["virality"] + 5)  # ≥50k fol
+            elif "kol" in tiers:
+                S["virality"] = min(15, S["virality"] + 3)
+            # Тип взаимодействия: RT офиц. сильнее bare-упоминания
+            if "rt_fresh" in types:
+                S["virality"] = min(15, S["virality"] + 4)  # свежий RT = самый ранний сигнал
+            elif "rt_official" in types:
+                S["virality"] = min(15, S["virality"] + 3)
+            elif "quote_fresh" in types or "quote_official" in types or "reply_official" in types:
+                S["virality"] = min(15, S["virality"] + 2)
+            elif "bare_burnie" in types:
+                S["virality"] = min(15, S["virality"] + 2)  # двусмысленное слово BURNIE
+            if "like_spike" in types:
+                S["virality"] = min(15, S["virality"] + 3)  # аномальный всплеск лайков
+            likes = eng.get("likes", 0)
+            if likes >= 50:
+                S["virality"] = min(15, S["virality"] + 2)
     elif kol:
         # fallback: старый kol_mentions без типизации
         S["virality"] = min(15, len(kol) * 4)
@@ -2407,7 +2427,11 @@ def format_alert(snapshot: dict[str, Any]) -> str:
         lines.append("✅ Серьёзных обвинений (скам/слив) не обнаружено.")
     if catalysts:
         # Драйвер = самый весомый катализатор (крупный аккаунт × BURNIE), не random post
-        c = catalysts[0]
+        c = next((x for x in catalysts if not is_noise_catalyst(x)), catalysts[0])
+        noise_mark = (
+            " (⚠️ не крипто-аудитория, шумовой сигнал — цену не двигает)"
+            if is_noise_catalyst(c) else ""
+        )
         trans = translate_post(c.get("text", ""))
         url = c.get("url") or post_url(c.get("user", ""), c.get("id", ""))
         driver_ru = explain_terms(c.get("text", ""), DRIVER_TERMS_RU)
@@ -2425,7 +2449,7 @@ def format_alert(snapshot: dict[str, Any]) -> str:
                 "mention_official": "упоминание офиц. аккаунта",
                 "bare_burnie": "двусмысленное упоминание BURNIE (без тикера)",
             }.get(c.get("type"), "взаимодействие с BURNIE")
-        lines.append("🔥 Драйвер: " + driver_ru)
+        lines.append("🔥 Драйвер: " + driver_ru + noise_mark)
         lines.append("   💬 " + trans)
         if url:
             lines.append("   🔗 " + url)
@@ -2479,6 +2503,9 @@ def format_alert(snapshot: dict[str, Any]) -> str:
         )
         if pol_n:
             head += f" (🏛 {pol_n} politician)"
+        noise_n = sum(1 for c in catalysts if is_noise_catalyst(c))
+        if noise_n:
+            head += f" | {noise_n} шумовых (не крипто) — в виральность не идут"
         lines.append(head)
         for c in shown[:4]:
             fol = int(c.get("followers") or 0)
@@ -2486,11 +2513,12 @@ def format_alert(snapshot: dict[str, Any]) -> str:
             v_mark = "✓" if c.get("verified") else ""
             tier_s = c.get("tier") or ""
             pol_mark = " 🏛" if tier_s == "politician" else ""
+            noise_tag = " ⚠️шум" if is_noise_catalyst(c) else ""
             user_s = c.get("user") or "аккаунт-аноним (всплеск)"
             if c.get("type") == "like_spike":
                 lines.append(f"   ⚡ {c.get('text','')[:100]}")
             else:
-                lines.append(f"   @{user_s} ({fol:,} fol{v_mark}{pol_mark}) — {tr}")
+                lines.append(f"   @{user_s} ({fol:,} fol{v_mark}{pol_mark}) — {tr}{noise_tag}")
             if c.get("url"):
                 lines.append(f"   🔗 {c['url']}")
     else:
