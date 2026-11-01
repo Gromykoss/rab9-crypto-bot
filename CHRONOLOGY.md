@@ -874,3 +874,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **29.10.2026 04:14** — feat(accum): auto-enroll new whales (>=0.9% + net>=$10K) + GMGN field normalization (29.10) (`94078d6`)
 
 - **29.10.2026 10:30** — feat(accum): снапшот переснят 29.10 (25→36 кошельков: 15 carry + 11 new-20261029 + 10 dropped-out); скрипт теперь АВТОПОПОЛНЯЕТ watch новыми китами (≥0.9% саплая + net-buy ≥$10K) — решение Сергея «осень, реагировать быстро»; нормализация инвертированных полей GMGN address/account_address (двойной ключ by_addr + dedupe). Бэкап старого снапшота: data/burnie_accum_watch.snapshot-20260925.json.bak
+- **29.10.2026 04:14** — chrono: 29.10 accum snapshot rebuild + auto-enroll (`435c930`)

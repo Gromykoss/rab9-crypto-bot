@@ -126,7 +126,7 @@ def enroll_new_wallets(snap: dict, by_addr: dict) -> list[str]:
             f"Вне старого списка 25.09 — раньше был невидим."
         )
     if added:
-        snap["wallets"].sort(key=lambda x: -x.get("pct", 0))
+        snap["wallets"].sort(key=lambda x: -(x.get("pct") or 0))
     return added
 
 
