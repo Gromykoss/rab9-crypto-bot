@@ -875,3 +875,6 @@ n8n-вебхук перестал передавать сигналы из Ме�
 
 - **29.10.2026 10:30** — feat(accum): снапшот переснят 29.10 (25→36 кошельков: 15 carry + 11 new-20261029 + 10 dropped-out); скрипт теперь АВТОПОПОЛНЯЕТ watch новыми китами (≥0.9% саплая + net-buy ≥$10K) — решение Сергея «осень, реагировать быстро»; нормализация инвертированных полей GMGN address/account_address (двойной ключ by_addr + dedupe). Бэкап старого снапшота: data/burnie_accum_watch.snapshot-20260925.json.bak
 - **29.10.2026 04:14** — chrono: 29.10 accum snapshot rebuild + auto-enroll (`435c930`)
+- **01.11.2026 19:23** — fix(accum): sort None pct guard (29.10) (`34c3d04`)
+
+- **02.11.2026 08:20** — ops(tg-delivery): сентимент 03:00 снова delivery_failed — найден корень: профильный config.yaml ПЕРЕЗАПИСАН 01.11 17:58 (при рестарте gateway 17:46): ужат 96→60 строк (потеряны deepseek-list, формат plugins) + добавлен telegram: enabled: false. Минимальный фикс: enabled→true (токен в .env с 28.10). Верификация: tg enabled=True, token=True, home=-1004425561477, connected=[buzz,telegram]. Подозрение на сбойный config-rewrite при рестарте — Hermes доложен.
