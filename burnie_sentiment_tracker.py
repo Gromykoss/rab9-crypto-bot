@@ -2030,9 +2030,29 @@ def compute_weighted_score(snapshot: dict[str, Any]) -> dict[str, Any]:
         elif likes >= 10:
             S["virality"] = min(15, S["virality"] + 2)
 
-    # Календарный бонус: ±3 дня от дебатов/праймериз/Election Day
+    # Календарный ±3д: ДВОЙНОЕ ЧТЕНИЕ (29.11, решение Сергея «event-as-exit»).
+    # Катализатор-событие близко — это не только хайп, это и окно выхода для китов:
+    # кейс 01.11 — топ-1 слил 65M за 2 дня до оглашения, в пик предвыборного пампа.
+    # Правило:
+    #   • цена УЖЕ разогналась к событию (7д > +15% или 24ч > +10%) → событие =
+    #     exit-liquidity risk: виральность ШТРАФУЕМ (−4), не бустим;
+    #   • цена плоская/внизу к событию → хайпа ещё нет, бонус оставляем (+bonus).
+    ta_cal = snapshot.get("chart_ta") or {}
+    d7_cal = ta_cal.get("delta_7d")
+    chg_cal = snapshot.get("change_24h")
     cal = snapshot.get("calendar") or calendar_boost()
-    if cal.get("active") and cal.get("bonus"):
+    ran_into_event = False
+    try:
+        ran_into_event = cal.get("active") and cal.get("bonus") and (
+            (d7_cal is not None and float(d7_cal) > 15.0)
+            or (chg_cal is not None and float(chg_cal) > 10.0)
+        )
+    except (TypeError, ValueError):
+        ran_into_event = False
+    if ran_into_event:
+        S["virality"] = max(0, S["virality"] - 4)
+        snapshot["_event_exit_risk"] = True
+    elif cal.get("active") and cal.get("bonus"):
         S["virality"] = min(15, S["virality"] + int(cal["bonus"]))
 
     # 4. Smart money flow — max 5 (rev. 01.09: смарт-мани = допсигнал/манипуляция, НЕ основа.
@@ -2543,10 +2563,17 @@ def format_alert(snapshot: dict[str, Any]) -> str:
     if cal.get("active"):
         days = cal.get("days_to")
         days_s = "сегодня" if days == 0 else (f"через {days}д" if days and days > 0 else f"{abs(days or 0)}д назад")
-        lines.append(
-            f"🗓 Календарь: {cal.get('event')} ({cal.get('date')}, {days_s}) "
-            f"— бонус +{cal.get('bonus', 0)} к виральности"
-        )
+        if snapshot.get("_event_exit_risk"):
+            lines.append(
+                f"🗓 Календарь: {cal.get('event')} ({cal.get('date')}, {days_s}) "
+                f"— ⚠️ EVENT-AS-EXIT: цена разогнана к событию, виральность снижена; "
+                f"близко окно выхода китов (кейс 01.11: топ-1 слил до оглашения)"
+            )
+        else:
+            lines.append(
+                f"🗓 Календарь: {cal.get('event')} ({cal.get('date')}, {days_s}) "
+                f"— бонус +{cal.get('bonus', 0)} к виральности"
+            )
 
     # Wallet accumulation factor (factor #2: smart money accumulation)
     sm = snapshot.get("smart_money") or {}

@@ -878,3 +878,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **01.11.2026 19:23** — fix(accum): sort None pct guard (29.10) (`34c3d04`)
 
 - **02.11.2026 08:20** — ops(tg-delivery): сентимент 03:00 снова delivery_failed — найден корень: профильный config.yaml ПЕРЕЗАПИСАН 01.11 17:58 (при рестарте gateway 17:46): ужат 96→60 строк (потеряны deepseek-list, формат plugins) + добавлен telegram: enabled: false. Минимальный фикс: enabled→true (токен в .env с 28.10). Верификация: tg enabled=True, token=True, home=-1004425561477, connected=[buzz,telegram]. Подозрение на сбойный config-rewrite при рестарте — Hermes доложен.
+- **02.11.2026 12:12** — chrono: 02.11 tg-delivery root cause (config rewrite 01.11 17:58 disabled telegram) (`0885751`)
