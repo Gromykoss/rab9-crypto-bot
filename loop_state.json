@@ -1,14 +1,6 @@
 {
   "analyses": [
     {
-      "address": "5DLMQuAJdQp4...",
-      "token": "HKR",
-      "ts": 1793992595,
-      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
-      "tier": "SOLID",
-      "duplicate": false
-    },
-    {
       "address": "A7bdiYdS5Gjq...",
       "token": "?",
       "ts": 1793992716,
@@ -1599,9 +1591,17 @@
       "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
       "tier": "SOLID",
       "duplicate": false
+    },
+    {
+      "address": "145aeJuGdzaz...",
+      "token": "UODF",
+      "ts": 1794037195,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
     }
   ],
   "duplicates": 0,
-  "total": 12955,
+  "total": 12956,
   "last_cleanup": 1794034212
 }
