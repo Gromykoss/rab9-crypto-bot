@@ -130,8 +130,66 @@ def enroll_new_wallets(snap: dict, by_addr: dict) -> list[str]:
     return added
 
 
+def measure_holdings(snap: dict) -> list[str]:
+    """RPC-фолбэк: текущий холд по известному holding_owner каждого кошелька.
+
+    Нужен потому, что gmgn-cli на VPS упирается в 429 и watch слепнет —
+    без этой проверки отчёт продолжает показывать старый «накопление, продаж 0»
+    даже после того, как кит слил позицию (кейс 01.11: топ-1 вышел, а отчёты
+    ещё неделю писали «держит 6.87%, продаж 0»).
+
+    Меряем только те записи, где holding_owner известен и проверен
+    (GMGN-модель: address = кошелёк/плательщик, реальные токены лежат на
+    отдельном торговом аккаунте). Иначе честно оставляем cur_pct пустым.
+    """
+    supply = snap.get("supply") or 0
+    if not supply:
+        return []
+    out = []
+    for w in snap.get("wallets", []):
+        owner = w.get("holding_owner")
+        if not owner:
+            continue
+        tot = None
+        for attempt in range(4):
+            try:
+                body = json.dumps({
+                    "jsonrpc": "2.0", "id": 1,
+                    "method": "getTokenAccountsByOwner",
+                    "params": [owner, {"mint": MINT}, {"encoding": "jsonParsed"}],
+                }).encode()
+                req = urllib.request.Request(
+                    "https://api.mainnet-beta.solana.com", body,
+                    {"Content-Type": "application/json"},
+                )
+                with urllib.request.urlopen(req, timeout=25) as r:
+                    res = json.load(r)
+                if "result" in res:
+                    tot = sum(
+                        int(i["account"]["data"]["parsed"]["info"]["tokenAmount"]["amount"])
+                        for i in (res["result"].get("value") or [])
+                    )
+                    break
+            except Exception:
+                pass
+            time.sleep(8 * (attempt + 1))
+        if tot is None:
+            continue
+        cur_pct = round(tot / supply * 100, 3)
+        base = w.get("pct") or 0
+        w["cur_pct"] = cur_pct
+        if base and cur_pct < base * 0.5:
+            out.append(
+                f"🔴 КИТ ВЫШЕЛ: {w['address']}\n"
+                f"   холд {base}% → {cur_pct}% саплая (holding account {owner[:8]}…). "
+                f"Накопитель сократил/закрыл позицию — сценарий «тихое накопление» сломан."
+            )
+    return out
+
+
 def main():
     snap = json.loads(SNAP.read_text())
+    snap.setdefault("supply", 969651601137694)
     by_addr = {}
     for h in fetch_traders():
         if str(h.get("addr_type")) == "2":
@@ -159,6 +217,9 @@ def main():
 
     p = fetch_price()
 
+    # RPC-фолбэк холдов (gmgn может быть в 429 — watch не должен слепнуть)
+    hold_alerts = measure_holdings(snap)
+
     # Авто-пополнение новыми китами ДО основного цикла: зачисленные сразу попадают
     # в сверку этого же прогона (baseline = текущие значения, алерт на след. тик).
     new_alerts = enroll_new_wallets(snap, by_addr)
@@ -183,9 +244,13 @@ def main():
                 f"Раньше продаж не было ({w.get('sells', 0)}). Сигнал выхода накопителя.{_entry_note(cur, price=p['price'] if p else None)}"
             )
 
+    if by_addr:
+        from datetime import datetime, timezone
+        snap["last_gmgn_data_utc"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
     px = f"цена ${p['price']} (24ч {p['chg24h']}%), MC ${p['mc']:,.0f}, liq ${p['liq']:,.0f}" if p else "н/д"
 
-    lines = new_alerts + lines
+    lines = new_alerts + hold_alerts + lines
     if lines:
         print(f"BURNIE watch ({px})")
         print("\n".join(lines))

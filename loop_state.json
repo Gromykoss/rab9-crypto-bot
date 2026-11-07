@@ -1,15 +1,1607 @@
 {
   "analyses": [
     {
-      "address": "CGEDT9QZDvvH...",
-      "token": "BURNIE",
-      "ts": 1785246632,
+      "address": "5DLMQuAJdQp4...",
+      "token": "HKR",
+      "ts": 1793992595,
       "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
-      "tier": "СИЛЬНЫЙ",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "A7bdiYdS5Gjq...",
+      "token": "?",
+      "ts": 1793992716,
+      "verdict": "?",
+      "tier": "AVOID",
+      "duplicate": false
+    },
+    {
+      "address": "4ZCGWJhxmJJG...",
+      "token": "CHROME",
+      "ts": 1793992781,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "AZwkqWtPg485...",
+      "token": "YouTube",
+      "ts": 1793992907,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "MNSTy46haEN7...",
+      "token": "MNST",
+      "ts": 1793993213,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "ПРОПУСК",
+      "duplicate": false
+    },
+    {
+      "address": "BxB5RVvNbXJL...",
+      "token": "WLD2",
+      "ts": 1793993308,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "4pLGJrrEQ9iv...",
+      "token": "GTA",
+      "ts": 1793993554,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "7NcM7x9PEjB2...",
+      "token": "LAURA",
+      "ts": 1793993589,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "EFCLz5dNa7kj...",
+      "token": "CEILING",
+      "ts": 1793993685,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "2WZfXZQNiHHw...",
+      "token": "Trump",
+      "ts": 1793993811,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "5VPSz1rbwyn9...",
+      "token": "Boomer",
+      "ts": 1793993846,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "6qMoB6DHFEbD...",
+      "token": "Gemerald",
+      "ts": 1793993883,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "HMQxi3L1fTwK...",
+      "token": "Adeng",
+      "ts": 1793993919,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "5v298tAgNiZQ...",
+      "token": "Microsoft",
+      "ts": 1793994344,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "5nZe5HnMyAQM...",
+      "token": "BOMBERS",
+      "ts": 1793994382,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "qj4HoKLgtKgJ...",
+      "token": "HODL",
+      "ts": 1793994418,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "mH9QFH2a1d6x...",
+      "token": "UODF",
+      "ts": 1793994574,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "Cy6F9HUKj29d...",
+      "token": "GLITCHPEPE",
+      "ts": 1793994760,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "AD2TBq5fP6mm...",
+      "token": "SQRL",
+      "ts": 1793995066,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "HrDmoHCFLrv7...",
+      "token": "Grok",
+      "ts": 1793995552,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "4WYSNddP81UF...",
+      "token": "GTA",
+      "ts": 1793996221,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "BN4Z5NtntHhu...",
+      "token": "CRIME",
+      "ts": 1793996351,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "8iSyS2woxSMh...",
+      "token": "Queenie",
+      "ts": 1793996387,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "BYifdTuFBiCW...",
+      "token": "FUSE",
+      "ts": 1793996512,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "FgLfLhT3QoPW...",
+      "token": "?",
+      "ts": 1793996813,
+      "verdict": "?",
+      "tier": "AVOID",
+      "duplicate": false
+    },
+    {
+      "address": "6uyJRUZpMkcb...",
+      "token": "MMC",
+      "ts": 1793996908,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "QZi7LsuxiCWx...",
+      "token": "WHITE",
+      "ts": 1793997185,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "DznhKKXhSxht...",
+      "token": "GrokBot",
+      "ts": 1793997220,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "5Yyxt95UsHtm...",
+      "token": "gPAID",
+      "ts": 1793997286,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "ADJr5wxxQFG1...",
+      "token": "MMC",
+      "ts": 1793997412,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "EfRnwABuWZKx...",
+      "token": "?",
+      "ts": 1793997442,
+      "verdict": "?",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "8TYbrEjAYUk5...",
+      "token": "NDTA",
+      "ts": 1793997718,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "CUJvu14xWbRz...",
+      "token": "USDP",
+      "ts": 1793997905,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "CzwzQw6eGr9R...",
+      "token": "FUSE",
+      "ts": 1793997970,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "BpLCiHZZuHkV...",
+      "token": "XIAOMI",
+      "ts": 1793998306,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "EPjFWdd5Aufq...",
+      "token": "USDC",
+      "ts": 1793998371,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "ПРОПУСК",
+      "duplicate": false
+    },
+    {
+      "address": "HGHJCdysTaaY...",
+      "token": "sexcoin",
+      "ts": 1793998677,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "9p28J5uPo4JF...",
+      "token": "US",
+      "ts": 1793999045,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "5R7cG2KuvD6u...",
+      "token": "GTA",
+      "ts": 1793999081,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "Tnq4TtgfHp8H...",
+      "token": "BMW",
+      "ts": 1793999266,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "6GmAFSYs4gk3...",
+      "token": "?",
+      "ts": 1793999837,
+      "verdict": "?",
+      "tier": "HIGH CONVICTION",
+      "duplicate": false
+    },
+    {
+      "address": "ajPVY64wV8H5...",
+      "token": "HODL",
+      "ts": 1793999963,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "D9bzC1XvVERT...",
+      "token": "STARBUCKS",
+      "ts": 1793999998,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "3TxLagBHBNgv...",
+      "token": "Trump",
+      "ts": 1794000126,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "6sMinp4bFA9y...",
+      "token": "Toly",
+      "ts": 1794000433,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "4VyS1DWXDEbu...",
+      "token": "pip",
+      "ts": 1794000529,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "DGuudmnJZ6ye...",
+      "token": "PRIVACY",
+      "ts": 1794000804,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "ПРОПУСК",
+      "duplicate": false
+    },
+    {
+      "address": "CQ1napYmWJ3u...",
+      "token": "SQRL",
+      "ts": 1794000840,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "8nFy4Hw9VAy3...",
+      "token": "LEAPCAT",
+      "ts": 1794000908,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "4cJmQze3dDHU...",
+      "token": "GTA6",
+      "ts": 1794001034,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "1D9rx8Aytf3U...",
+      "token": "DONALD",
+      "ts": 1794001069,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "5LYk5DBmPZAc...",
+      "token": "Scamsum",
+      "ts": 1794001345,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "AbSkPVL67xyi...",
+      "token": "HODL",
+      "ts": 1794001531,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "3ZLd9DvbQkhW...",
+      "token": "/DREAM",
+      "ts": 1794001596,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "GX7dUn5M4TYp...",
+      "token": "IphoneDuo",
+      "ts": 1794001931,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "25dvNJvxim8N...",
+      "token": "MIMI",
+      "ts": 1794001996,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "9KenrJk5fhQR...",
+      "token": "Leap",
+      "ts": 1794002302,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "4c4Ev2wq145H...",
+      "token": "ANIME",
+      "ts": 1794002668,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "9RuMiNcGhiTe...",
+      "token": "U",
+      "ts": 1794002886,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "DGuudmnJZ6ye...",
+      "token": "?",
+      "ts": 1794003006,
+      "verdict": "?",
+      "tier": "AVOID",
+      "duplicate": false
+    },
+    {
+      "address": "DJTu7vi8norV...",
+      "token": "?",
+      "ts": 1794003457,
+      "verdict": "?",
+      "tier": "AVOID",
+      "duplicate": false
+    },
+    {
+      "address": "FwouH3pvMPUN...",
+      "token": "DINU",
+      "ts": 1794003584,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "PgKNd27UcZCd...",
+      "token": "Leonida",
+      "ts": 1794003619,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "9rZR9nCQbaiB...",
+      "token": "Slingoor",
+      "ts": 1794003745,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "G9MtqPnSyieT...",
+      "token": "GTA",
+      "ts": 1794004051,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "FJ8YMaW5kZY2...",
+      "token": "Diamond",
+      "ts": 1794004422,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "gwN3emBPQEA9...",
+      "token": "AMM",
+      "ts": 1794004458,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "AGafUs8DmJmV...",
+      "token": "SEASHELL",
+      "ts": 1794004523,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "TTWofwAge91o...",
+      "token": "TTWO",
+      "ts": 1794004648,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "ПРОПУСК",
+      "duplicate": false
+    },
+    {
+      "address": "F8XXtaCPBwew...",
+      "token": "UEHI",
+      "ts": 1794004687,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "GyDhpYYXPPaA...",
+      "token": "Billy",
+      "ts": 1794005172,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "9UWhBFgtgRfz...",
+      "token": "MrBeast",
+      "ts": 1794005298,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "Gaf76dBqPbJ3...",
+      "token": "HANDS",
+      "ts": 1794005332,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "2c5cXUFk6Zic...",
+      "token": "jose",
+      "ts": 1794005547,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "87CQtouHSb6Y...",
+      "token": "José",
+      "ts": 1794005645,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "BW1K4YTSGW4x...",
+      "token": "Sahil",
+      "ts": 1794005920,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "9tWgEbVX9Zi4...",
+      "token": "USOE",
+      "ts": 1794006286,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "HWx9EpkS4Wwr...",
+      "token": "Daumen",
+      "ts": 1794006501,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "9NDMNsM31hTN...",
+      "token": "BTC",
+      "ts": 1794006627,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "14VvYUgyAxT6...",
+      "token": "Highcap",
+      "ts": 1794007085,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "5pdu9jrUf9ry...",
+      "token": "DCAT",
+      "ts": 1794007210,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "W72i58cv5yYQ...",
+      "token": "VETO",
+      "ts": 1794007245,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "8wbGqmTj9Pru...",
+      "token": "PUMP",
+      "ts": 1794007370,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "5D9xPSYP6tLL...",
+      "token": "PUMP",
+      "ts": 1794007676,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "46r5vJSK4vZW...",
+      "token": "HATCH",
+      "ts": 1794007771,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "DKtofLM6bhb5...",
+      "token": "HODL",
+      "ts": 1794008048,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "8P8BNixECEJw...",
+      "token": "burncoin",
+      "ts": 1794008083,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "CBRewMwMPR9K...",
+      "token": "Trumpfiles",
+      "ts": 1794008148,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "ysPp2Bt2j2UQ...",
+      "token": "MUSK4",
+      "ts": 1794008303,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "ПРОПУСК",
+      "duplicate": false
+    },
+    {
+      "address": "9grujRgBDPyZ...",
+      "token": "Ondo",
+      "ts": 1794008338,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "D7eCYXewMoJ9...",
+      "token": "GTA",
+      "ts": 1794008794,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "A4KjQBsiXa8Y...",
+      "token": "USOE",
+      "ts": 1794008920,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "AFVqABds2LBM...",
+      "token": "IphoneDuo",
+      "ts": 1794008955,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "4P7TCh7JHBUk...",
+      "token": "POTUS",
+      "ts": 1794009171,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "BLYdKSwcRnEm...",
+      "token": "POKEHOOD",
+      "ts": 1794009267,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "DkiAjxSKHhyf...",
+      "token": "Sahil",
+      "ts": 1794009544,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "HQN7xrtf3czL...",
+      "token": "Alibi",
+      "ts": 1794009912,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "kM6C2v36etMP...",
+      "token": "ZY",
+      "ts": 1794010158,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "9TpRtDXB42rp...",
+      "token": "XTO",
+      "ts": 1794010404,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "z17XKTitUume...",
+      "token": "USDF",
+      "ts": 1794010710,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "EyJhGdWdKcE5...",
+      "token": "OFFICIAL",
+      "ts": 1794010837,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "dMyGV4ptoPmJ...",
+      "token": "USDP",
+      "ts": 1794010873,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "3sHwwWx1BeJw...",
+      "token": "X",
+      "ts": 1794010999,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "AjaxMiAHRuGE...",
+      "token": "ADA",
+      "ts": 1794011306,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "EvRJSc2DttVE...",
+      "token": "PUMP",
+      "ts": 1794011372,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "C1p9vRN6XUBS...",
+      "token": "aBTC",
+      "ts": 1794011649,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "CKz3xbwSdsaT...",
+      "token": "ADA",
+      "ts": 1794011685,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "C8CiNpmZV5RV...",
+      "token": "Trump",
+      "ts": 1794011783,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "4AN9uwPTNFfF...",
+      "token": "MEME",
+      "ts": 1794011909,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "FzmSx4UuG8Jh...",
+      "token": "Busted",
+      "ts": 1794012308,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "grJMBfFJpyy7...",
+      "token": "ADA",
+      "ts": 1794012434,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "2siCH2nVcKWa...",
+      "token": "ELON",
+      "ts": 1794013040,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "YcS6TX6pxpFK...",
+      "token": "HODL",
+      "ts": 1794013166,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "4jYyTt9DXSTX...",
+      "token": "USRP",
+      "ts": 1794013292,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "6ReB3hFZEf2t...",
+      "token": "MUTTAPE",
+      "ts": 1794013448,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "83WuTBUf1vMD...",
+      "token": "XRP",
+      "ts": 1794013574,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "7jRGjc5W7Dmf...",
+      "token": "Work",
+      "ts": 1794013940,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "CfoQMUkfrezD...",
+      "token": "Starry",
+      "ts": 1794014066,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "FRCpQFvy2mj2...",
+      "token": "Pibblemas",
+      "ts": 1794014434,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "BFkjyPar9gFv...",
+      "token": "LUCKY",
+      "ts": 1794014530,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "XcxQVW1hRAnM...",
+      "token": "USPR",
+      "ts": 1794014656,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "8XreJg4BGJ9d...",
+      "token": "Trump",
+      "ts": 1794015022,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "41WpXn15fxQX...",
+      "token": "scamsem",
+      "ts": 1794015087,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "7tAjeX7mNQg2...",
+      "token": "CALL",
+      "ts": 1794015124,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "Touv59kVtx3z...",
+      "token": "UODF",
+      "ts": 1794015190,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "UTvedNn4ATpA...",
+      "token": "UDTF",
+      "ts": 1794015256,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "uFYPnfEd4VS8...",
+      "token": "XTO",
+      "ts": 1794015292,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "CsLURQNNnX5o...",
+      "token": "WOFI",
+      "ts": 1794016228,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "F1gKV5QEV4xt...",
+      "token": "GTA",
+      "ts": 1794016294,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "Ecxn2QcULfzv...",
+      "token": "AMD",
+      "ts": 1794016329,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "GK9qD7ydrRE2...",
+      "token": "USOE",
+      "ts": 1794016395,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "3N1jCJ5iKhPV...",
+      "token": "Trump",
+      "ts": 1794016941,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "S4i1WHGwuVDm...",
+      "token": "SPCX90K",
+      "ts": 1794017128,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "Ey4YG29k4hQm...",
+      "token": "LKY",
+      "ts": 1794017166,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "ZFtb1eDmcDmk...",
+      "token": "scamsem",
+      "ts": 1794017212,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "9PdqdCyR9N4i...",
+      "token": "XT",
+      "ts": 1794017428,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "C1w2cSCc4GmX...",
+      "token": "BTC",
+      "ts": 1794017734,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "yKKtcgHeyWUL...",
+      "token": "Microsoft",
+      "ts": 1794018220,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "7Gp18DH1fGsh...",
+      "token": "US",
+      "ts": 1794019127,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "9ripiapoJ5EG...",
+      "token": "Diamond",
+      "ts": 1794019223,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "66s2k2L3PLzW...",
+      "token": "Trump",
+      "ts": 1794019409,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "GdY4Z6pYUcr3...",
+      "token": "coin",
+      "ts": 1794019535,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "14JVWBDYvsMS...",
+      "token": "Dacity",
+      "ts": 1794019661,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "FhtLRwmMfuZA...",
+      "token": "SCAMCHI",
+      "ts": 1794019786,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "CHRXoFobuqgt...",
+      "token": "PAD",
+      "ts": 1794019822,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "bwRoeNSzcoxf...",
+      "token": "XTO",
+      "ts": 1794019887,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "12SvW8geY7jm...",
+      "token": "YouTube",
+      "ts": 1794019925,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "2fAnUZorfTy7...",
+      "token": "DIC",
+      "ts": 1794019960,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "V8Z6jX8e9NZg...",
+      "token": "USOE",
+      "ts": 1794020086,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "aa6vqwpC97g8...",
+      "token": "MUTTAPE",
+      "ts": 1794020302,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "EPjFWdd5Aufq...",
+      "token": "?",
+      "ts": 1794020482,
+      "verdict": "?",
+      "tier": "AVOID",
+      "duplicate": false
+    },
+    {
+      "address": "6dNSFCipwW9Z...",
+      "token": "CATE",
+      "ts": 1794020789,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "GTWQEQBsuaNc...",
+      "token": "Trump",
+      "ts": 1794021095,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "Gvqrg6uTzB2J...",
+      "token": "NN",
+      "ts": 1794021131,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "C89aVBvoZjSG...",
+      "token": "STM",
+      "ts": 1794021527,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "DhZ9LaH9TqEi...",
+      "token": "Leap",
+      "ts": 1794021683,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "Xsc9qvGR1efV...",
+      "token": "NVDAx",
+      "ts": 1794021931,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "ПРОПУСК",
+      "duplicate": false
+    },
+    {
+      "address": "BdouwEr3mwXk...",
+      "token": "Alice",
+      "ts": 1794021997,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "C5UvGG83sRax...",
+      "token": "FUSE",
+      "ts": 1794023264,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "2SquPKDVfGw9...",
+      "token": "MUTTAPE",
+      "ts": 1794023691,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "MZ3Yng8JYXT9...",
+      "token": "NADF",
+      "ts": 1794024267,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "7j75sRodqFV2...",
+      "token": "Funny",
+      "ts": 1794024933,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "GsZANz2KPDJd...",
+      "token": "PALICO",
+      "ts": 1794025179,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "Bhe7zAmLTxsV...",
+      "token": "Slingfolio",
+      "ts": 1794025606,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "BXnu4UpofFbn...",
+      "token": "VETO",
+      "ts": 1794025792,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "4gJDPfoyRrph...",
+      "token": "Trump",
+      "ts": 1794026218,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "Fmu6ykGrbaBR...",
+      "token": "Twizter",
+      "ts": 1794026374,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "PgFtGGquvnv2...",
+      "token": "BRUH",
+      "ts": 1794027100,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "SiKEjMmdD8xy...",
+      "token": "USDP",
+      "ts": 1794027226,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "3J9aZ8aJq8c5...",
+      "token": "Capiboo",
+      "ts": 1794027292,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "9DubmcpjdeJv...",
+      "token": "jailsem",
+      "ts": 1794027478,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "8kuUr4cC2iQB...",
+      "token": "Trump",
+      "ts": 1794027814,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "G77jG5U6CE6i...",
+      "token": "Scamoors",
+      "ts": 1794027880,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "GoqdpMVvqawN...",
+      "token": "SLINGFOLIO",
+      "ts": 1794028366,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "BvqKMJ4bwnDa...",
+      "token": "UODF",
+      "ts": 1794028912,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "E4YoVyVmZ5X3...",
+      "token": "GTA",
+      "ts": 1794029038,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "6GmAFSYs4gk3...",
+      "token": "?",
+      "ts": 1794029128,
+      "verdict": "?",
+      "tier": "HIGH CONVICTION",
+      "duplicate": false
+    },
+    {
+      "address": "B4Kwgnnhjo4e...",
+      "token": "meme",
+      "ts": 1794029435,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "CiW8Ap8TF1MP...",
+      "token": "XT",
+      "ts": 1794029981,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "5qLGsjydvdRq...",
+      "token": "UODF",
+      "ts": 1794030108,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "CuDaiesYbXQg...",
+      "token": "meme",
+      "ts": 1794030354,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "xDhEtPtY8H2Y...",
+      "token": "UODF",
+      "ts": 1794030720,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "pumpCmXqMfrs...",
+      "token": "PUMP",
+      "ts": 1794030816,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "ПРОПУСК",
+      "duplicate": false
+    },
+    {
+      "address": "999Y1nMepcsW...",
+      "token": "GSTR",
+      "ts": 1794031061,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "21azpu32qfuN...",
+      "token": "Hakutaku",
+      "ts": 1794031488,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "EgsY9jNCkGio...",
+      "token": "GTA",
+      "ts": 1794031613,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "76inp9q4HxQU...",
+      "token": "STONKA",
+      "ts": 1794032220,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "zb9sid1kWd8h...",
+      "token": "USDF🚀",
+      "ts": 1794033188,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "xT1KU5r2qRmP...",
+      "token": "BARRON",
+      "ts": 1794033224,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "FGpLWJ7SoZvu...",
+      "token": "1",
+      "ts": 1794033530,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "3FkAaHMyTT9X...",
+      "token": "ASTEX",
+      "ts": 1794033566,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "6wEiUQd7ji3s...",
+      "token": "GTA",
+      "ts": 1794033663,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "Cp1qJ5CMyJCP...",
+      "token": "BRUH",
+      "ts": 1794034212,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "FwEvVSeKKpqn...",
+      "token": "XT",
+      "ts": 1794034368,
+      "verdict": "⚠️ AVOID (RugCheck: HIGH RISK)",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "7tSMEsYfx2vd...",
+      "token": "Alice",
+      "ts": 1794034434,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "C5xph2yL6gMd...",
+      "token": "?",
+      "ts": 1794034494,
+      "verdict": "?",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "FpUtpHmLH37z...",
+      "token": "Morgano",
+      "ts": 1794034620,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "DPboYWuynBSn...",
+      "token": "BEAST",
+      "ts": 1794034747,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SPECULATIVE",
+      "duplicate": false
+    },
+    {
+      "address": "4CxjZyMNoF1p...",
+      "token": "mihao",
+      "ts": 1794035053,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
+      "duplicate": false
+    },
+    {
+      "address": "FFgnd8bifG8z...",
+      "token": "trauma",
+      "ts": 1794036529,
+      "verdict": "⏳ WAIT | ❓ НЕИЗВЕСТНО",
+      "tier": "SOLID",
       "duplicate": false
     }
   ],
   "duplicates": 0,
-  "total": 37,
-  "last_cleanup": 1785245242
+  "total": 12955,
+  "last_cleanup": 1794034212
 }

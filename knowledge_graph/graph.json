@@ -1,0 +1,2030 @@
+{
+  "built_at": "2026-11-07T05:00:54.920544+00:00",
+  "stats": {
+    "nodes": 215,
+    "edges": 165,
+    "projects": 3,
+    "events": 71,
+    "people": 16,
+    "tasks": 4
+  },
+  "nodes": [
+    [
+      "event/2026-09-24/60-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-24",
+      {}
+    ],
+    [
+      "60-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-14/50-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-14",
+      {}
+    ],
+    [
+      "50-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-13/49-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-13",
+      {}
+    ],
+    [
+      "49-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-11/47-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-11",
+      {}
+    ],
+    [
+      "47-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-10/46-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-10",
+      {}
+    ],
+    [
+      "46-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-09/45-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-09",
+      {}
+    ],
+    [
+      "45-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-08/44-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-08",
+      {}
+    ],
+    [
+      "44-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-05/40-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-05",
+      {}
+    ],
+    [
+      "40-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-05/CONTRACT INDEX GATE rollout",
+      {}
+    ],
+    [
+      "CONTRACT INDEX GATE rollout",
+      {}
+    ],
+    [
+      "event/2026-09-04/39-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-04",
+      {}
+    ],
+    [
+      "39-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-03/38-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-03",
+      {}
+    ],
+    [
+      "38-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-02/37-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-02",
+      {}
+    ],
+    [
+      "37-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-09-01/36-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-09-01",
+      {}
+    ],
+    [
+      "36-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-31/35-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-31",
+      {}
+    ],
+    [
+      "35-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-29/33-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-29",
+      {}
+    ],
+    [
+      "33-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-28/32-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-28",
+      {}
+    ],
+    [
+      "32-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-26/отчёт BURNIE «залипал»: заголовок/вердик",
+      {}
+    ],
+    [
+      "2026-08-26",
+      {}
+    ],
+    [
+      "отчёт BURNIE «залипал»: заголовок/вердикт не реагировали на цену",
+      {}
+    ],
+    [
+      "event/2026-08-25/30-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-25",
+      {}
+    ],
+    [
+      "30-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-24/29-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-24",
+      {}
+    ],
+    [
+      "29-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-23/28-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-23",
+      {}
+    ],
+    [
+      "28-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-22/27-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-22",
+      {}
+    ],
+    [
+      "27-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-22/лог-гигиена rab9.log + 409-защита msf_li",
+      {}
+    ],
+    [
+      "лог-гигиена rab9.log + 409-защита msf_listener (по дампу 21.08)",
+      {}
+    ],
+    [
+      "event/2026-08-22/конденсация AGENTS.md (307→284) + KPI-бл",
+      {}
+    ],
+    [
+      "конденсация AGENTS.md (307→284) + KPI-блок (аудит MGT_maccha)",
+      {}
+    ],
+    [
+      "event/2026-08-21/внедрение manipulation research в код (b",
+      {}
+    ],
+    [
+      "2026-08-21",
+      {}
+    ],
+    [
+      "внедрение manipulation research в код (buy_ratio, breakout-interest, KOL-swarm)",
+      {}
+    ],
+    [
+      "event/2026-08-21/26-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "26-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-21/BURNIE price-watch: крон чаще при аномал",
+      {}
+    ],
+    [
+      "BURNIE price-watch: крон чаще при аномалии цены + московское время",
+      {}
+    ],
+    [
+      "event/2026-08-21/фикс бага «пробой не ловился» (chart_ana",
+      {}
+    ],
+    [
+      "фикс бага «пробой не ловился» (chart_analysis breakout) + апгрейд BURNIE-отчёта",
+      {}
+    ],
+    [
+      "event/2026-08-21/Grok Build: инструкция по манипуляциям п",
+      {}
+    ],
+    [
+      "Grok Build: инструкция по манипуляциям перезапущена и сохранена",
+      {}
+    ],
+    [
+      "event/2026-08-21/инцидент «msf-listener systemd vs фон» з",
+      {}
+    ],
+    [
+      "инцидент «msf-listener systemd vs фон» закрыт",
+      {}
+    ],
+    [
+      "event/2026-08-20/25-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-20",
+      {}
+    ],
+    [
+      "25-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-19/24-й день без MSF-сигналов + secrets-миг",
+      {}
+    ],
+    [
+      "2026-08-19",
+      {}
+    ],
+    [
+      "24-й день без MSF-сигналов + secrets-миграция listener активирована",
+      {}
+    ],
+    [
+      "event/2026-08-18/23-й день без MSF-сигналов (CHRONOLOGY a",
+      {}
+    ],
+    [
+      "2026-08-18",
+      {}
+    ],
+    [
+      "23-й день без MSF-сигналов (CHRONOLOGY agent не запускался)",
+      {}
+    ],
+    [
+      "event/2026-08-17/22-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-17",
+      {}
+    ],
+    [
+      "22-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-16/21-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-16",
+      {}
+    ],
+    [
+      "21-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-15/Enforced-слой: финальный точечный проход",
+      {}
+    ],
+    [
+      "2026-08-15",
+      {}
+    ],
+    [
+      "Enforced-слой: финальный точечный проход safety/verifier/dedupe",
+      {}
+    ],
+    [
+      "event/2026-08-15/Enforced-слой: третий проход Maker закры",
+      {}
+    ],
+    [
+      "Enforced-слой: третий проход Maker закрыл N1-N7",
+      {}
+    ],
+    [
+      "event/2026-08-15/Enforced-слой: закрыт второй проход Chec",
+      {}
+    ],
+    [
+      "Enforced-слой: закрыт второй проход Checker по 8 дефектам",
+      {}
+    ],
+    [
+      "event/2026-08-15/Детерминирование профиля: enforced-опера",
+      {}
+    ],
+    [
+      "Детерминирование профиля: enforced-оператор-слой `operators/`",
+      {}
+    ],
+    [
+      "event/2026-08-15/(2-я половина) — Детерминирование rab9:",
+      {}
+    ],
+    [
+      "(2-я половина) — Детерминирование rab9: проход 2 + 3 (закрытие багов Checker)",
+      {}
+    ],
+    [
+      "event/2026-07-20/Доставка отчётов: Песочница → Cryptanaly",
+      {}
+    ],
+    [
+      "2026-07-20",
+      {}
+    ],
+    [
+      "Доставка отчётов: Песочница → Cryptanalyst",
+      {}
+    ],
+    [
+      "event/2026-07-26/MSF Listener мёртв с ~21.07 + перевод в",
+      {}
+    ],
+    [
+      "2026-07-26",
+      {}
+    ],
+    [
+      "MSF Listener мёртв с ~21.07 + перевод в systemd",
+      {}
+    ],
+    [
+      "event/2026-07-26/X API 402 credits depleted → пополнение",
+      {}
+    ],
+    [
+      "X API 402 credits depleted → пополнение",
+      {}
+    ],
+    [
+      "event/2026-07-26..2026-07-31/n8n ворует getUpdates @msf_rab_bot (две",
+      {}
+    ],
+    [
+      "2026-07-26..2026-07-31",
+      {}
+    ],
+    [
+      "n8n ворует getUpdates @msf_rab_bot (две волны)",
+      {}
+    ],
+    [
+      "event/2026-07-28..2026-08-02/BURNIE tracker: кредиты, один крон, vote",
+      {}
+    ],
+    [
+      "2026-07-28..2026-08-02",
+      {}
+    ],
+    [
+      "BURNIE tracker: кредиты, один крон, vote-spam",
+      {}
+    ],
+    [
+      "event/2026-07-28..2026-08-02/BURNIE: TA/OHLCV, фаза decay, крупные ак",
+      {}
+    ],
+    [
+      "BURNIE: TA/OHLCV, фаза decay, крупные аккаунты",
+      {}
+    ],
+    [
+      "event/2026-08-03/Отчёты BURNIE: тишина event-first + слот",
+      {}
+    ],
+    [
+      "2026-08-03",
+      {}
+    ],
+    [
+      "Отчёты BURNIE: тишина event-first + слоты Бишкек",
+      {}
+    ],
+    [
+      "event/2026-07-28/T-182 GMGN OpenAPI cutover (read-only)",
+      {}
+    ],
+    [
+      "2026-07-28",
+      {}
+    ],
+    [
+      "T-182 GMGN OpenAPI cutover (read-only)",
+      {}
+    ],
+    [
+      "event/2026-08-09/(без заголовка)",
+      {}
+    ],
+    [
+      "2026-08-09",
+      {}
+    ],
+    [
+      "(без заголовка)",
+      {}
+    ],
+    [
+      "event/2026-07-28/T-182 layer2: track SM/KOL + wallet-scor",
+      {}
+    ],
+    [
+      "T-182 layer2: track SM/KOL + wallet-score",
+      {}
+    ],
+    [
+      "event/2026-07-28/Report quality fix (BURNIE path)",
+      {}
+    ],
+    [
+      "Report quality fix (BURNIE path)",
+      {}
+    ],
+    [
+      "event/2026-07-25/Profile memory created (Operator Watch)",
+      {}
+    ],
+    [
+      "2026-07-25",
+      {}
+    ],
+    [
+      "Profile memory created (Operator Watch)",
+      {}
+    ],
+    [
+      "event/2026-07-24/(без заголовка)",
+      {}
+    ],
+    [
+      "2026-07-24",
+      {}
+    ],
+    [
+      "event/2026-07-20/T-134 auto-sol study: 7 P0+P1 improvemen",
+      {}
+    ],
+    [
+      "T-134 auto-sol study: 7 P0+P1 improvements",
+      {}
+    ],
+    [
+      "event/2026-07-17/05:10 — Birdeye исключён из пайплайна",
+      {}
+    ],
+    [
+      "2026-07-17",
+      {}
+    ],
+    [
+      "05:10 — Birdeye исключён из пайплайна",
+      {}
+    ],
+    [
+      "event/2026-07-14/Agent-Driven Development Rules",
+      {}
+    ],
+    [
+      "2026-07-14",
+      {}
+    ],
+    [
+      "Agent-Driven Development Rules",
+      {}
+    ],
+    [
+      "event/2026-07-07/Hy3 295B как основной LLM",
+      {}
+    ],
+    [
+      "2026-07-07",
+      {}
+    ],
+    [
+      "Hy3 295B как основной LLM",
+      {}
+    ],
+    [
+      "event/2026-07-05/Создание кабал-детектора",
+      {}
+    ],
+    [
+      "2026-07-05",
+      {}
+    ],
+    [
+      "Создание кабал-детектора",
+      {}
+    ],
+    [
+      "event/2026-07-22/AutoHedge радиолокационная находка + про",
+      {}
+    ],
+    [
+      "2026-07-22",
+      {}
+    ],
+    [
+      "AutoHedge радиолокационная находка + проект idle",
+      {}
+    ],
+    [
+      "event/2026-07-21/Hy3 LLM миграция + Birdeye fallback",
+      {}
+    ],
+    [
+      "2026-07-21",
+      {}
+    ],
+    [
+      "Hy3 LLM миграция + Birdeye fallback",
+      {}
+    ],
+    [
+      "event/2026-06-20/Миграция RAB9 на hermes-user",
+      {}
+    ],
+    [
+      "2026-06-20",
+      {}
+    ],
+    [
+      "Миграция RAB9 на hermes-user",
+      {}
+    ],
+    [
+      "event/2026-08-07/xAI key fix + agent-bus escalation rules",
+      {}
+    ],
+    [
+      "2026-08-07",
+      {}
+    ],
+    [
+      "xAI key fix + agent-bus escalation rules",
+      {}
+    ],
+    [
+      "event/2026-08-08/VPS hardening: localhost-only порты + пл",
+      {}
+    ],
+    [
+      "2026-08-08",
+      {}
+    ],
+    [
+      "VPS hardening: localhost-only порты + платформенные изменения",
+      {}
+    ],
+    [
+      "event/2026-08-09/13-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "13-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-10/15-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-10",
+      {}
+    ],
+    [
+      "15-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-11/16-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-11",
+      {}
+    ],
+    [
+      "16-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-12/17-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-12",
+      {}
+    ],
+    [
+      "17-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-13/18-й день без MSF-сигналов + секреты в v",
+      {}
+    ],
+    [
+      "2026-08-13",
+      {}
+    ],
+    [
+      "18-й день без MSF-сигналов + секреты в vault",
+      {}
+    ],
+    [
+      "event/2026-08-14/19-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-14",
+      {}
+    ],
+    [
+      "19-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "event/2026-08-15/enforced-оператор-слой RAB9",
+      {}
+    ],
+    [
+      "enforced-оператор-слой RAB9",
+      {}
+    ],
+    [
+      "event/2026-08-27/32-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-27",
+      {}
+    ],
+    [
+      "event/2026-08-30/33-й день без MSF-сигналов",
+      {}
+    ],
+    [
+      "2026-08-30",
+      {}
+    ],
+    [
+      "person/@msf_rab_bot",
+      {}
+    ],
+    [
+      "CHRONOLOGY.md",
+      {}
+    ],
+    [
+      "person/@rab2610bot",
+      {}
+    ],
+    [
+      "person/@ClipsByDough",
+      {}
+    ],
+    [
+      "person/@NickLor04939359",
+      {}
+    ],
+    [
+      "person/@AlphaAgentcall",
+      {}
+    ],
+    [
+      "person/@BurnieSendersX",
+      {}
+    ],
+    [
+      "person/@DangerousThinkg",
+      {}
+    ],
+    [
+      "person/@Benji_Yugi",
+      {}
+    ],
+    [
+      "person/@elonmusk",
+      {}
+    ],
+    [
+      "person/@0xrichboy",
+      {}
+    ],
+    [
+      "person/@NousResearch",
+      {}
+    ],
+    [
+      "person/@cyrilXBT",
+      {}
+    ],
+    [
+      "person/@Hermes",
+      {}
+    ],
+    [
+      "person/@lawyer4laws",
+      {}
+    ],
+    [
+      "person/@DeepBlueCrypto",
+      {}
+    ],
+    [
+      "person/@Project",
+      {}
+    ],
+    [
+      "project/rab9",
+      {}
+    ],
+    [
+      "project/alikhan",
+      {}
+    ],
+    [
+      "project/gulag",
+      {}
+    ],
+    [
+      "task/T-132",
+      {}
+    ],
+    [
+      "task/T-134",
+      {}
+    ],
+    [
+      "task/T-182",
+      {}
+    ],
+    [
+      "task/T-158",
+      {}
+    ]
+  ],
+  "edges": [
+    {
+      "source": "event/2026-09-24/60-й день без MSF-сигналов",
+      "target": "2026-09-24",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-24/60-й день без MSF-сигналов",
+      "target": "60-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-14/50-й день без MSF-сигналов",
+      "target": "2026-09-14",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-14/50-й день без MSF-сигналов",
+      "target": "50-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-13/49-й день без MSF-сигналов",
+      "target": "2026-09-13",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-13/49-й день без MSF-сигналов",
+      "target": "49-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-11/47-й день без MSF-сигналов",
+      "target": "2026-09-11",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-11/47-й день без MSF-сигналов",
+      "target": "47-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-10/46-й день без MSF-сигналов",
+      "target": "2026-09-10",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-10/46-й день без MSF-сигналов",
+      "target": "46-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-09/45-й день без MSF-сигналов",
+      "target": "2026-09-09",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-09/45-й день без MSF-сигналов",
+      "target": "45-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-08/44-й день без MSF-сигналов",
+      "target": "2026-09-08",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-08/44-й день без MSF-сигналов",
+      "target": "44-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-05/40-й день без MSF-сигналов",
+      "target": "2026-09-05",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-05/40-й день без MSF-сигналов",
+      "target": "40-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-05/CONTRACT INDEX GATE rollout",
+      "target": "2026-09-05",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-05/CONTRACT INDEX GATE rollout",
+      "target": "CONTRACT INDEX GATE rollout",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-04/39-й день без MSF-сигналов",
+      "target": "2026-09-04",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-04/39-й день без MSF-сигналов",
+      "target": "39-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-03/38-й день без MSF-сигналов",
+      "target": "2026-09-03",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-03/38-й день без MSF-сигналов",
+      "target": "38-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-02/37-й день без MSF-сигналов",
+      "target": "2026-09-02",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-02/37-й день без MSF-сигналов",
+      "target": "37-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-01/36-й день без MSF-сигналов",
+      "target": "2026-09-01",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-01/36-й день без MSF-сигналов",
+      "target": "36-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-31/35-й день без MSF-сигналов",
+      "target": "2026-08-31",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-31/35-й день без MSF-сигналов",
+      "target": "35-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-29/33-й день без MSF-сигналов",
+      "target": "2026-08-29",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-29/33-й день без MSF-сигналов",
+      "target": "33-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-28/32-й день без MSF-сигналов",
+      "target": "2026-08-28",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-28/32-й день без MSF-сигналов",
+      "target": "32-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-26/отчёт BURNIE «залипал»: заголовок/вердик",
+      "target": "2026-08-26",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-26/отчёт BURNIE «залипал»: заголовок/вердик",
+      "target": "отчёт BURNIE «залипал»: заголовок/вердикт не реагировали на цену",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-25/30-й день без MSF-сигналов",
+      "target": "2026-08-25",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-25/30-й день без MSF-сигналов",
+      "target": "30-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-24/29-й день без MSF-сигналов",
+      "target": "2026-08-24",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-24/29-й день без MSF-сигналов",
+      "target": "29-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-23/28-й день без MSF-сигналов",
+      "target": "2026-08-23",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-23/28-й день без MSF-сигналов",
+      "target": "28-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-22/27-й день без MSF-сигналов",
+      "target": "2026-08-22",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-22/27-й день без MSF-сигналов",
+      "target": "27-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-22/лог-гигиена rab9.log + 409-защита msf_li",
+      "target": "2026-08-22",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-22/лог-гигиена rab9.log + 409-защита msf_li",
+      "target": "лог-гигиена rab9.log + 409-защита msf_listener (по дампу 21.08)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-22/конденсация AGENTS.md (307→284) + KPI-бл",
+      "target": "2026-08-22",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-22/конденсация AGENTS.md (307→284) + KPI-бл",
+      "target": "конденсация AGENTS.md (307→284) + KPI-блок (аудит MGT_maccha)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-21/внедрение manipulation research в код (b",
+      "target": "2026-08-21",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-21/внедрение manipulation research в код (b",
+      "target": "внедрение manipulation research в код (buy_ratio, breakout-interest, KOL-swarm)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-21/26-й день без MSF-сигналов",
+      "target": "2026-08-21",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-21/26-й день без MSF-сигналов",
+      "target": "26-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-21/BURNIE price-watch: крон чаще при аномал",
+      "target": "2026-08-21",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-21/BURNIE price-watch: крон чаще при аномал",
+      "target": "BURNIE price-watch: крон чаще при аномалии цены + московское время",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-21/фикс бага «пробой не ловился» (chart_ana",
+      "target": "2026-08-21",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-21/фикс бага «пробой не ловился» (chart_ana",
+      "target": "фикс бага «пробой не ловился» (chart_analysis breakout) + апгрейд BURNIE-отчёта",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-21/Grok Build: инструкция по манипуляциям п",
+      "target": "2026-08-21",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-21/Grok Build: инструкция по манипуляциям п",
+      "target": "Grok Build: инструкция по манипуляциям перезапущена и сохранена",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-21/инцидент «msf-listener systemd vs фон» з",
+      "target": "2026-08-21",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-21/инцидент «msf-listener systemd vs фон» з",
+      "target": "инцидент «msf-listener systemd vs фон» закрыт",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-20/25-й день без MSF-сигналов",
+      "target": "2026-08-20",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-20/25-й день без MSF-сигналов",
+      "target": "25-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-19/24-й день без MSF-сигналов + secrets-миг",
+      "target": "2026-08-19",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-19/24-й день без MSF-сигналов + secrets-миг",
+      "target": "24-й день без MSF-сигналов + secrets-миграция listener активирована",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-18/23-й день без MSF-сигналов (CHRONOLOGY a",
+      "target": "2026-08-18",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-18/23-й день без MSF-сигналов (CHRONOLOGY a",
+      "target": "23-й день без MSF-сигналов (CHRONOLOGY agent не запускался)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-17/22-й день без MSF-сигналов",
+      "target": "2026-08-17",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-17/22-й день без MSF-сигналов",
+      "target": "22-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-16/21-й день без MSF-сигналов",
+      "target": "2026-08-16",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-16/21-й день без MSF-сигналов",
+      "target": "21-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-15/Enforced-слой: финальный точечный проход",
+      "target": "2026-08-15",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-15/Enforced-слой: финальный точечный проход",
+      "target": "Enforced-слой: финальный точечный проход safety/verifier/dedupe",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-15/Enforced-слой: третий проход Maker закры",
+      "target": "2026-08-15",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-15/Enforced-слой: третий проход Maker закры",
+      "target": "Enforced-слой: третий проход Maker закрыл N1-N7",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-15/Enforced-слой: закрыт второй проход Chec",
+      "target": "2026-08-15",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-15/Enforced-слой: закрыт второй проход Chec",
+      "target": "Enforced-слой: закрыт второй проход Checker по 8 дефектам",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-15/Детерминирование профиля: enforced-опера",
+      "target": "2026-08-15",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-15/Детерминирование профиля: enforced-опера",
+      "target": "Детерминирование профиля: enforced-оператор-слой `operators/`",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-15/(2-я половина) — Детерминирование rab9:",
+      "target": "2026-08-15",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-15/(2-я половина) — Детерминирование rab9:",
+      "target": "(2-я половина) — Детерминирование rab9: проход 2 + 3 (закрытие багов Checker)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-20/Доставка отчётов: Песочница → Cryptanaly",
+      "target": "2026-07-20",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-20/Доставка отчётов: Песочница → Cryptanaly",
+      "target": "Доставка отчётов: Песочница → Cryptanalyst",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-26/MSF Listener мёртв с ~21.07 + перевод в",
+      "target": "2026-07-26",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-26/MSF Listener мёртв с ~21.07 + перевод в",
+      "target": "MSF Listener мёртв с ~21.07 + перевод в systemd",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-26/X API 402 credits depleted → пополнение",
+      "target": "2026-07-26",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-26/X API 402 credits depleted → пополнение",
+      "target": "X API 402 credits depleted → пополнение",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-26..2026-07-31/n8n ворует getUpdates @msf_rab_bot (две",
+      "target": "2026-07-26..2026-07-31",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-26..2026-07-31/n8n ворует getUpdates @msf_rab_bot (две",
+      "target": "n8n ворует getUpdates @msf_rab_bot (две волны)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-28..2026-08-02/BURNIE tracker: кредиты, один крон, vote",
+      "target": "2026-07-28..2026-08-02",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-28..2026-08-02/BURNIE tracker: кредиты, один крон, vote",
+      "target": "BURNIE tracker: кредиты, один крон, vote-spam",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-28..2026-08-02/BURNIE: TA/OHLCV, фаза decay, крупные ак",
+      "target": "2026-07-28..2026-08-02",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-28..2026-08-02/BURNIE: TA/OHLCV, фаза decay, крупные ак",
+      "target": "BURNIE: TA/OHLCV, фаза decay, крупные аккаунты",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-03/Отчёты BURNIE: тишина event-first + слот",
+      "target": "2026-08-03",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-03/Отчёты BURNIE: тишина event-first + слот",
+      "target": "Отчёты BURNIE: тишина event-first + слоты Бишкек",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-28/T-182 GMGN OpenAPI cutover (read-only)",
+      "target": "2026-07-28",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-28/T-182 GMGN OpenAPI cutover (read-only)",
+      "target": "T-182 GMGN OpenAPI cutover (read-only)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-09/(без заголовка)",
+      "target": "2026-08-09",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-09/(без заголовка)",
+      "target": "(без заголовка)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-28/T-182 layer2: track SM/KOL + wallet-scor",
+      "target": "2026-07-28",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-28/T-182 layer2: track SM/KOL + wallet-scor",
+      "target": "T-182 layer2: track SM/KOL + wallet-score",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-28/Report quality fix (BURNIE path)",
+      "target": "2026-07-28",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-28/Report quality fix (BURNIE path)",
+      "target": "Report quality fix (BURNIE path)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-25/Profile memory created (Operator Watch)",
+      "target": "2026-07-25",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-25/Profile memory created (Operator Watch)",
+      "target": "Profile memory created (Operator Watch)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-24/(без заголовка)",
+      "target": "2026-07-24",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-24/(без заголовка)",
+      "target": "(без заголовка)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-20/T-134 auto-sol study: 7 P0+P1 improvemen",
+      "target": "2026-07-20",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-20/T-134 auto-sol study: 7 P0+P1 improvemen",
+      "target": "T-134 auto-sol study: 7 P0+P1 improvements",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-17/05:10 — Birdeye исключён из пайплайна",
+      "target": "2026-07-17",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-17/05:10 — Birdeye исключён из пайплайна",
+      "target": "05:10 — Birdeye исключён из пайплайна",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-14/Agent-Driven Development Rules",
+      "target": "2026-07-14",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-14/Agent-Driven Development Rules",
+      "target": "Agent-Driven Development Rules",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-07/Hy3 295B как основной LLM",
+      "target": "2026-07-07",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-07/Hy3 295B как основной LLM",
+      "target": "Hy3 295B как основной LLM",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-05/Создание кабал-детектора",
+      "target": "2026-07-05",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-05/Создание кабал-детектора",
+      "target": "Создание кабал-детектора",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-22/AutoHedge радиолокационная находка + про",
+      "target": "2026-07-22",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-22/AutoHedge радиолокационная находка + про",
+      "target": "AutoHedge радиолокационная находка + проект idle",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-21/Hy3 LLM миграция + Birdeye fallback",
+      "target": "2026-07-21",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-21/Hy3 LLM миграция + Birdeye fallback",
+      "target": "Hy3 LLM миграция + Birdeye fallback",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-06-20/Миграция RAB9 на hermes-user",
+      "target": "2026-06-20",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-06-20/Миграция RAB9 на hermes-user",
+      "target": "Миграция RAB9 на hermes-user",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-07/xAI key fix + agent-bus escalation rules",
+      "target": "2026-08-07",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-07/xAI key fix + agent-bus escalation rules",
+      "target": "xAI key fix + agent-bus escalation rules",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-08/VPS hardening: localhost-only порты + пл",
+      "target": "2026-08-08",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-08/VPS hardening: localhost-only порты + пл",
+      "target": "VPS hardening: localhost-only порты + платформенные изменения",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-09/13-й день без MSF-сигналов",
+      "target": "2026-08-09",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-09/13-й день без MSF-сигналов",
+      "target": "13-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-10/15-й день без MSF-сигналов",
+      "target": "2026-08-10",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-10/15-й день без MSF-сигналов",
+      "target": "15-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-11/16-й день без MSF-сигналов",
+      "target": "2026-08-11",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-11/16-й день без MSF-сигналов",
+      "target": "16-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-12/17-й день без MSF-сигналов",
+      "target": "2026-08-12",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-12/17-й день без MSF-сигналов",
+      "target": "17-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-13/18-й день без MSF-сигналов + секреты в v",
+      "target": "2026-08-13",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-13/18-й день без MSF-сигналов + секреты в v",
+      "target": "18-й день без MSF-сигналов + секреты в vault",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-14/19-й день без MSF-сигналов",
+      "target": "2026-08-14",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-14/19-й день без MSF-сигналов",
+      "target": "19-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-15/enforced-оператор-слой RAB9",
+      "target": "2026-08-15",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-15/enforced-оператор-слой RAB9",
+      "target": "enforced-оператор-слой RAB9",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-27/32-й день без MSF-сигналов",
+      "target": "2026-08-27",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-27/32-й день без MSF-сигналов",
+      "target": "32-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-30/33-й день без MSF-сигналов",
+      "target": "2026-08-30",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-30/33-й день без MSF-сигналов",
+      "target": "33-й день без MSF-сигналов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "person/@msf_rab_bot",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@rab2610bot",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@ClipsByDough",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@NickLor04939359",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@AlphaAgentcall",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@BurnieSendersX",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@DangerousThinkg",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@Benji_Yugi",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@elonmusk",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@0xrichboy",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@NousResearch",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@cyrilXBT",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@Hermes",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@lawyer4laws",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@DeepBlueCrypto",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "person/@Project",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "project/rab9",
+      "target": "CHRONOLOGY.md",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "project/alikhan",
+      "target": "CHRONOLOGY.md",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "project/gulag",
+      "target": "CHRONOLOGY.md",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "task/T-132",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "task/T-134",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "task/T-182",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "task/T-158",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/rab9/CHRONOLOGY.md",
+      "confidence": 0.9
+    }
+  ]
+}

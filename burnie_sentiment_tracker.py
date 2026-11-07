@@ -2274,6 +2274,13 @@ def _accum_watch_note() -> str:
     Контекст: GMGN не помечает этих кошельков как smart money, но они
     структурно копят BURNIE мелкими покупками. Отсутствие SM-тегов ≠
     отсутствие накопления. Обновляется задачей BURNIE accumulator watch.
+
+    ЧЕСТНОСТЬ (07.11, урок «отчёт не должен раздувать реальность»):
+    снапшот мог не обновляться (GMGN 429 → watch молчит), поэтому
+      • показываем ВОЗРАСТ данных и помечаем устаревшие (>36ч);
+      • «продаж 0» больше не хардкод — берём фактическое поле sells;
+      • если у кошелька есть измеренный текущий холд (cur_pct) и он
+        сильно ниже снапшотного — пишем, что позиция сокращена/вышла.
     """
     path = Path(__file__).resolve().parent / "data" / "burnie_accum_watch.json"
     try:
@@ -2281,14 +2288,53 @@ def _accum_watch_note() -> str:
         wallets = snap.get("wallets") or []
         if not wallets:
             return "он-чейн снапшот накопителей пуст."
+        age_h = None
+        try:
+            # Возраст ДАННЫХ, не файла: last_gmgn_data_utc ставится только когда
+            # прогон реально получил данные трейдеров (иначе файл обновляется
+            # вхолостую и mtime врёт о свежести).
+            stamp = snap.get("last_gmgn_data_utc")
+            if stamp:
+                ts = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                age_h = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
+            else:
+                age_h = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 3600
+        except Exception:
+            age_h = None
         top = max(wallets, key=lambda w: w.get("net_buy_usd", 0) or 0)
         total = sum(w.get("net_buy_usd", 0) or 0 for w in wallets)
-        return (
-            f"SM-тегов нет, НО идёт он-чейн накопление: {len(wallets)} кошельков, "
-            f"суммарно +${total:,.0f} net-buy мелкими ордерами; топ-копатель держит "
-            f"{top.get('pct')}% саплая (ср. входа ниже рынка, продаж 0). "
-            f"Мониторинг: BURNIE accumulator watch."
-        )
+        top_sells = int(top.get("sells", 0) or 0)
+        top_pct = top.get("pct")
+        cur_pct = top.get("cur_pct")
+        # Сокращение позиции топ-копателя = главный сигнал смены сценария
+        shrunk = None
+        if cur_pct is not None and top_pct:
+            try:
+                cur_f, snap_f = float(cur_pct), float(top_pct)
+                if snap_f > 0 and cur_f < snap_f * 0.5:
+                    shrunk = (snap_f, cur_f)
+            except (TypeError, ValueError):
+                shrunk = None
+        stale = f"⚠️ данные устарели ({age_h:.0f}ч назад) — " if (age_h and age_h > 36) else ""
+        if shrunk:
+            head = (
+                f"{stale}он-чейн: ТОП-КОПАТЕЛЬ ВЫШЕЛ из позиции — холд упал "
+                f"{shrunk[0]}% → {shrunk[1]}% саплая (снапшот {snap.get('snapshot_utc')}). "
+                f"Накопление по списку ({len(wallets)} кошельков, +${total:,.0f} net-buy) — "
+                f"устаревшая картина, сценарий «тихое накопление» требует переоценки. "
+            )
+        else:
+            sells_s = (
+                f", продаж {top_sells}" if top_sells else ", продаж 0"
+            )
+            head = (
+                f"{stale}SM-тегов нет, НО идёт он-чейн накопление: {len(wallets)} кошельков, "
+                f"суммарно +${total:,.0f} net-buy мелкими ордерами; топ-копатель держит "
+                f"{top_pct}% саплая (ср. входа ниже рынка{sells_s}). "
+            )
+        return f"{head}Мониторинг: BURNIE accumulator watch."
     except Exception:
         return "он-чейн данные накопителей недоступны (см. accumulator watch)."
 

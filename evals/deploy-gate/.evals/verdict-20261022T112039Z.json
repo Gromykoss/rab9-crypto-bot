@@ -1,0 +1,41 @@
+{
+  "name": "rab9-deploy-gate",
+  "kind": "service",
+  "runner": "eval_runner.py",
+  "metrics_expected": {
+    "files_present": {
+      "min": 1.0
+    },
+    "syntax_ok": {
+      "min": 1.0
+    }
+  },
+  "run_rc": 0,
+  "metrics": {
+    "files_present": 1.0,
+    "syntax_ok": 1.0
+  },
+  "checks": {
+    "files_present": {
+      "value": 1.0,
+      "threshold": {
+        "min": 1.0
+      },
+      "ok": true,
+      "detail": ""
+    },
+    "syntax_ok": {
+      "value": 1.0,
+      "threshold": {
+        "min": 1.0
+      },
+      "ok": true,
+      "detail": ""
+    }
+  },
+  "shas": {
+    "sha_eval_yaml": "abbc8684f34f536cc69ed53feee0306b05393ab623f25ab95e0180b85fcb0506"
+  },
+  "verdict": "PASS",
+  "timestamp_utc": "2026-10-22T11:20:39.127491+00:00"
+}

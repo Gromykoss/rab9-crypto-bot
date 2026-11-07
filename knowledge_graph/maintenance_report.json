@@ -1,0 +1,24 @@
+{
+  "generated_at": "2026-11-07T05:00:54.932403+00:00",
+  "graph_built_at": "2026-11-07T05:00:54.920544+00:00",
+  "graph_stats": {
+    "nodes": 215,
+    "edges": 165,
+    "projects": 3,
+    "events": 71,
+    "people": 16,
+    "tasks": 4
+  },
+  "checks": {
+    "stale_nodes": [],
+    "duplicate_entities": [],
+    "contradictions": [],
+    "confidence_decay": []
+  },
+  "summary": {
+    "stale_nodes": 0,
+    "duplicate_entities": 0,
+    "contradictions": 0,
+    "confidence_decay": 0
+  }
+}

@@ -7,3 +7,9 @@ thresholds:
   syntax_ok: {min: 1.0}
 run_timeout: 60
 artifact_dir: .evals
+mandatory:
+- file:burnie_sentiment_tracker.py
+- file:msf_http.py
+- file:cabal_detector.py
+- file:wallet_intel.py
+report_path: run_report.json

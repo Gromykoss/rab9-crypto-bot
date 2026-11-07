@@ -35,6 +35,12 @@ metrics = {
     "syntax_ok": 1.0 if not syntax_errors else 0.0,
 }
 Path("metrics.json").write_text(json.dumps(metrics, ensure_ascii=False, indent=2) + "\n")
+# Пофайловые кейсы для mandatory-манифеста: pass = файл на месте И компилируется.
+# Если файл молча исчезнет из REQUIRED — манифест в eval.yaml это поймает (not run → FAIL).
+Path("run_report.json").write_text(json.dumps(
+    [{"id": f"file:{f}", "status": "pass" if not any(e.startswith(f + ":") for e in syntax_errors) else "fail"}
+     for f in REQUIRED],
+    ensure_ascii=False, indent=2) + "\n")
 if syntax_errors:
     print("ERRORS: " + "; ".join(syntax_errors))
 print(json.dumps(metrics, ensure_ascii=False))
