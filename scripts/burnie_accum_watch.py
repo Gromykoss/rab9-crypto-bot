@@ -130,6 +130,11 @@ def enroll_new_wallets(snap: dict, by_addr: dict) -> list[str]:
     return added
 
 
+def _now_iso() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
 def measure_holdings(snap: dict) -> list[str]:
     """RPC-фолбэк: текущий холд по известному holding_owner каждого кошелька.
 
@@ -178,12 +183,25 @@ def measure_holdings(snap: dict) -> list[str]:
         cur_pct = round(tot / supply * 100, 3)
         base = w.get("pct") or 0
         w["cur_pct"] = cur_pct
-        if base and cur_pct < base * 0.5:
-            out.append(
-                f"🔴 КИТ ВЫШЕЛ: {w['address']}\n"
-                f"   холд {base}% → {cur_pct}% саплая (holding account {owner[:8]}…). "
-                f"Накопитель сократил/закрыл позицию — сценарий «тихое накопление» сломан."
-            )
+        if not base:
+            continue
+        if cur_pct >= base * 0.5:
+            # Позиция в норме — снимаем флаг выхода, чтобы СЛЕДУЮЩИЙ реальный
+            # выход снова дал алерт (кит вернулся и снова ушёл = новость).
+            w.pop("exit_alerted", None)
+            continue
+        # Дедуп: один выход = один алерт. Без флага один и тот же факт
+        # повторялся бы каждый тик (4×/день) и превращал отчёт в шум.
+        # ВАЖНО: снапшотную базу w["pct"] НЕ трогаем — её читает
+        # burnie_sentiment_tracker._accum_watch_note() для строки «ТОП-КОПАТЕЛЬ ВЫШЕЛ».
+        if w.get("exit_alerted"):
+            continue
+        w["exit_alerted"] = {"at": _now_iso(), "from": base, "to": cur_pct}
+        out.append(
+            f"🔴 КИТ ВЫШЕЛ: {w['address']}\n"
+            f"   холд {base}% → {cur_pct}% саплая (holding account {owner[:8]}…). "
+            f"Накопитель сократил/закрыл позицию — сценарий «тихое накопление» сломан."
+        )
     return out
 
 
