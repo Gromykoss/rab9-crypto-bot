@@ -14,12 +14,24 @@ import urllib.request
 from pathlib import Path
 
 MINT = "CGEDT9QZDvvH5GmVkWJH2BXiMJqMJySC9ihWyr7Spump"
+TOKEN_DECIMALS = 6   # pump.fun: суммы GMGN приходят в UI-единицах, а снапшот supply — в raw
 GMGN = "/home/hermes-workspace/.hermes/node/bin/gmgn-cli"
 HERE = Path(__file__).resolve().parent
 SNAP = HERE.parent / "data" / "burnie_accum_watch.json"
 
 ALERT_NET_USD = 1000      # докупка от $1K
 ALERT_SELL_PCT = 0.25     # продал >25% своего net-объёма
+
+# Пакетные переводы (решение Сергея 08.11). Разбор топ-холдеров показал: часть
+# «крупных покупателей» покупок не делала вообще — токены пришли переводом
+# (history_bought_cost == 0), один помечен bundler. Рост числа холдеров без
+# покупок = дробление пакета, т.е. ранний признак подготовки к дампу, а не
+# смартмани-накопление. Следим за этим как за отдельным событием.
+PACKAGE_MIN_PCT = 0.5      # перевод ≥0.5% саплая = событие
+PACKAGE_LOOKBACK_H = 72    # окно поиска (переживает простой крона)
+DIST_MIN_WALLETS = 3       # один источник → ≥3 кошелька
+DIST_MIN_TOTAL_PCT = 1.0   # при суммарном объёме ≥1% саплая
+TRANSFER_SEEN_CAP = 300    # сколько tx_hash держим для дедупа
 
 
 def fetch_traders():
@@ -86,16 +98,20 @@ NEW_WALLET_MIN_PCT = 0.9    # ≥0.9% саплая
 NEW_WALLET_MIN_NET = 10000  # и net-buy ≥ $10K (не спекулянт-однодневка)
 
 
-def enroll_new_wallets(snap: dict, by_addr: dict) -> list[str]:
+def enroll_new_wallets(snap: dict, by_addr: dict, holders: list | None = None) -> list[str]:
     """Авто-пополнение watch: новый холдер ≥0.9% + net-buy ≥$10K → в снапшот с tag=new-<date>.
 
     Решение Сергея 29.10 («осень, горячее время, реагировать быстро»): новое
     накопление не должно месяцами жить вне радара. Возвращает строки-алерты.
+
+    Решение Сергея 08.11: НЕ зачисляем bundler-кошельки и адреса без покупок
+    (токены пришли переводом) — это распределение пакета, а не накопление;
+    такие адреса ведёт detect_package_transfers(), а не список «накопителей».
     """
     added = []
     known = {w["address"] for w in snap["wallets"]}
     today = time.strftime("%Y%m%d")
-    for h in fetch_holders():
+    for h in (holders if holders is not None else fetch_holders()):
         # GMGN holders: поле address/account_address НЕ консистентно по строкам
         # (то владелец, то токен-аккаунт). Владелец = тот, кто есть в traders-map
         # (by_addr ключи = владельцы); иначе candidate = address.
@@ -108,6 +124,10 @@ def enroll_new_wallets(snap: dict, by_addr: dict) -> list[str]:
             continue
         if h.get("addr_type") == 2 or h.get("exchange"):
             continue  # пул/биржа — не кит
+        if "bundler" in (h.get("maker_token_tags") or []):
+            continue  # бандл-кошелёк (08.11): токены розданы пачкой, покупок нет
+        if not (h.get("history_bought_cost") or 0) and (h.get("history_transfer_in_amount") or 0) > 0:
+            continue  # пришло переводом — не «накопление» (08.11)
         pct = round((h.get("amount_percentage") or 0) * 100, 2)
         cur = by_addr.get(a)
         if pct < NEW_WALLET_MIN_PCT or not cur or cur["net"] < NEW_WALLET_MIN_NET:
@@ -128,6 +148,80 @@ def enroll_new_wallets(snap: dict, by_addr: dict) -> list[str]:
     if added:
         snap["wallets"].sort(key=lambda x: -(x.get("pct") or 0))
     return added
+
+
+def detect_package_transfers(snap: dict, holders: list) -> list[str]:
+    """Пакеты, пришедшие ПЕРЕВОДОМ: признак распределения, а не накопления.
+
+    Разбор 08.11: из 7 холдеров ≥0.9% вне watch у трёх покупок на $0 —
+    токены пришли transfer_in (один адрес помечен bundler). Рост холдеров
+    без покупок = дробление пакета, т.е. подготовка к дампу. Дедуп по tx_hash:
+    одно событие = один алерт (иначе повтор каждый тик 4×/день).
+    """
+    supply = snap.get("supply") or 0
+    if not supply or not holders:
+        return []
+    # Снапшот хранит supply в raw-единицах (его использует measure_holdings с RPC,
+    # где amounts тоже raw), а GMGN отдаёт суммы уже в UI-единицах: без приведения
+    # доли получаются в 10^6 раз меньше и порог события не срабатывает никогда.
+    supply_ui = supply / (10 ** TOKEN_DECIMALS)
+    seen = snap.setdefault("transfer_seen", {})
+    cutoff = time.time() - PACKAGE_LOOKBACK_H * 3600
+    events = []
+    for h in holders:
+        if h.get("addr_type") == 2 or h.get("exchange"):
+            continue
+        ti = h.get("token_transfer_in") or {}
+        tx = ti.get("tx_hash") or ""
+        amount = h.get("history_transfer_in_amount") or 0
+        ts = ti.get("timestamp") or 0
+        if not tx or not amount or ts < cutoff:
+            continue
+        events.append({
+            "addr": h.get("address") or "",
+            "pct": round(amount / supply_ui * 100, 3),
+            "src": ti.get("address") or "",
+            "ts": ts,
+            "tx": tx,
+            "bought": h.get("history_bought_cost") or 0,
+            "tags": h.get("maker_token_tags") or [],
+        })
+
+    out = []
+    for e in events:
+        if e["pct"] < PACKAGE_MIN_PCT or e["tx"] in seen:
+            continue
+        seen[e["tx"]] = _now_iso()
+        out.append(
+            f"📦 ПЕРЕВОД ПАКЕТА: {e['addr']}\n"
+            f"   получил {e['pct']}% саплая переводом от {e['src'][:8]}… — покупок на ${e['bought']:,.0f}"
+            f"{', тег bundler' if 'bundler' in e['tags'] else ''}. Это распределение пакета, а не накопление."
+        )
+
+    # Групповой признак: один источник раздаёт пачками нескольким кошелькам —
+    # так пакет дробят перед сбросом в рынок.
+    by_src = {}
+    for e in events:
+        if not e["src"]:
+            continue
+        g = by_src.setdefault(e["src"], {"n": 0, "total": 0.0, "ts": e["ts"]})
+        g["n"] += 1
+        g["total"] = round(g["total"] + e["pct"], 3)
+        g["ts"] = min(g["ts"], e["ts"])
+    for src, g in by_src.items():
+        key = f"dist:{src}:{int(g['ts'])}"
+        if g["n"] < DIST_MIN_WALLETS or g["total"] < DIST_MIN_TOTAL_PCT or key in seen:
+            continue
+        seen[key] = _now_iso()
+        out.append(
+            f"🔀 РАСПРЕДЕЛЕНИЕ ПАКЕТА: {src} раздал {g['n']} кошелькам суммарно {g['total']}% саплая "
+            f"за последние {PACKAGE_LOOKBACK_H}ч — ранний признак подготовки к сбросу."
+        )
+
+    # Дедуп-журнал не растёт бесконечно (dict хранит порядок вставки).
+    while len(seen) > TRANSFER_SEEN_CAP:
+        seen.pop(next(iter(seen)))
+    return out
 
 
 def _now_iso() -> str:
@@ -240,7 +334,10 @@ def main():
 
     # Авто-пополнение новыми китами ДО основного цикла: зачисленные сразу попадают
     # в сверку этого же прогона (baseline = текущие значения, алерт на след. тик).
-    new_alerts = enroll_new_wallets(snap, by_addr)
+    # holders тянем ОДИН раз на оба блока — меньше обращений к gmgn (лимит по IP).
+    holders = fetch_holders()
+    new_alerts = enroll_new_wallets(snap, by_addr, holders)
+    pkg_alerts = detect_package_transfers(snap, holders)
 
     lines = []
     for w in snap["wallets"]:
@@ -268,7 +365,7 @@ def main():
 
     px = f"цена ${p['price']} (24ч {p['chg24h']}%), MC ${p['mc']:,.0f}, liq ${p['liq']:,.0f}" if p else "н/д"
 
-    lines = new_alerts + hold_alerts + lines
+    lines = new_alerts + pkg_alerts + hold_alerts + lines
     if lines:
         print(f"BURNIE watch ({px})")
         print("\n".join(lines))
