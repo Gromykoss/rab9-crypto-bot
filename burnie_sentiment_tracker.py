@@ -63,7 +63,7 @@ CATALYST_QUERY = (
 CATALYST_MIN_FOLLOWERS = 5000
 CATALYST_LARGE_FOLLOWERS = 50_000
 CATALYST_MEGA_FOLLOWERS = 500_000
-CATALYST_MAX_RESULTS = 20  # экономия X API: было 25 (директива владельца 11.10)
+CATALYST_MAX_RESULTS = 15  # экономия X API: 25 (11.10) → 20 → 15 (08.11: с 22.11 expansion-объекты платные)
 
 # Типы «офиц. касания» для hard_alert (event-first).
 OFFICIAL_TOUCH_TYPES = frozenset({
@@ -413,7 +413,12 @@ def run_x_search_raw(
         "query": query,
         "max_results": str(max(10, min(100, max_results))),
         "tweet.fields": "created_at,author_id,public_metrics,referenced_tweets,in_reply_to_user_id",
-        "expansions": "author_id,referenced_tweets.id",
+        # 22.11.2026: X PPU тарифицирует объекты expansions (User $0.010, Post $0.005).
+        # Полезен только author_id (вес аккаунта из includes.users). referenced_tweets.id
+        # код НЕ использует — тип RT/quote берётся из tweet.fields.referenced_tweets.
+        # Замер 08.11: на 1 пост +0.7 user и +0.8 referenced-поста → снятие расширения
+        # убирает ~$0.08 впустую на каждый вызов.
+        "expansions": "author_id",
         "user.fields": "username,name,public_metrics,verified,verified_type",
     }
     qs = urllib.parse.urlencode(params, safe="():\"@")

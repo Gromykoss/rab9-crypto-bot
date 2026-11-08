@@ -82,7 +82,9 @@ def search_x(query: str) -> dict:
             params={
                 "query": clean_query, "max_results": MAX_RESULTS,
                 "tweet.fields": "created_at,author_id,public_metrics,referenced_tweets,in_reply_to_user_id",
-                "expansions": "author_id,referenced_tweets.id",
+                # 22.11.2026: expansion-объекты платные — оставляем только author_id
+                # (вес аккаунта); referenced_tweets.id код не использует.
+                "expansions": "author_id",
                 "user.fields": "username,public_metrics,verified,verified_type",
             },
             auth=auth, timeout=TIMEOUT,
