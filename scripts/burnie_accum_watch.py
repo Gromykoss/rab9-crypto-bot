@@ -33,6 +33,24 @@ DIST_MIN_WALLETS = 3       # один источник → ≥3 кошелька
 DIST_MIN_TOTAL_PCT = 1.0   # при суммарном объёме ≥1% саплая
 TRANSFER_SEEN_CAP = 300    # сколько tx_hash держим для дедупа
 
+# Сжигания (решение Сергея 12.11). Кошелёк проекта собирает creator fees
+# (инструкция TransferCreatorFeesToPump), выкупает токен с рынка и жжёт его —
+# «печь» из их твитов. Подтверждено 12.11 00:11: покупка 8,238,661 BURNIE за
+# 97.087 SOL и через минуту BurnChecked на 11,575,437 BURNIE. Без распознавания
+# BurnChecked падение холда читается как «КИТ ВЫШЕЛ», хотя токены не ушли в рынок.
+BURN_WATCH_WALLETS = ["7YeCaAqhzhtRio1mddqaQzhvWRWXEsm4GSyfm4VwDsvL"]
+BURN_SCAN_LIMIT = 40        # сколько последних tx смотреть у кошелька-печи
+BURN_SEEN_CAP = 300         # дедуп tx_hash сжиганий
+BURN_RESCAN_H = 4           # не чаще раза в 4ч на кошелёк (RPC дорогой)
+BURN_ALERT_MIN_PCT = 0.05   # сжигание ≥0.05% саплая = событие
+BURN_LOG_CAP = 200          # журнал сжиганий (для атрибуции просадки)
+BURN_ATTR_DAYS = 30         # окно атрибуции «просадка = печь»
+BURN_ATTR_MIN_SHARE = 0.5   # ≥50% просадки ушло в сжигание → это печь, не продажа
+
+# База pct ставилась под снапшотный supply (25.09) — сравнение долей при
+# сожжённом supply некорректно, поэтому базу переводим в токены.
+BASE_SUPPLY_UI_AT_BASELINE = 969651601.137694
+
 
 def fetch_traders():
     # gmgn rate limit — общий на IP VPS (429 RETE_LIMIT_EXCEEDED): ретрай с паузой
@@ -134,6 +152,8 @@ def enroll_new_wallets(snap: dict, by_addr: dict, holders: list | None = None) -
             continue
         w = {
             "address": a, "pct": pct, "baseline_pct": pct,
+            # База в токенах: проценты при сжигаемом supply несравнимы между тиками.
+            "base_tokens": round(pct / 100 * ((snap.get("supply") or 0) / (10 ** TOKEN_DECIMALS)), 2),
             "net_buy_usd": round(cur["net"]), "avg_buy_usd": 0,
             "buys": h.get("accu_tx_count_buy") or 0, "sells": cur["sells"],
             "tag": f"new-{today}",
@@ -224,6 +244,161 @@ def detect_package_transfers(snap: dict, holders: list) -> list[str]:
     return out
 
 
+def _rpc(method: str, params: list, tries: int = 4):
+    """JSON-RPC с ретраями: публичный RPC периодически отдаёт 429."""
+    for attempt in range(tries):
+        try:
+            body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+            req = urllib.request.Request(
+                "https://api.mainnet-beta.solana.com", body, {"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=25) as r:
+                res = json.load(r)
+            if "result" in res:
+                return res
+            if "429" in str(res.get("error")):
+                time.sleep(3 + 2 * attempt)
+                continue
+            return res
+        except Exception:
+            time.sleep(3 + 2 * attempt)
+    return {}
+
+
+def fetch_live_supply():
+    """Живой total supply (raw). Снапшот 25.09 устарел: с тех пор сожжено 31.85M.
+
+    Все доли саплая считались от 969.65M, тогда как живая supply 937.81M —
+    систематическая ошибка 3.4% во ВСЕХ процентах вотча (найдено 12.11).
+    """
+    res = _rpc("getTokenSupply", [MINT])
+    try:
+        return int((res.get("result") or {}).get("value", {}).get("amount"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _burn_log_add(snap: dict, wallet: str, burns: list) -> list:
+    """Добавить сжигания в журнал, вернуть ТОЛЬКО новые (дедуп по tx_hash)."""
+    log = snap.setdefault("burn_log", [])
+    seen = {e.get("tx") for e in log}
+    fresh = []
+    for b in burns:
+        if not b.get("tx") or b["tx"] in seen:
+            continue
+        log.append({"wallet": wallet, "tx": b["tx"], "ts": b.get("ts") or 0, "tokens": b.get("tokens") or 0})
+        seen.add(b["tx"])
+        fresh.append(b)
+    if len(log) > BURN_LOG_CAP:
+        del log[: len(log) - BURN_LOG_CAP]
+    return fresh
+
+
+def burn_log_total(snap: dict, wallet: str, days: int = BURN_ATTR_DAYS) -> float:
+    """Сколько токенов этот кошелёк сжёг за окно (по журналу)."""
+    cutoff = time.time() - days * 86400
+    return sum(
+        e.get("tokens") or 0
+        for e in (snap.get("burn_log") or [])
+        if e.get("wallet") == wallet and (e.get("ts") or 0) >= cutoff
+    )
+
+
+def scan_wallet_burns(addr: str, limit: int = BURN_SCAN_LIMIT) -> list:
+    """Сжигания (BurnChecked) в последних tx кошелька: [{tx, ts, tokens}]."""
+    raw = (_rpc("getSignaturesForAddress", [addr, {"limit": limit}]).get("result") or [])
+    sigs = [s for s in raw if isinstance(s, dict) and s.get("signature")]
+    out = []
+    for s in sigs:
+        tx = (_rpc("getTransaction", [s["signature"], {
+            "encoding": "jsonParsed", "maxSupportedTransactionVersion": 0,
+        }]).get("result"))
+        if not tx:
+            continue
+        meta = tx.get("meta") or {}
+        if not any("BurnChecked" in (l or "") for l in (meta.get("logMessages") or [])):
+            continue
+        pre = {b["accountIndex"]: b for b in (meta.get("preTokenBalances") or [])}
+        post = {b["accountIndex"]: b for b in (meta.get("postTokenBalances") or [])}
+        delta = 0.0
+        for idx in set(list(pre) + list(post)):
+            b = post.get(idx) or pre.get(idx)
+            if not b or b.get("mint") != MINT or b.get("owner") != addr:
+                continue
+            a0 = float((pre.get(idx) or {}).get("uiTokenAmount", {}).get("uiAmount") or 0)
+            a1 = float((post.get(idx) or {}).get("uiTokenAmount", {}).get("uiAmount") or 0)
+            delta += a1 - a0
+        if delta < 0:
+            out.append({"tx": s["signature"], "ts": s.get("blockTime") or 0, "tokens": -delta})
+    return out
+
+
+def _classify_drop(snap: dict, owner: str, drop_tokens: float) -> str:
+    """Просадка холда: 'burn' (печь проекта) или 'sell' (сброс в рынок).
+
+    Приоритет: если это кошелёк-печь (BURN_WATCH_WALLETS) — просадка НЕ продажа.
+    Основание: у 7YeCaAqh за всю историю GMGN продаж $0 (history_sold_income=0),
+    а падение холда подтверждено сжиганиями (12.11: 11.58M одним tx). Остальные
+    кошельки классифицируем по журналу сжиганий (≥50% просадки ушло в печь).
+    """
+    if owner in BURN_WATCH_WALLETS:
+        return "burn"
+    burned = burn_log_total(snap, owner)
+    if burned < drop_tokens * BURN_ATTR_MIN_SHARE:
+        fresh = _burn_log_add(snap, owner, scan_wallet_burns(owner))
+        burned += sum(b.get("tokens") or 0 for b in fresh)
+    return "burn" if burned >= drop_tokens * BURN_ATTR_MIN_SHARE else "sell"
+
+
+def detect_burns(snap: dict, price_usd=None, wallets: list | None = None) -> list[str]:
+    """Событие «🔥 СЖИГАНИЕ»: печь проекта уничтожила токены (дедуп по tx_hash).
+
+    Сжигание — не продажа: это выкуп с рынка на creator fees и уничтожение
+    (дефляционная поддержка). Считаем отдельным событием, чтобы не путать
+    с выходом кита, и не чаще раза в BURN_RESCAN_H часов на кошелёк.
+    """
+    supply = snap.get("supply") or 0
+    if not supply:
+        return []
+    supply_ui = supply / (10 ** TOKEN_DECIMALS)
+    stamp = snap.setdefault("burn_scan_utc", {})
+    now = time.time()
+    out = []
+    for addr in (wallets if wallets is not None else BURN_WATCH_WALLETS):
+        last = stamp.get(addr)
+        if last:
+            try:
+                from datetime import datetime, timezone
+                if now - datetime.fromisoformat(last).timestamp() < BURN_RESCAN_H * 3600:
+                    continue
+            except Exception:
+                pass
+        fresh = _burn_log_add(snap, addr, scan_wallet_burns(addr))
+        stamp[addr] = _now_iso()
+        if not fresh:
+            continue
+        tokens = sum(b.get("tokens") or 0 for b in fresh)
+        snap["burn_total_tokens"] = round((snap.get("burn_total_tokens") or 0) + tokens, 2)
+        pct = tokens / supply_ui * 100
+        if pct < BURN_ALERT_MIN_PCT:
+            continue
+        usd = f" ≈ ${tokens * float(price_usd):,.0f}" if price_usd else ""
+        out.append(
+            f"🔥 СЖИГАНИЕ (печь проекта): {tokens:,.0f} BURNIE{usd} — {pct:.2f}% саплая, {len(fresh)} tx\n"
+            f"   кошелёк {addr[:10]}… (собирает creator fees → выкуп с рынка → в печь). "
+            f"Это дефляция, НЕ сброс в рынок; всего сожжено за наблюдение "
+            f"{snap['burn_total_tokens']:,.0f} токенов."
+        )
+    return out
+
+
+def _burn_note(w: dict) -> str:
+    """Пометка для кошелька-печи: его выкуп идёт в сжигание, а не в холд."""
+    if (w.get("holding_owner") or w.get("address")) in BURN_WATCH_WALLETS:
+        return ", кошелёк проекта (печь): выкуп уходит в сжигание, не в холд"
+    return ""
+
+
 def _now_iso() -> str:
     from datetime import datetime, timezone
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -249,37 +424,30 @@ def measure_holdings(snap: dict) -> list[str]:
         owner = w.get("holding_owner")
         if not owner:
             continue
-        tot = None
-        for attempt in range(4):
-            try:
-                body = json.dumps({
-                    "jsonrpc": "2.0", "id": 1,
-                    "method": "getTokenAccountsByOwner",
-                    "params": [owner, {"mint": MINT}, {"encoding": "jsonParsed"}],
-                }).encode()
-                req = urllib.request.Request(
-                    "https://api.mainnet-beta.solana.com", body,
-                    {"Content-Type": "application/json"},
-                )
-                with urllib.request.urlopen(req, timeout=25) as r:
-                    res = json.load(r)
-                if "result" in res:
-                    tot = sum(
-                        int(i["account"]["data"]["parsed"]["info"]["tokenAmount"]["amount"])
-                        for i in (res["result"].get("value") or [])
-                    )
-                    break
-            except Exception:
-                pass
-            time.sleep(8 * (attempt + 1))
-        if tot is None:
+        # Единый RPC-хелпер с ретраями (тот же, что у детектора сжиганий:
+        # один путь для сети = один путь для тестов).
+        res = _rpc("getTokenAccountsByOwner", [owner, {"mint": MINT}, {"encoding": "jsonParsed"}])
+        if "result" not in res:
             continue
+        tot = sum(
+            int(i["account"]["data"]["parsed"]["info"]["tokenAmount"]["amount"])
+            for i in (res.get("result", {}).get("value") or [])
+        )
         cur_pct = round(tot / supply * 100, 3)
         base = w.get("pct") or 0
         w["cur_pct"] = cur_pct
-        if not base:
+        w["cur_tokens"] = round(tot / (10 ** TOKEN_DECIMALS), 2)
+        base_tokens = w.get("base_tokens")
+        if not base_tokens and base:
+            # База ставилась под снапшотный supply. Проценты сравнивать нельзя:
+            # supply с 25.09 уменьшился сжиганиями (12.11), поэтому базу один раз
+            # переводим в токены и дальше решаем по токенам.
+            base_tokens = round(base / 100 * BASE_SUPPLY_UI_AT_BASELINE, 2)
+            w["base_tokens"] = base_tokens
+        if not base_tokens:
             continue
-        if cur_pct >= base * 0.5:
+        base_raw = base_tokens * (10 ** TOKEN_DECIMALS)
+        if tot >= base_raw * 0.5:
             # Позиция в норме — снимаем флаг выхода, чтобы СЛЕДУЮЩИЙ реальный
             # выход снова дал алерт (кит вернулся и снова ушёл = новость).
             w.pop("exit_alerted", None)
@@ -290,18 +458,34 @@ def measure_holdings(snap: dict) -> list[str]:
         # burnie_sentiment_tracker._accum_watch_note() для строки «ТОП-КОПАТЕЛЬ ВЫШЕЛ».
         if w.get("exit_alerted"):
             continue
-        w["exit_alerted"] = {"at": _now_iso(), "from": base, "to": cur_pct}
-        out.append(
-            f"🔴 КИТ ВЫШЕЛ: {w['address']}\n"
-            f"   холд {base}% → {cur_pct}% саплая (holding account {owner[:8]}…). "
-            f"Накопитель сократил/закрыл позицию — сценарий «тихое накопление» сломан."
-        )
+        drop_tokens = (base_raw - tot) / (10 ** TOKEN_DECIMALS)
+        kind = _classify_drop(snap, owner, drop_tokens)
+        w["exit_alerted"] = {"at": _now_iso(), "from": base, "to": cur_pct, "kind": kind}
+        if kind == "burn":
+            out.append(
+                f"🔥 ПЕЧЬ, А НЕ ВЫХОД: {w['address']}\n"
+                f"   холд {base}% → {cur_pct}% саплая (holding account {owner[:8]}…), но "
+                f"{burn_log_total(snap, owner):,.0f} токенов из просадки сожжены — "
+                f"выкуп с рынка и уничтожение, а не сброс. Продажи тут нет."
+            )
+        else:
+            out.append(
+                f"🔴 КИТ ВЫШЕЛ: {w['address']}\n"
+                f"   холд {base}% → {cur_pct}% саплая (holding account {owner[:8]}…). "
+                f"Накопитель сократил/закрыл позицию — сценарий «тихое накопление» сломан."
+            )
     return out
 
 
 def main():
     snap = json.loads(SNAP.read_text())
     snap.setdefault("supply", 969651601137694)
+    # Живая supply (12.11): снапшот 25.09 показывал 969.65M, реальная 937.81M —
+    # сожжено 31.85M, и все доли саплая в отчётах были занижены на 3.4%.
+    live_supply = fetch_live_supply()
+    if live_supply:
+        snap["supply"] = live_supply
+        snap["supply_updated_utc"] = _now_iso()
     by_addr = {}
     for h in fetch_traders():
         if str(h.get("addr_type")) == "2":
@@ -329,6 +513,10 @@ def main():
 
     p = fetch_price()
 
+    # Печь проекта: сжигания считаем ДО холдов, чтобы журнал сжиганий уже был
+    # заполнен и просадка кошелька классифицировалась как «печь», а не «выход».
+    burn_alerts = detect_burns(snap, price_usd=p["price"] if p else None)
+
     # RPC-фолбэк холдов (gmgn может быть в 429 — watch не должен слепнуть)
     hold_alerts = measure_holdings(snap)
 
@@ -350,7 +538,8 @@ def main():
             lines.append(
                 f"🟢 ДОКУПКА: {w['address']}\n"
                 f"   докупил на ${d_net:,.0f} сверх снапшота; всего накопил ${cur['net']:,.0f} "
-                f"({w['pct']}% саплая), покупок {w['buys']}{_entry_note(cur, price=p['price'] if p else None)}"
+                f"({w.get('cur_pct') or w['pct']}% саплая сейчас)"
+                f"{_burn_note(w)}{_entry_note(cur, price=p['price'] if p else None)}"
             )
         if sold_share > ALERT_SELL_PCT and w.get("sells", 0) < 3 and cur["sells"] >= 3:
             lines.append(
@@ -365,7 +554,7 @@ def main():
 
     px = f"цена ${p['price']} (24ч {p['chg24h']}%), MC ${p['mc']:,.0f}, liq ${p['liq']:,.0f}" if p else "н/д"
 
-    lines = new_alerts + pkg_alerts + hold_alerts + lines
+    lines = new_alerts + pkg_alerts + burn_alerts + hold_alerts + lines
     if lines:
         print(f"BURNIE watch ({px})")
         print("\n".join(lines))
