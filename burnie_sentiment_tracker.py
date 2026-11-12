@@ -2308,8 +2308,37 @@ def _accum_watch_note() -> str:
                 age_h = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 3600
         except Exception:
             age_h = None
-        top = max(wallets, key=lambda w: w.get("net_buy_usd", 0) or 0)
+        def _is_furnace(w: dict) -> bool:
+            """Кошелёк-печь проекта: падение его холда = сжигания, а не сброс в рынок."""
+            flag = w.get("exit_alerted")
+            return isinstance(flag, dict) and flag.get("kind") == "burn"
+
         total = sum(w.get("net_buy_usd", 0) or 0 for w in wallets)
+        # «Топ-копатель» = крупнейший по net-buy СРЕДИ настоящих копателей. Кошелёк печи
+        # формально тоже покупает, но выкуп уходит в сжигание (12.11: 11.58 млн за одну tx),
+        # поэтому называть его главным накопителем = раздувать реальность.
+        acc = [w for w in wallets if not _is_furnace(w)] or wallets
+        top = max(acc, key=lambda w: w.get("net_buy_usd", 0) or 0)
+        furnaces = [w for w in wallets if _is_furnace(w)]
+        burned_note = ""
+        if furnaces:
+            # Просадку холда печи НЕ выдаём за сжигание целиком: часть токенов она
+            # перераспределяла. Показываем только проверяемое — журнал сжиганий и
+            # фактическое падение саплая против базового замера.
+            burn_total = snap.get("burn_total_tokens") or 0
+            base_ui = snap.get("supply_ui_at_baseline")
+            supply_ui = (snap.get("supply") or 0) / (10 ** 6)
+            parts = []
+            if burn_total:
+                parts.append(f"в нашем журнале сожжено {burn_total:,.0f} токенов (BurnChecked)")
+            if base_ui and supply_ui and base_ui > supply_ui:
+                drop = base_ui - supply_ui
+                parts.append(
+                    f"саплай упал с {base_ui:,.0f} до {supply_ui:,.0f} (−{drop:,.0f}, {drop / base_ui * 100:.1f}%)"
+                )
+            if parts:
+                burned_note = (" Кошелёк проекта (печь) выкупает с рынка и жжёт: " + "; ".join(parts) +
+                               ". Продаж у него нет — это дефляция, а не выход в рынок.")
         top_sells = int(top.get("sells", 0) or 0)
         top_pct = top.get("pct")
         cur_pct = top.get("cur_pct")
@@ -2337,9 +2366,9 @@ def _accum_watch_note() -> str:
             head = (
                 f"{stale}SM-тегов нет, НО идёт он-чейн накопление: {len(wallets)} кошельков, "
                 f"суммарно +${total:,.0f} net-buy мелкими ордерами; топ-копатель держит "
-                f"{top_pct}% саплая (ср. входа ниже рынка{sells_s}). "
+                f"{cur_pct if cur_pct is not None else top_pct}% саплая (ср. входа ниже рынка{sells_s}). "
             )
-        return f"{head}Мониторинг: BURNIE accumulator watch."
+        return f"{head}{burned_note} Мониторинг: BURNIE accumulator watch."
     except Exception:
         return "он-чейн данные накопителей недоступны (см. accumulator watch)."
 

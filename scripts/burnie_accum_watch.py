@@ -43,9 +43,17 @@ BURN_SCAN_LIMIT = 40        # сколько последних tx смотре�
 BURN_SEEN_CAP = 300         # дедуп tx_hash сжиганий
 BURN_RESCAN_H = 4           # не чаще раза в 4ч на кошелёк (RPC дорогой)
 BURN_ALERT_MIN_PCT = 0.05   # сжигание ≥0.05% саплая = событие
+TRANSFER_VERIFY_CAP = 12     # максимум транзакций, проверяемых по цепочке за тик
 BURN_LOG_CAP = 200          # журнал сжиганий (для атрибуции просадки)
 BURN_ATTR_DAYS = 30         # окно атрибуции «просадка = печь»
 BURN_ATTR_MIN_SHARE = 0.5   # ≥50% просадки ушло в сжигание → это печь, не продажа
+
+# Пулы/пара: если они в accountKeys транзакции — токены пришли из свопа (покупка),
+# а не переводом от кошелька. Без этой проверки покупка в пуле выдавалась за «раздачу».
+AMM_ACCOUNTS = {
+    "5tYFviFWQRKV9BJSTHGitbdqEYC1BGUgRUDnSADUXqJP",   # основная пара (DexScreener)
+    "EgGACLzNtvTWfjWopkMbbcRsUPAaSCcgPjbNqUCcLUCJ",   # пул Meteora
+}
 
 # База pct ставилась под снапшотный supply (25.09) — сравнение долей при
 # сожжённом supply некорректно, поэтому базу переводим в токены.
@@ -188,34 +196,49 @@ def detect_package_transfers(snap: dict, holders: list) -> list[str]:
     seen = snap.setdefault("transfer_seen", {})
     cutoff = time.time() - PACKAGE_LOOKBACK_H * 3600
     events = []
+    checked = 0
     for h in holders:
         if h.get("addr_type") == 2 or h.get("exchange"):
             continue
         ti = h.get("token_transfer_in") or {}
         tx = ti.get("tx_hash") or ""
-        amount = h.get("history_transfer_in_amount") or 0
         ts = ti.get("timestamp") or 0
-        if not tx or not amount or ts < cutoff:
+        if not tx or ts < cutoff or tx in seen:
             continue
+        if checked >= TRANSFER_VERIFY_CAP:
+            break  # защита от лавины RPC-запросов в горячем рынке
+        checked += 1
+        addr = h.get("address") or ""
+        # GMGN даёт только НАКОПЛЕННУЮ сумму и последнюю транзакцию — сумму и сторону
+        # берём из самой транзакции, иначе алерт врёт (см. classify_transfer_tx).
+        chain = classify_transfer_tx(tx, addr)
+        seen[tx] = _now_iso()  # транзакция неизменна: второй раз не проверяем
+        if not chain or (chain.get("delta") or 0) <= 0:
+            continue  # прихода по цепочке нет — GMGN-строка не про этот перевод
+        if chain.get("market"):
+            continue  # токены вышли из пула = покупка в рынке, а не перевод; раздачей не является
         events.append({
-            "addr": h.get("address") or "",
-            "pct": round(amount / supply_ui * 100, 3),
-            "src": ti.get("address") or "",
-            "ts": ts,
+            "addr": addr,
+            "tokens": chain["delta"],
+            "pct": round(chain["delta"] / supply_ui * 100, 3),
+            "src": chain.get("src") or (ti.get("address") or ""),
+            "ts": chain.get("ts") or ts,
             "tx": tx,
             "bought": h.get("history_bought_cost") or 0,
             "tags": h.get("maker_token_tags") or [],
+            "one_hand": chain.get("one_hand"),
         })
 
     out = []
     for e in events:
-        if e["pct"] < PACKAGE_MIN_PCT or e["tx"] in seen:
+        if e["pct"] < PACKAGE_MIN_PCT:
             continue
-        seen[e["tx"]] = _now_iso()
         out.append(
-            f"📦 ПЕРЕВОД ПАКЕТА: {e['addr']}\n"
-            f"   получил {e['pct']}% саплая переводом от {e['src'][:8]}… — покупок на ${e['bought']:,.0f}"
-            f"{', тег bundler' if 'bundler' in e['tags'] else ''}. Это распределение пакета, а не накопление."
+            f"📦 ПЕРЕВОД ПАКЕТА (по цепочке): {e['tokens']:,.0f} токенов = {e['pct']}% саплая\n"
+            f"   от {e['src'][:8]}… → {e['addr'][:12]}…, покупок у получателя на ${e['bought']:,.0f}"
+            f"{', тег bundler' if 'bundler' in e['tags'] else ''}"
+            f"{', перевод подписан третьим адресом — одна рука/бот' if e['one_hand'] else ''}. "
+            f"Это распределение пакета, а не накопление."
         )
 
     # Групповой признак: один источник раздаёт пачками нескольким кошелькам —
@@ -331,6 +354,62 @@ def scan_wallet_burns(addr: str, limit: int = BURN_SCAN_LIMIT) -> list:
         if delta < 0:
             out.append({"tx": s["signature"], "ts": s.get("blockTime") or 0, "tokens": -delta})
     return out
+
+
+def classify_transfer_tx(tx_hash: str, wallet: str) -> dict:
+    """Правда о транзакции по цепочке: сколько токенов, откуда и кто подписал.
+
+    GMGN отдаёт НАКОПЛЕННУЮ сумму переводов (`history_transfer_in_amount`) и
+    приклеивает её к последней транзакции перевода. Из-за этого алерт 12.11 01:30
+    показывал «получил 1.194% саплая переводом», тогда как в той транзакции было
+    1 000 токенов (пыль), а пакет 1.157% кошелёк КУПИЛ в пуле за 45.61 SOL
+    двумя часами раньше. Поэтому сумму и сторону берём из pre/postTokenBalances
+    самой транзакции, а своп (в accountKeys есть пара/пул) отличаем от перевода.
+    """
+    tx = _rpc("getTransaction", [tx_hash, {
+        "encoding": "jsonParsed", "maxSupportedTransactionVersion": 0,
+    }]).get("result")
+    if not tx:
+        return {}
+    meta = tx.get("meta") or {}
+    keys = [k["pubkey"] for k in tx["transaction"]["message"]["accountKeys"]]
+    pre = {b["accountIndex"]: b for b in (meta.get("preTokenBalances") or [])}
+    post = {b["accountIndex"]: b for b in (meta.get("postTokenBalances") or [])}
+    delta = 0.0
+    src = ""
+    for idx in set(list(pre) + list(post)):
+        b = post.get(idx) or pre.get(idx)
+        if not b or b.get("mint") != MINT:
+            continue
+        acct = keys[idx] if idx < len(keys) else ""
+        if b.get("owner") != wallet and acct != wallet:
+            continue
+        a0 = float((pre.get(idx) or {}).get("uiTokenAmount", {}).get("uiAmount") or 0)
+        a1 = float((post.get(idx) or {}).get("uiTokenAmount", {}).get("uiAmount") or 0)
+        delta += a1 - a0
+    # Кто отдал токены: владелец аккаунта, у которого баланс упал.
+    for idx in set(list(pre) + list(post)):
+        b = post.get(idx) or pre.get(idx)
+        if not b or b.get("mint") != MINT:
+            continue
+        acct = keys[idx] if idx < len(keys) else ""
+        owner = b.get("owner") or ""
+        if owner == wallet or acct == wallet:
+            continue
+        a0 = float((pre.get(idx) or {}).get("uiTokenAmount", {}).get("uiAmount") or 0)
+        a1 = float((post.get(idx) or {}).get("uiTokenAmount", {}).get("uiAmount") or 0)
+        if a1 - a0 < -1:
+            src = owner or acct
+            break
+    signer = keys[0] if keys else ""
+    return {
+        "delta": delta,
+        "src": src,
+        "market": any(k in AMM_ACCOUNTS for k in keys),
+        "signer": signer,
+        "ts": tx.get("blockTime") or 0,
+        "one_hand": bool(signer) and signer not in (wallet, src),
+    }
 
 
 def _classify_drop(snap: dict, owner: str, drop_tokens: float) -> str:
@@ -486,6 +565,9 @@ def main():
     if live_supply:
         snap["supply"] = live_supply
         snap["supply_updated_utc"] = _now_iso()
+    # База сравнения для дефляции: сентимент-отчёт считает по ней падение саплая,
+    # не дублируя константу у себя (в снапшотном supply — raw-единицы).
+    snap["supply_ui_at_baseline"] = round(BASE_SUPPLY_UI_AT_BASELINE, 6)
     by_addr = {}
     for h in fetch_traders():
         if str(h.get("addr_type")) == "2":
