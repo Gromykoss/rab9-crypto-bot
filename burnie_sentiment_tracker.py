@@ -2368,7 +2368,8 @@ def _accum_watch_note() -> str:
                 f"суммарно +${total:,.0f} net-buy мелкими ордерами; топ-копатель держит "
                 f"{cur_pct if cur_pct is not None else top_pct}% саплая (ср. входа ниже рынка{sells_s}). "
             )
-        return f"{head}{burned_note} Мониторинг: BURNIE accumulator watch."
+        parts = [p.strip() for p in (head, burned_note, "Мониторинг: BURNIE accumulator watch.") if p.strip()]
+        return " ".join(parts)
     except Exception:
         return "он-чейн данные накопителей недоступны (см. accumulator watch)."
 
