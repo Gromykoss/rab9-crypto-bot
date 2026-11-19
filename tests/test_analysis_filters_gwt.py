@@ -1,8 +1,6 @@
-"""GWT-тесты FROZEN-спеки analysis-filters v1.1 (код домена: analyzer_main.py + sink.py).
+"""GWT-тесты FROZEN-спеки analysis-filters v1.3.
 
 Герметичность: сеть/время/внешние API замоканы, все пути состояния — tmp_path.
-Сценарии 4 (supply_concentration_flag), 5 (social_negative_priority) и
-12 (confirmed_scam_drop) в этот файл НЕ включены — реализующего кода в домене нет.
 """
 import asyncio
 import json
@@ -27,7 +25,19 @@ class _StopLoop(BaseException):
 
 def _paths(monkeypatch, tmp_path):
     """Все персистентные пути домена → tmp_path (реальный data/ не трогаем)."""
+    import importlib
+
     import analyzer_main as am
+    if REPO_ROOT not in Path(am.__file__).resolve().parents:
+        for module_name in list(sys.modules):
+            if module_name == "analyzer_main" or module_name == "config" or module_name == "operators" or module_name.startswith("operators."):
+                del sys.modules[module_name]
+        previous_path = list(sys.path)
+        try:
+            sys.path.insert(0, str(REPO_ROOT))
+            am = importlib.import_module("analyzer_main")
+        finally:
+            sys.path[:] = previous_path
 
     monkeypatch.setattr(am, "T0_QUEUE", tmp_path / "t0_queue.jsonl")
     monkeypatch.setattr(am, "ANALYSIS_QUEUE", tmp_path / "analysis_queue.jsonl")
@@ -170,6 +180,58 @@ def test_t0_queue_survives_restart(tmp_path, monkeypatch):
     monkeypatch.setattr(am, "_is_kabal", AsyncMock(return_value=False))
     asyncio.run(am.t0_tick(_mock_sink()))
     assert sorted(r["address"] for r in _jsonl(am.ANALYSIS_QUEUE)) == sorted([ADDR_A, ADDR_B])
+
+
+# ── 4. migrant-risk-profile ───────────────────────────────────────────────
+@pytest.mark.scenario("analysis-filters.supply_concentration_flag")
+def test_supply_concentration_flag_fraction_and_percent():
+    from operators import concentration_flag
+
+    # GIVEN топ-10 холдеров выше конфиг-порога WHEN формируется вердикт
+    assert "CONCENTRATION" in concentration_flag(0.61, 50)
+    assert "61.0%" in concentration_flag(61, 0.50)
+    # THEN флаг только при строгом превышении; неизвестное значение не выдумывается
+    assert concentration_flag(50, 50) == ""
+    assert concentration_flag(None, 50) == ""
+
+
+# ── 5. social-weight ──────────────────────────────────────────────────────
+@pytest.mark.scenario("analysis-filters.social_negative_priority")
+def test_social_negative_priority_and_verdict_flag(tmp_path, monkeypatch):
+    from unittest.mock import AsyncMock
+    import sink as sink_mod
+
+    am = _paths(monkeypatch, tmp_path)
+    _freeze_time(monkeypatch)
+    monkeypatch.setattr(am, "T0_INTERVAL_MIN", 0)
+    monkeypatch.setattr(am, "SOCIAL_NEGATIVE_THRESHOLD", 0.70)
+    monkeypatch.setattr(am, "SOCIAL_NEGATIVE_PRIORITY_PENALTY", 0.25)
+    monkeypatch.setattr(am, "_extract_baseline", lambda _a: {"liquidity_usd": 10000})
+    monkeypatch.setattr(am, "_is_kabal", AsyncMock(return_value=False))
+    am.T0_QUEUE.write_text(json.dumps({
+        "address": ADDR_A, "ts": NOW - 1,
+        "social": {"has_x": True, "confirmed": True, "negative_score": 0.80},
+    }) + "\n")
+
+    sink = sink_mod.Sink(out_dir=tmp_path / "analyses_out")
+    asyncio.run(am.t0_tick(sink))
+
+    # THEN подтверждённый per-token негатив понижает priority на 25%
+    queued = _jsonl(am.ANALYSIS_QUEUE)
+    assert queued[0]["priority"] == 7500.0
+    assert "SOCIAL NEGATIVE" in queued[0]["verdict_flags"][0]
+
+    async def fake_analysis(flagged_sink, address):
+        await flagged_sink.write("verdict", address, "TKN", "PASS")
+        return "sent"
+
+    monkeypatch.setattr(am, "send_msf_pairresolve", fake_analysis)
+    asyncio.run(am.rate_gate(sink))
+    assert "SOCIAL NEGATIVE" in _jsonl(sink.jsonl)[0]["text"]
+
+    # Отсутствующий X не блокирует: neutral multiplier, пустой flag.
+    from operators import social_weight
+    assert social_weight(None, confirmed=False, has_x=False) == (1.0, "")
 
 
 # ── 6. outcome-loop ────────────────────────────────────────────────────────
@@ -368,3 +430,28 @@ def test_kabal_cap_overflow_uses_common_queue_and_formula(tmp_path, monkeypatch)
     send.assert_awaited_once()
     assert send.await_args.args[1] == ADDR_B
     assert [r["address"] for r in _jsonl(am.ANALYSIS_QUEUE)] == [ADDR_A]
+
+
+# ── 12. safety-priority ───────────────────────────────────────────────────
+@pytest.mark.scenario("analysis-filters.confirmed_scam_drop")
+def test_confirmed_scam_drop_removes_both_queues_and_writes_reject(tmp_path, monkeypatch):
+    import sink as sink_mod
+
+    am = _paths(monkeypatch, tmp_path)
+    _freeze_time(monkeypatch)
+    monkeypatch.setattr(am, "T0_INTERVAL_MIN", 0)
+    monkeypatch.setattr(
+        am, "_extract_baseline", lambda _a: {"liquidity_usd": 20000, "honeypot": "fail"}
+    )
+    am.T0_QUEUE.write_text(json.dumps({"address": ADDR_A, "ts": NOW - 1}) + "\n")
+    am.ANALYSIS_QUEUE.write_text(json.dumps({"address": ADDR_A, "ts": NOW, "priority": 1}) + "\n")
+    sink = sink_mod.Sink(out_dir=tmp_path / "analyses_out")
+
+    asyncio.run(am.t0_tick(sink))
+
+    assert _lines(am.T0_QUEUE) == []
+    assert _lines(am.ANALYSIS_QUEUE) == []
+    records = _jsonl(sink.jsonl)
+    assert [record["type"] for record in records] == ["reject"]
+    assert records[0]["address"] == ADDR_A
+    assert "DROP: confirmed scam" in records[0]["text"]

@@ -1,4 +1,4 @@
-"""GWT-тесты спеки openspec/specs/standalone-analyzer.md (v1.2 FROZEN).
+"""GWT-тесты спеки openspec/specs/standalone-analyzer.md (v1.4 FROZEN).
 
 Проверяется реальное поведение продакшн-кода: analyzer_main (t0_enroll/t0_tick/
 rate_gate/digest_timer), sink.Sink (write/read_new/read_new_from), msf_http
@@ -10,15 +10,7 @@ cabal_detector) — детерминированные заглушки; исх�
 loopback запрещены autouse-фикстурой. Реальный data/ не затрагивается.
 HTTP-тесты поднимают настоящий ingress (start_msf_http_server) на 127.0.0.1:0.
 
-Дрейф спека↔код, зафиксированный тестами:
-* hard DROP в полном прогоне (send_msf_pairresolve, rugcheck=rugged) возвращает
-  "dropped_safety" и НЕ пишет reject-строку в sink (verdict-taxonomy спеки требует
-  строку reject-категории) — t0-путь rugcheck не читает вовсе;
-* reject-строка и очистка очереди в t0-пути реализованы по мёртвому пулу (liq<3000),
-  что и есть наблюдаемое следствие rug-pull;
-* baseline-поля вердикта вложены в record["baseline"], а не плоские;
-* offset-файл доставки (delivery-reader-contract) в репозитории не реализован —
-  см. отчёт по сценарию digest_offset_advance.
+Offset-файл доставки (delivery-reader-contract) намеренно вне репозитория.
 """
 import asyncio
 import builtins
@@ -316,9 +308,13 @@ def test_hard_drop_overrides(sb, monkeypatch):
     assert _read_jsonl(sb.jsonl) == []  # ни вердикта, ни отчёта — DROP перекрывает
     assert sb.llm == []
 
-    # WHEN: чек очереди t0_pending для rug-токена (пул слит, liq=0) — руг-пул вырезан
-    monkeypatch.setattr(sb.am, "_extract_baseline", lambda address: {"price_usd": "0.0", "liquidity_usd": 0})
+    # WHEN: любой queue-check подтверждает honeypot=fail
+    monkeypatch.setattr(
+        sb.am, "_extract_baseline",
+        lambda address: {"price_usd": "0.0", "liquidity_usd": 20000, "honeypot": "fail"},
+    )
     _write_jsonl(sb.am.T0_QUEUE, [{"address": ADDR_B, "ts": 0, "baseline": {}}])
+    _write_jsonl(sb.am.ANALYSIS_QUEUE, [{"address": ADDR_B, "ts": 0, "priority": 1}])
 
     asyncio.run(sb.am.t0_tick(sb.sink))
 
@@ -326,7 +322,7 @@ def test_hard_drop_overrides(sb, monkeypatch):
     records = _read_jsonl(sb.jsonl)
     assert [rec["type"] for rec in records] == ["reject"]
     assert records[0]["address"] == ADDR_B
-    assert "каскад" in records[0]["text"]
+    assert "DROP: confirmed scam" in records[0]["text"]
     assert _read_jsonl(sb.am.T0_QUEUE) == []
     assert _read_jsonl(sb.am.ANALYSIS_QUEUE) == []
 

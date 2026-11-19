@@ -1,4 +1,4 @@
-# Spec: standalone-analyzer — v1.3 FROZEN (2026-11-19, GWT-биндинг T6)
+# Spec: standalone-analyzer — v1.4 FROZEN (2026-11-19, T6 prose closure)
 
 > v1.1 → v1.2 (ре-чек Grok FAIL → правки): (1) standalone-process переписан —
 > полный прогон только в состоянии ANALYZED (v1.1-формулировка superseded);
@@ -6,9 +6,10 @@
 > строка дайджеста (не «без записи»); (4) type=manual заменён флагом
 > manual=true на type=verdict, вердикт-запись несёт outcome-бейзлайн.
 > v1.2 → v1.3: GWT-биндинг — 14 сценариев в карточной форме с id, тесты
-> `tests/test_standalone_analyzer_gwt.py`. Сценарий «агент забрал дайджест» остался prose:
-> доставка — вне репозитория (delivery-reader-contract), offset-файла в коде нет.
-> Текст шагов не менялся; поведение не менялось.
+> `tests/test_standalone_analyzer_gwt.py`.
+> v1.3 → v1.4: внешний сценарий доставки отмечен no-ci по
+> delivery-reader-contract; анализатор по-прежнему не владеет offset. Текст шагов
+> не менялся; поведение доставки не добавлялось.
 
 Purpose: ядро анализа без Telegram-зависимостей: HTTP-ingress + пайплайн + sink для
 доставки RAB9-агентом. Демонтаж Telegram-слоя и MSF-входа. ADR-0001.
@@ -70,6 +71,8 @@ Known Traps: процесс не имеет права слать в Telegram в
 ### Requirement: delivery-reader-contract
 Система определяет доставку: RAB9-агент (Hermes-профиль) SHALL читать `data/analyses_out/analyses.jsonl` по крону (окно дайджеста), парсить по схеме D-A1, доставлять владельцу в чат и фиксировать факт доставки offset-файлом `data/analyses_out/delivery_offset.json` (последний прочитанный id); записи до offset = доставлены, после = очередь. Анализатор SHALL NOT реализовывать доставку сам.
 #### Scenario: агент забрал дайджест
+<!-- no-ci -->
+Причина: delivery-reader-contract относит доставку и offset к внешнему RAB9-агенту.
 GIVEN digest-запись в sink и delivery_offset позади неё
 WHEN агент выполняет доставку
 THEN offset обновлён на id digest-записи, повторной доставки нет

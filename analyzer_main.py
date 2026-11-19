@@ -17,6 +17,8 @@ import requests
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from msf_http import _extract_baseline, send_msf_pairresolve, start_msf_http_server
+from config import SOCIAL_NEGATIVE_PRIORITY_PENALTY, SOCIAL_NEGATIVE_THRESHOLD
+from operators import Verdict, check_safety, social_weight
 from sink import Sink
 
 logging.basicConfig(
@@ -91,6 +93,58 @@ async def t0_enroll(address: str):
     _append(T0_QUEUE, {"address": address, "ts": time.time(), "baseline": baseline})
 
 
+def _safety_fields(*records):
+    merged = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        safety = record.get("safety") if isinstance(record.get("safety"), dict) else record
+        for key in ("honeypot", "rugcheck", "phase"):
+            if safety.get(key) is not None:
+                merged[key] = safety[key]
+    return merged
+
+
+def _remove_address(path: Path, address: str) -> None:
+    kept = []
+    for raw in _load(path):
+        try:
+            if json.loads(raw).get("address") == address:
+                continue
+        except ValueError:
+            pass
+        kept.append(raw)
+    _rewrite(path, kept)
+
+
+async def _drop_if_confirmed_scam(sink: Sink, address: str, *records) -> bool:
+    safety = _safety_fields(*records)
+    gate = check_safety(safety.get("honeypot"), safety.get("rugcheck"), safety.get("phase"))
+    if gate.verdict != Verdict.DROP:
+        return False
+    _remove_address(T0_QUEUE, address)
+    _remove_address(ANALYSIS_QUEUE, address)
+    await sink.write("reject", address, "?", f"DROP: confirmed scam ({gate.reason}).")
+    log.info("SAFETY DROP: %s removed from t0/analysis queues", address[:12])
+    return True
+
+
+class _VerdictFlagSink:
+    """Scoped sink view that attaches queue-derived flags to verdict records."""
+
+    def __init__(self, sink, flags):
+        self._sink = sink
+        self._flags = [flag for flag in flags if flag]
+
+    async def write(self, record_type, address, token, text, **extra):
+        if record_type == "verdict" and self._flags:
+            text = f"{text}\n" + "\n".join(self._flags)
+        return await self._sink.write(record_type, address, token, text, **extra)
+
+    def __getattr__(self, name):
+        return getattr(self._sink, name)
+
+
 # ── T0_PENDING → QUEUED (L1-пороги) ──
 async def t0_tick(sink: Sink):
     now = time.time()
@@ -106,6 +160,8 @@ async def t0_tick(sink: Sink):
             fresh = await asyncio.to_thread(_extract_baseline, address)
         except Exception:
             fresh = {}
+        if await _drop_if_confirmed_scam(sink, address, rec, fresh):
+            continue
         liq = float(fresh.get("liquidity_usd") or 0)
         if liq < 3000:  # умер: пул пуст/ниже критического
             log.info("T0: token %s не пережил каскад (liq=$%.0f) — дайджест-строка", address[:12], liq)
@@ -118,7 +174,21 @@ async def t0_tick(sink: Sink):
             _rewrite(T0_QUEUE, [l for l in _load(T0_QUEUE) if l != raw])
             continue
         kabal_bonus = 10.0 if await _is_kabal(address) else 0.0
-        _append(ANALYSIS_QUEUE, {"address": address, "ts": now, "priority": liq + kabal_bonus})
+        social = rec.get("social") if isinstance(rec.get("social"), dict) else {}
+        multiplier, social_flag = social_weight(
+            social.get("negative_score"),
+            confirmed=bool(social.get("confirmed")),
+            threshold=SOCIAL_NEGATIVE_THRESHOLD,
+            penalty=SOCIAL_NEGATIVE_PRIORITY_PENALTY,
+            has_x=social.get("has_x"),
+        )
+        queued = {"address": address, "ts": now, "priority": (liq + kabal_bonus) * multiplier}
+        if social_flag:
+            queued["verdict_flags"] = [social_flag]
+        safety = _safety_fields(rec, fresh)
+        if safety:
+            queued["safety"] = safety
+        _append(ANALYSIS_QUEUE, queued)
         _rewrite(T0_QUEUE, [l for l in _load(T0_QUEUE) if l != raw])
         log.info("T0 pass: %s → QUEUED (liq=$%.0f, kabal=%s)", address[:12], liq, bool(kabal_bonus))
 
@@ -166,6 +236,8 @@ async def rate_gate(sink: Sink):
     if best is None:
         return
     address = best.get("address", "")
+    if await _drop_if_confirmed_scam(sink, address, best):
+        return
     if done_this_hour >= RATE_CAP_H + KABAL_CAP_H:
         log.info("RATE CAP: %d/%d+KABAL — %s остаётся в очереди", done_this_hour, RATE_CAP_H, address[:12])
         return
@@ -173,7 +245,7 @@ async def rate_gate(sink: Sink):
     _rewrite(ANALYSIS_QUEUE, [l for i, l in enumerate(entries) if i != best_i])
     _append(RATE_LOG, {"ts": time.time(), "address": address})
     log.info("ANALYZED start: %s (priority=%.0f, done=%d/%d)", address[:12], best_p, done_this_hour, RATE_CAP_H)
-    await send_msf_pairresolve(sink, address)
+    await send_msf_pairresolve(_VerdictFlagSink(sink, best.get("verdict_flags") or []), address)
 
 
 # ── accumulation-radar P2 (спека v1.0: окно 24ч, 5 признаков) ──

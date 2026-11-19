@@ -161,6 +161,20 @@ analysis-filters.t0_queue_survives_restart:
   code:
     - analyzer_main.py
     - sink.py
+analysis-filters.supply_concentration_flag:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_supply_concentration_flag_fraction_and_percent
+  code:
+    - msf_analysis.py
+    - operators/operator_analysis_filters.py
+    - config.py
+analysis-filters.social_negative_priority:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_social_negative_priority_and_verdict_flag
+  code:
+    - analyzer_main.py
+    - operators/operator_analysis_filters.py
+    - config.py
 analysis-filters.outcome_recorded_after_24h:
   card: openspec/specs/analysis-filters.md
   test: tests/test_analysis_filters_gwt.py::test_outcome_recorded_after_24h
@@ -196,6 +210,13 @@ analysis-filters.kabal_cap_overflow:
   test: tests/test_analysis_filters_gwt.py::test_kabal_cap_overflow_uses_common_queue_and_formula
   code:
     - analyzer_main.py
+    - sink.py
+analysis-filters.confirmed_scam_drop:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_confirmed_scam_drop_removes_both_queues_and_writes_reject
+  code:
+    - analyzer_main.py
+    - operators/operator_safety.py
     - sink.py
 standalone-analyzer.t0_no_llm_on_arrival:
   card: openspec/specs/standalone-analyzer.md

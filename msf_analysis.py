@@ -187,6 +187,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     from config import BIRDEYE_API_KEY
 
     safety_flags = empty_safety_flags()
+    security_hints = {}
 
     # ── P0: 24h address deduplication ──
     dedupe_msg = check_dedupe(address)
@@ -539,7 +540,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 print(f"[ENRICH] gmgn track failed: {e}", file=sys.stderr)
 
             # security_hints для hard-gates (GMGN + RugCheck) — optional, backward-compat
-            security_hints: dict = {}
+            security_hints = {}
             if isinstance(gmgn_report, dict) and gmgn_report.get("ok"):
                 sec = gmgn_report.get("security") or {}
                 # renounced_freeze True → freeze_open False
@@ -771,6 +772,14 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 }
                 if verdict in downgrades:
                     verdict = downgrades[verdict]
+
+    from config import TOP10_CONCENTRATION_THRESHOLD_PCT
+    from operators import concentration_flag
+    concentration_warning = concentration_flag(
+        security_hints.get("top10_pct"), TOP10_CONCENTRATION_THRESHOLD_PCT
+    )
+    if concentration_warning:
+        verdict += f" | {concentration_warning}"
 
     # ── Proceed even without makers (Birdeye may be down) ──
     if not makers:
