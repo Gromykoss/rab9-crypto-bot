@@ -323,7 +323,7 @@ def build_compact_analysis_text(address: str, mode: str = "full", analysis_hando
     # ── P0: 24h address deduplication ──
     dedupe_msg = check_dedupe(address)
     if dedupe_msg:
-        return dedupe_msg, safety_flags
+        return append_social_verdict_line(dedupe_msg, handoff), safety_flags
 
     theory_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trading_theory.md")
     try:
@@ -1199,7 +1199,10 @@ def build_compact_analysis_text(address: str, mode: str = "full", analysis_hando
     else:
         lines.append("")
         lines.append("─── Вердикт ───")
-        lines.append(f"→ {verdict}")
+        verdict_full = _apply_summary_risk_flags(
+            verdict, security_hints, social_confirmed=social_confirmed
+        )
+        lines.append(f"→ {verdict_full}")
         lines.append("_Без PnL, без торговых советов._")
 
     # ── P0: sourceTags provenance line ──

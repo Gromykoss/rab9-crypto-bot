@@ -4,6 +4,7 @@
 """
 import asyncio
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -590,6 +591,152 @@ def test_social_thin_liq_skip_carries_social_flag(tmp_path, monkeypatch):
 
     text, _ = msf_analysis.build_compact_analysis_text(ADDR_A, "summary", handoff)
     assert "SKIP" in text and "SOCIAL" in text
+
+
+def _negative_social_handoff():
+    return {
+        "address": ADDR_A,
+        "x_query": "tkn",
+        "x_radar": {
+            "ok": True,
+            "cacheable": True,
+            "query": "tkn",
+            "posts": [],
+            "post_records": [],
+            "count": 0,
+        },
+        "verdict_flags": ["negative_sentiment"],
+        "social_confirmed": True,
+    }
+
+
+def _stub_build_compact_boundaries(monkeypatch, msf_analysis, *, liq=80_000, mc=500_000):
+    """HTTP + subprocess radar boundary для реального build_compact_analysis_text."""
+
+    class _Resp:
+        ok = True
+
+        def json(self):
+            return {
+                "pairs": [
+                    {
+                        "liquidity": {"usd": liq},
+                        "marketCap": mc,
+                        "volume": {"h24": 50_000},
+                    }
+                ]
+            }
+
+    radar_x_launches = {"n": 0}
+
+    def _fake_run(cmd, **kwargs):
+        if cmd and any("radar_x.py" in str(part) for part in cmd):
+            radar_x_launches["n"] += 1
+            payload = json.dumps(
+                {
+                    "ok": True,
+                    "query": cmd[-1] if cmd else "q",
+                    "posts": [],
+                    "post_records": [],
+                    "count": 0,
+                }
+            )
+            return subprocess.CompletedProcess(cmd, 0, stdout=payload, stderr="")
+        return subprocess.CompletedProcess(cmd, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(msf_analysis, "check_dedupe", lambda _a: None)
+    monkeypatch.setattr(msf_analysis, "get_token_address_from_dex", lambda _a: _a)
+    monkeypatch.setattr(
+        msf_analysis,
+        "build_pair_resolve_text",
+        lambda _a: "#1 pair | dex: raydium | name: TKN",
+    )
+    monkeypatch.setattr(msf_analysis, "extract_recommended_pair", lambda _t: ADDR_A)
+    monkeypatch.setattr(
+        msf_analysis, "get_birdeye_pair_makers", lambda *a, **k: {"items": []}
+    )
+    monkeypatch.setattr(
+        msf_analysis,
+        "rugcheck_check",
+        lambda _a: {"ok": True, "level": "low", "rugged": False},
+    )
+    monkeypatch.setattr(msf_analysis, "gmgn_enrich_token", lambda _a: {"ok": False})
+    monkeypatch.setattr(msf_analysis, "get_smart_money_score", lambda _a: None)
+    monkeypatch.setattr(msf_analysis, "gmgn_track_token_flow", lambda *_a, **_k: {"ok": False})
+    monkeypatch.setattr(msf_analysis, "gmgn_score_wallets", lambda *_a, **_k: {"ok": False})
+    monkeypatch.setattr(msf_analysis, "_get_cabal", lambda: {})
+    monkeypatch.setattr(
+        msf_analysis,
+        "cross_reference_makers",
+        lambda *a, **k: {
+            "cabal_count": 0,
+            "known": [],
+            "infrastructure": [],
+            "summary": "",
+        },
+    )
+    monkeypatch.setattr("requests.get", lambda *a, **k: _Resp())
+    monkeypatch.setattr(msf_analysis, "ask_llm", lambda *_a, **_k: "")
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+    return radar_x_launches
+
+
+@pytest.mark.parametrize(
+    "handoff,expected_launches",
+    [
+        (_negative_social_handoff(), 0),
+        ({}, 1),
+    ],
+    ids=["with_handoff", "without_handoff"],
+)
+def test_social_build_compact_radar_x_subprocess_count(
+    tmp_path, monkeypatch, handoff, expected_launches
+):
+    import msf_analysis
+
+    msf_analysis.clear_analysis_queue_context()
+    _radar_cache_path(monkeypatch, tmp_path)
+    launches = _stub_build_compact_boundaries(monkeypatch, msf_analysis, liq=80_000, mc=500_000)
+    msf_analysis.build_compact_analysis_text(ADDR_A, "summary", handoff)
+    assert launches["n"] == expected_launches
+
+
+def test_social_summary_verdict_line_80k_liq(tmp_path, monkeypatch):
+    import msf_analysis
+
+    msf_analysis.clear_analysis_queue_context()
+    handoff = _negative_social_handoff()
+    _radar_cache_path(monkeypatch, tmp_path)
+    _stub_build_compact_boundaries(monkeypatch, msf_analysis, liq=80_000, mc=500_000)
+    text, _ = msf_analysis.build_compact_analysis_text(ADDR_A, "summary", handoff)
+    assert "🎯" in text and "SOCIAL" in text
+
+
+def test_social_full_mode_verdict_carries_social(tmp_path, monkeypatch):
+    import msf_analysis
+
+    msf_analysis.clear_analysis_queue_context()
+    handoff = _negative_social_handoff()
+    _radar_cache_path(monkeypatch, tmp_path)
+    _stub_build_compact_boundaries(monkeypatch, msf_analysis, liq=80_000, mc=500_000)
+    text, _ = msf_analysis.build_compact_analysis_text(ADDR_A, "full", handoff)
+    assert "─── Вердикт ───" in text
+    assert "SOCIAL" in text
+
+
+def test_social_dedupe_recap_carries_social(tmp_path, monkeypatch):
+    import msf_analysis
+
+    msf_analysis.clear_analysis_queue_context()
+    handoff = _negative_social_handoff()
+    recap = (
+        "🔄 Already analyzed 2h ago — TKN\n"
+        "Score: 50/115 SOLID\n"
+        "🔗 https://dexscreener.com/solana/" + ADDR_A
+    )
+    monkeypatch.setattr(msf_analysis, "check_dedupe", lambda _a: recap)
+    text, _ = msf_analysis.build_compact_analysis_text(ADDR_A, "summary", handoff)
+    assert "Already analyzed" in text and "SOCIAL" in text
 
 
 # ── 6. outcome-loop ────────────────────────────────────────────────────────
