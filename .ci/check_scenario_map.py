@@ -100,6 +100,13 @@ WHITELIST = (
     "data/wallet_events.jsonl",
     # сигнал-пайплайн без scenario-карточек (легаси-домен, карта не покрывает)
     "msf_analysis.py",
+    # 19.11 ops runtime без scenario-карточек (unit tests есть у token_watch; GWT-биндинг — отдельной картой)
+    "scripts/token_watch.py",
+    "tests/test_token_watch.py",
+    "radar_x.py",
+    "loop_state.json",
+    "scripts/kg_benchmark.py",
+    "scripts/knowledge_graph.py",
 )
 
 
