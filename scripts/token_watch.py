@@ -7,8 +7,13 @@
 (sentiment, accum-watch, price-watch) не читается и не меняется.
 
 Что делает за один тик (крон, no_agent, тишина в норме):
-  1) DexScreener: цена по самой ликвидной паре, СУММАРНАЯ ликвидность и объём по
-     всем парам, число пар и DEX-ов, изменения 5м/1ч/6ч/24ч, покупки/продажи 24ч.
+  1) DexScreener: цена = МЕДИАНА по парам, котируемым в SOL/USDC/USDT; ликвидность
+     и объём — сумма по этим же парам, число пар и DEX-ов, изменения 5м/1ч/6ч/24ч,
+     покупки/продажи 24ч. Пары с экзотической котировкой в расчёт НЕ входят: их
+     USD-оценку DexScreener иногда считает битой (19.11 meteora CLAUDIA/MM отдала
+     priceUsd $61.15 и «ликвидность» $9.98 млн при реальных $0.0064 и ~$1 тыс. —
+     ошибка ~×9600 в курсе MM, из-за неё ложный «+829 807%» и MC $58 млрд).
+     Такие пары выносятся отдельной строкой и один раз сообщаются владельцу.
   2) Solana RPC (публичный, без ключей): живой саплай (getTokenSupply) и один раз
      — права mint/freeze (safety-строка).
   3) Алерты (каждый — только при срабатывании порога):
@@ -19,6 +24,11 @@
        • ИЗМЕНЕНИЕ САПЛАЯ      — ±0.5% (сжигание печью / докомпаунд минта)
        • РАЗМНОЖЕНИЕ ПАР       — +3 пары и больше за сутки (в пайплайне RAB9 это
                                  признак кабала: 08.11 по CLAUDIA был CABAL_EXPLOSION)
+       • ПАРА ВНЕ РАСЧЁТА     — один раз на адрес пары: экзотическая котировка
+                                 с «ликвидностью» ≥ 5× от чистых пар (спуф-витрина)
+     Санити-гейт (19.11): скачок цены больше ×10 между тиками — аномалия источника,
+     а не рынок: алерт не отправляем, а тики с битой оценкой вычищаем из истории,
+     иначе следующие 24 ч сыпались бы ложные «падение цены» и «слив ликвидности».
   4) Раз в сутки (04:00 UTC = 09:00 Бишкек) — короткая сводка по всем токенам.
 Повтор одного и того же типа алерта — не чаще 120 мин (антиспам).
 Время в сообщениях — Бишкек (UTC+5), как у владельца.
@@ -66,6 +76,11 @@ SELL_MIN_VOL = 500_000.0   # ...но сообщаем только при так
 SUPPLY_CHANGE_PCT = 0.5    # сжигание/допечатка саплая
 NEW_PAIRS_24H = 3          # рост числа пар за сутки
 ALERT_COOLDOWN_MIN = 120   # антиспам на тип алерта
+METRIC_VERSION = 2         # v2 (19.11): цена/ликвидность/объём — только по парам SOL/USDC/USDT
+CLEAN_QUOTES = frozenset({"SOL", "USDC", "USDT"})  # котировки, которым верим в USD
+SANITY_JUMP_X = 10.0       # расхождение цены/ликвидности больше — битая запись пары
+PRICE_SPREAD_X = 3.0       # цена пары дальше этого от медианы — запись не берём
+EXOTIC_LIQ_X = 5.0         # экзотическая пара крупнее чистых в столько раз — сообщаем
 DIGEST_UTC_HOUR = 4        # 04:00 UTC = 09:00 Бишкек
 DIGEST_TREND_PCT = 15.0    # заметное суточное движение для вердикта
 BISHKEK = timezone(timedelta(hours=5))
@@ -108,32 +123,106 @@ def _f(v) -> float:
         return 0.0
 
 
+def _median(values) -> float:
+    vals = sorted(v for v in values if v > 0)
+    if not vals:
+        return 0.0
+    n = len(vals)
+    mid = n // 2
+    return vals[mid] if n % 2 else (vals[mid - 1] + vals[mid]) / 2.0
+
+
+def _quote(p: dict) -> str:
+    return str(((p.get("quoteToken") or {}).get("symbol")) or "").strip().upper()
+
+
+def _liq_of(p: dict) -> float:
+    return _f((p.get("liquidity") or {}).get("usd"))
+
+
+def split_pairs(pairs):
+    """Чистые пары (котировка SOL/USDC/USDT) и прочие — с экзотической котировкой."""
+    valid = [p for p in pairs if isinstance(p, dict)]
+    clean = [p for p in valid if _quote(p) in CLEAN_QUOTES]
+    exotic = [p for p in valid if _quote(p) not in CLEAN_QUOTES]
+    return clean, exotic
+
+
+def pick_pair(pairs):
+    """Глубочайшая ДОСТОВЕРНАЯ пара: чистая котировка + цена рядом с медианой.
+
+    Битая USD-запись пары отбрасывается по расхождению с медианой, а не по
+    ликвидности: 19.11 meteora CLAUDIA/MM отдала priceUsd $61.15 (ошибка ~×9600
+    в курсе MM) при «ликвидности» $9.98 млн — по ликвидности она «побеждала».
+    """
+    clean, _ = split_pairs(pairs)
+    pool = clean or [p for p in pairs if isinstance(p, dict)]
+    if not pool:
+        return None
+    med = _median([_f(p.get("priceUsd")) for p in pool])
+    if med:
+        ok = [p for p in pool
+              if _f(p.get("priceUsd")) > 0
+              and max(_f(p.get("priceUsd")), med) / min(_f(p.get("priceUsd")), med) <= PRICE_SPREAD_X]
+        if ok:
+            pool = ok
+    return max(pool, key=_liq_of)
+
+
 def fetch_dex(mint: str) -> dict:
-    """Сводка по всем парам токена: цена, суммарная ликвидность/объём, сделки, пары."""
+    """Сводка по токену: цена, ликвидность/объём, сделки, пары.
+
+    Цена — медиана по парам с котировкой SOL/USDC/USDT; ликвидность и объём —
+    суммы по ним же. Экзотические пары в расчёт не входят (см. пояснение в шапке).
+    """
     out: dict = {"ok": False}
     try:
         data = _get_json("https://api.dexscreener.com/latest/dex/tokens/%s" % mint)
         pairs = [p for p in (data.get("pairs") or []) if isinstance(p, dict)]
         if not pairs:
             return out
-        pairs.sort(key=lambda p: _f((p.get("liquidity") or {}).get("usd")), reverse=True)
-        best = pairs[0]
+        clean, exotic = split_pairs(pairs)
+        best = pick_pair(pairs)
+        if best is None:
+            return out
+        base = clean or pairs          # нет ни одной чистой пары — считаем по всем (как раньше)
+        base = sorted(base, key=_liq_of, reverse=True)
+        price = _median([_f(p.get("priceUsd")) for p in base]) or _f(best.get("priceUsd"))
+        best_price = _f(best.get("priceUsd"))
+        best_mc = _f(best.get("marketCap"))
+        implied_supply = (best_mc / best_price) if best_price else 0.0
         txns = (best.get("txns") or {}).get("h24") or {}
         buys, sells = txns.get("buys"), txns.get("sells")
         ratio = round(_f(buys) / _f(sells), 2) if _f(sells) > 0 else None
+        exotic_sorted = sorted(exotic, key=_liq_of, reverse=True)
+        top = exotic_sorted[0] if exotic_sorted else None
         out.update({
             "ok": True,
-            "price": _f(best.get("priceUsd")) or None,
-            "mc": _f(best.get("marketCap")) or None,
-            "liq": sum(_f((p.get("liquidity") or {}).get("usd")) for p in pairs),
-            "vol24": sum(_f((p.get("volume") or {}).get("h24")) for p in pairs),
-            "vol1h": sum(_f((p.get("volume") or {}).get("h1")) for p in pairs),
+            "price": price or None,
+            # MC считаем по той же цене, что показываем: иначе цифры расходятся
+            "mc": round(price * implied_supply) if (price and implied_supply) else (best_mc or None),
+            "liq": sum(_liq_of(p) for p in base),
+            "vol24": sum(_f((p.get("volume") or {}).get("h24")) for p in base),
+            "vol1h": sum(_f((p.get("volume") or {}).get("h1")) for p in base),
             "chg_1h": _f((best.get("priceChange") or {}).get("h1")),
             "chg_24h": _f((best.get("priceChange") or {}).get("h24")),
             "buys": buys, "sells": sells, "ratio": ratio,
             "pairs": len(pairs),
+            "clean_pairs": len(base),
+            "exotic_pairs": len(exotic),
+            "exotic_liq": sum(_liq_of(p) for p in exotic),
+            "exotic_top": ({
+                "pair": top.get("pairAddress") or "",
+                "dex": top.get("dexId") or "?",
+                "quote": _quote(top) or "?",
+                "role": ("base" if str(((top.get("baseToken") or {}).get("address")) or "") == mint else "quote"),
+                "price": _f(top.get("priceUsd")),
+                "liq": _liq_of(top),
+                "vol24": _f((top.get("volume") or {}).get("h24")),
+                "url": top.get("url") or "",
+            } if top else None),
             "dexes": len({p.get("dexId") for p in pairs}),
-            "pool_url": best.get("url"),
+            "pool_url": best.get("url") or (base[0].get("url") if base else None),
         })
     except Exception:  # noqa: BLE001 — DexScreener недоступен: тишина, не спамим
         pass
@@ -253,6 +342,28 @@ def _snap_ago(snaps, now, hours):
     return snaps[0] if snaps else None
 
 
+def _prune_poisoned(snaps, price, liq):
+    """Убирает из истории тики, записанные по битой USD-оценке пары.
+
+    Скачок цены или ликвидности больше SANITY_JUMP_X раз — это не рынок, а
+    артефакт источника: такой тик остаётся в серии и потом 24 ч выдаёт ложные
+    «падение цены» и «слив ликвидности» на возврате к достоверной цифре.
+    """
+    keep, dropped = [], 0
+    for s in snaps:
+        sp, sl = _f(s.get("price")), _f(s.get("liq"))
+        bad = False
+        if price and sp and max(sp, price) / min(sp, price) > SANITY_JUMP_X:
+            bad = True
+        if liq and sl and max(sl, liq) / min(sl, liq) > SANITY_JUMP_X:
+            bad = True
+        if bad:
+            dropped += 1
+        else:
+            keep.append(s)
+    return keep, dropped
+
+
 def handle_token(cfg: dict, state: dict) -> list:
     """Проверяет один токен; возвращает список сообщений к отправке."""
     mint = cfg["mint"]
@@ -268,6 +379,31 @@ def handle_token(cfg: dict, state: dict) -> list:
     snaps = ts.get("snapshots") or []
     stamp = now_bk().strftime("%d.%m %H:%M")
 
+    # история: битые тики (USD-оценка пары через экзотическую валюту) не храним
+    snaps, dropped = _prune_poisoned(snaps, price, liq)
+    if dropped:
+        print("%s: из истории убрано %d тиков с битой USD-оценкой пары" % (cfg["symbol"], dropped),
+              file=sys.stderr)
+
+    # санити-гейт: скачок больше ×10 за тик — аномалия источника, а не рынок
+    prev_price = _f(ts.get("last_price"))
+    anomaly = bool(prev_price and price and max(price, prev_price) / min(price, prev_price) > SANITY_JUMP_X)
+    if anomaly:
+        print("%s: аномалия источника — цена %s против %s предыдущего тика (×%.0f), "
+              "алерты по цене подавлены, база пересчитана"
+              % (cfg["symbol"], fp(price), fp(prev_price),
+                 max(price, prev_price) / min(price, prev_price)), file=sys.stderr)
+
+    # смена методики: цифры старой серии считались по всем парам (включая битые),
+    # сравнивать их с новыми нельзя — иначе ложное «ликвидность уходит» на ровном месте
+    rebase = ts.get("metric_version") != METRIC_VERSION
+    if rebase:
+        print("%s: методика расчёта v%s → v%d — старая история несравнима, серия начата заново, "
+              "алерты по истории пропущены на один тик"
+              % (cfg["symbol"], ts.get("metric_version") or 1, METRIC_VERSION), file=sys.stderr)
+        ts["snapshots"] = snaps = []
+    ts["metric_version"] = METRIC_VERSION
+
     auth = ts.get("authorities") or fetch_authorities(mint)
     if auth:
         ts["authorities"] = auth
@@ -282,7 +418,7 @@ def handle_token(cfg: dict, state: dict) -> list:
             "👀 ВЗЯТ ПОД НАБЛЮДЕНИЕ: %s\n"
             "🪙 Минт: %s\n"
             "💵 Цена: %s | Капитализация: %s\n"
-            "💧 Ликвидность (по всем парам): %s | Объём 24ч: %s\n"
+            "💧 Ликвидность (по парам SOL/USDC/USDT): %s | Объём 24ч: %s\n"
             "🛠 Пар: %d на %d DEX | Права минта: %s | Права заморозки: %s\n"
             "📦 Саплай: %s токенов\n"
             "ℹ️ Контекст: %s\n"
@@ -297,26 +433,60 @@ def handle_token(cfg: dict, state: dict) -> list:
 
     s1h, s24h = _snap_ago(snaps, now, 1), _snap_ago(snaps, now, 24)
 
-    # 1. резкое движение цены
+    # 1. резкое движение цены (при аномалии источника не сравниваем — база битая)
     for kind, snap, th, label in (("price_1h", s1h, PRICE_FAST_PCT, "за час"),
                                   ("price_24h", s24h, PRICE_DAY_PCT, "за сутки")):
-        if snap and can_alert(ts, kind):
-            ref = _f(snap.get("price"))
-            if ref:
-                delta = (price - ref) / ref * 100.0
-                if abs(delta) >= th:
-                    msgs.append(
-                        "%s ЦЕНЫ: %s (%s)\n"
-                        "💵 %s → %s (%+.1f%%)\n"
-                        "💰 Капитализация: %s | Ликвидность: %s | Объём 24ч: %s\n"
-                        "📊 Покупок/продаж 24ч: %s/%s — %s\n"
-                        "⏱ %s Бишкек"
-                        % ("🚀 РОСТ" if delta > 0 else "📉 ПАДЕНИЕ", cfg["symbol"], label,
-                           fp(ref), fp(price), delta, fu(dex.get("mc")), fu(liq), fu(vol24),
-                           fnum(dex.get("buys")), fnum(dex.get("sells")), ratio_tag(dex.get("ratio")),
-                           stamp))
-                    mark_alert(ts, kind)
-                    break
+        if anomaly or not can_alert(ts, kind):
+            continue
+        ref = _f((snap or {}).get("price"))
+        if not ref:
+            continue
+        delta = (price - ref) / ref * 100.0
+        if abs(delta) >= th:
+            msgs.append(
+                "%s ЦЕНЫ: %s (%s)\n"
+                "💵 %s → %s (%+.1f%%)\n"
+                "💰 Капитализация: %s | Ликвидность: %s | Объём 24ч: %s\n"
+                "📊 Покупок/продаж 24ч: %s/%s — %s\n"
+                "⏱ %s Бишкек"
+                % ("🚀 РОСТ" if delta > 0 else "📉 ПАДЕНИЕ", cfg["symbol"], label,
+                   fp(ref), fp(price), delta, fu(dex.get("mc")), fu(liq), fu(vol24),
+                   fnum(dex.get("buys")), fnum(dex.get("sells")), ratio_tag(dex.get("ratio")),
+                   stamp))
+            mark_alert(ts, kind)
+            break
+
+    # 1b. пара вне расчёта — экзотическая котировка с «ликвидностью» больше чистых пар
+    top_exotic = dex.get("exotic_top")
+    if top_exotic and liq and _f(top_exotic.get("liq")) >= EXOTIC_LIQ_X * liq:
+        seen = ts.setdefault("exotic_seen", {})
+        if top_exotic.get("pair") and top_exotic["pair"] not in seen:
+            seen[top_exotic["pair"]] = now.isoformat()
+            if len(seen) > 50:      # держим журнал коротким
+                for old in sorted(seen, key=lambda k: seen[k])[:-50]:
+                    seen.pop(old, None)
+            diverg = (_f(top_exotic.get("price")) / price) if price else 0.0
+            role = top_exotic.get("role")
+            msgs.append(
+                "🧪 ПАРА ВНЕ РАСЧЁТА: %s\n"
+                "🛠 %s %s/%s — «ликвидность» %s против %s по парам SOL/USDC/USDT\n"
+                "💵 Её priceUsd: %s%s\n"
+                "🔎 Что это значит: %s Наша цена — %s (медиана по парам SOL/USDC/USDT),\n"
+                "   MC и ликвидность считаются без этой пары — на витрине DexScreener цифры\n"
+                "   по токену могут быть в разы больше.\n"
+                "🪙 Пара: %s\n"
+                "🔗 %s\n"
+                "⏱ %s Бишкек"
+                % (cfg["symbol"], top_exotic.get("dex"), top_exotic.get("quote"),
+                   cfg["symbol"] if role == "base" else "вне расчёта",
+                   fu(top_exotic.get("liq")), fu(liq), fp(top_exotic.get("price")),
+                   (" — против %s у нас (расхождение ×%.0f)" % (fp(price), diverg)) if (diverg >= SANITY_JUMP_X and role == "base") else "",
+                   ("наш токен в этой паре котируемый — её USD-цифры к нашей цене вообще не относятся."
+                    if role != "base" else
+                    "USD-оценка такой пары у DexScreener считается через курс экзотической "
+                    "валюты и бывает битой (19.11 meteora CLAUDIA/MM: priceUsd $61.15 при "
+                    "реальных $0.0064, MC $58 млрд против реальных ~$6 млн)."),
+                   fp(price), top_exotic.get("pair"), top_exotic.get("url") or "н/д", stamp))
 
     # 2. слив ликвидности
     if can_alert(ts, "liq"):
@@ -438,17 +608,24 @@ def maybe_digest(cfg: dict, state: dict) -> list:
         verdict = "🟡 СЛАБОСТЬ — продажи перевешивают"
     else:
         verdict = "⚪ БОКОВИК — выраженного перевеса нет"
+    exotic_line = ""
+    exotic_n = _f(dex.get("exotic_pairs"))
+    if exotic_n:
+        exotic_line = ("🧪 Вне расчёта: %d пар с экзотической котировкой — их «ликвидность» %s "
+                       "по данным DexScreener в цену/MC/ликвидность не входит\n"
+                       % (int(exotic_n), fu(dex.get("exotic_liq"))))
     return [
         "🗒 СВОДКА ЗА СУТКИ — %s\n"
         "💵 Цена: %s (%+.1f%% за 24ч) | Капитализация: %s\n"
         "💧 Ликвидность: %s | Объём 24ч: %s\n"
         "🤝 Сделки 24ч: %s покупок / %s продаж\n"
         "🛠 Пар: %d на %d DEX\n"
+        "%s"
         "📌 Вердикт: %s\n"
         "📎 %s"
         % (cfg["symbol"], fp(dex.get("price")), chg, fu(dex.get("mc")), fu(dex.get("liq")),
            fu(dex.get("vol24")), fnum(dex.get("buys")), fnum(dex.get("sells")),
-           dex["pairs"], dex["dexes"], verdict, dex.get("pool_url") or "")
+           dex["pairs"], dex["dexes"], exotic_line, verdict, dex.get("pool_url") or "")
     ]
 
 

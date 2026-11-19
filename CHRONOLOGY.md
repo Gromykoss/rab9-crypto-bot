@@ -929,3 +929,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **19.11.2026 12:51** — test(analyzer): lock social-weight reuse and verdict paths (Grok r3) (`1004be7`)
 - **19.11.2026 13:06** — fix(analyzer): no duplicate SOCIAL flag in dedupe recap (Grok r4 LOW) (`ef2c4bd`)
 - **19.11.2026 13:40** — chore(openspec): T6 final bookkeeping — 45/46 bound, freeze table rows for v1.3/v1.4 (`eee8c3f`)
+- **19.11.2026 13:41** — chore(spec-drift): write back SHA eee8c3f for T6 bookkeeping intent (`8b4a599`)

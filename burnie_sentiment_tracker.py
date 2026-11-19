@@ -1189,16 +1189,48 @@ def _dex_headers() -> dict[str, str]:
     return {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) RAB9/1.0"}
 
 
+VALID_QUOTE_SYMBOLS = frozenset({"SOL", "USDC", "USDT"})
+PAIR_PRICE_SPREAD_X = 3.0
+
+
 def _best_pair(pairs: list[Any]) -> dict[str, Any] | None:
-    """Пара с максимальной ликвидностью из списка DexScreener pairs."""
+    """Глубочайшая ДОСТОВЕРНАЯ пара: чистая котировка + цена рядом с медианой.
+
+    Просто «максимальная ликвидность» — ловушка: 19.11.2026 DexScreener отдал для
+    meteora CLAUDIA/MM priceUsd $61.15 и «ликвидность» $9.98 млн (ошибка ~×9600
+    в USD-курсе экзотической валюты MM при реальных $0.0064 и ~$1 тыс.). Такая
+    запись побеждала по ликвидности и превращала MC отчёта в $58 млрд, поэтому
+    пары с битой ценой (расхождение с медианой больше ×3) не рассматриваем.
+    """
     valid = [p for p in pairs if isinstance(p, dict)]
     if not valid:
         return None
-    return sorted(
-        valid,
-        key=lambda p: float((p.get("liquidity") or {}).get("usd") or 0),
-        reverse=True,
-    )[0]
+
+    def liq(p: dict[str, Any]) -> float:
+        return float((p.get("liquidity") or {}).get("usd") or 0)
+
+    def price(p: dict[str, Any]) -> float:
+        try:
+            return float(p.get("priceUsd") or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def quote(p: dict[str, Any]) -> str:
+        return str(((p.get("quoteToken") or {}).get("symbol")) or "").strip().upper()
+
+    pool = [p for p in valid if quote(p) in VALID_QUOTE_SYMBOLS] or valid
+    prices = sorted(v for v in (price(p) for p in pool) if v > 0)
+    median = prices[len(prices) // 2] if prices else 0.0
+    if median:
+        sane = [
+            p
+            for p in pool
+            if price(p) > 0
+            and max(price(p), median) / min(price(p), median) <= PAIR_PRICE_SPREAD_X
+        ]
+        if sane:
+            pool = sane
+    return max(pool, key=liq)
 
 
 def fetch_dex_metrics(mint: str | None = None) -> dict[str, Any]:
