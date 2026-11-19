@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""Lint GWT card shape and pytest scenario node bindings."""
+"""Lint GWT card shape and pytest scenario node bindings.
+
+Два класса сценариев:
+
+* карточка (`### GIVEN <условие> `<домен>.<id>`` + пункты `- WHEN` / `- THEN`) —
+  жёсткие правила: id обязателен и валиден, GIVEN в заголовке, WHEN/THEN пунктами;
+* prose-сценарий OpenSpec (`#### Scenario: <имя>` + строки GIVEN/WHEN/THEN без id) —
+  форма FROZEN-спек этого репо (standalone-analyzer, analysis-filters, pumpportal-ingress,
+  wallet-watch, accumulation-radar). Их домены намеренно не связаны с pytest-маркерами
+  (см. WHITELIST в check_scenario_map.py: «GWT-binding — на закрытии фичи 2 (T6)»),
+  поэтому id не требуется, но полнота GIVEN/WHEN/THEN проверяется — без этого
+  prose-ветка стала бы дырой в гейте.
+"""
 
 import argparse
 import ast
@@ -17,6 +29,10 @@ ANY_HEADER_RE = re.compile(r"^#{1,6}\s+")
 WHEN_RE = re.compile(r"^\s*-\s*(?:\*\*)?WHEN(?:\*\*)?\s*(.*)$", re.IGNORECASE)
 THEN_RE = re.compile(r"^\s*-\s*(?:\*\*)?THEN(?:\*\*)?\s*(.*)$", re.IGNORECASE)
 NO_CI_RE = re.compile(r"<!--\s*no-ci\s*-->", re.IGNORECASE)
+PROSE_SCENARIO_RE = re.compile(r"^\s*Scenario:", re.IGNORECASE)
+PLAIN_STEP_RE = re.compile(
+    r"^\s*(?:[-*]\s*)?(?:\*\*)?(GIVEN|WHEN|THEN)(?:\*\*)?\s*:?\s*(.*)$", re.IGNORECASE
+)
 
 
 def _strip_value(value):
@@ -93,6 +109,23 @@ def is_scenario_heading(text):
     return re.search(r"\bGIVEN\b", text, re.IGNORECASE) or "Scenario:" in text
 
 
+def is_prose_scenario(heading):
+    """Prose-форма OpenSpec: `Scenario: <имя>` без id в бэктиках (FROZEN-спеки)."""
+    if ANY_TICKS_RE.search(heading):
+        return False
+    return bool(PROSE_SCENARIO_RE.match(heading))
+
+
+def collect_steps(block):
+    """GIVEN/WHEN/THEN из блока: годятся и пункты `- WHEN ...`, и строки без пункта."""
+    steps = {"GIVEN": [], "WHEN": [], "THEN": []}
+    for line in block:
+        match = PLAIN_STEP_RE.match(line)
+        if match:
+            steps[match.group(1).upper()].append(match.group(2).strip())
+    return steps
+
+
 def extract_id(heading):
     valid_match = VALID_ID_IN_TICKS_RE.search(heading)
     if valid_match:
@@ -133,6 +166,16 @@ def parse_card(path):
         first_non_empty = [item for item in block if item.strip()][:3]
         if NO_CI_RE.search("\n".join(first_non_empty)):
             warnings.append(f"skipped (no-ci): {heading}")
+            continue
+
+        if is_prose_scenario(heading):
+            steps = collect_steps(block)
+            for key in ("GIVEN", "WHEN", "THEN"):
+                if not steps[key]:
+                    errors.append(f"prose scenario without {key}: {path}:{start_line}: {heading}")
+                elif not any(steps[key]):
+                    errors.append(f"empty {key}: {path}:{start_line}: {heading}")
+            warnings.append(f"unbound prose scenario (no id): {heading}")
             continue
 
         scenario_id, id_error = extract_id(heading)
