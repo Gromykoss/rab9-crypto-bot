@@ -927,3 +927,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **19.11.2026 11:56** — fix(analyzer): social-weight at rate_gate with zero extra X calls (Grok RETURN) (`a3282cf`)
 - **19.11.2026 12:29** — fix(analyzer): hand gate X result to analysis — exactly one X call per token (Grok RETURN r2) (`b6b1714`)
 - **19.11.2026 12:51** — test(analyzer): lock social-weight reuse and verdict paths (Grok r3) (`1004be7`)
+- **19.11.2026 13:06** — fix(analyzer): no duplicate SOCIAL flag in dedupe recap (Grok r4 LOW) (`ef2c4bd`)
