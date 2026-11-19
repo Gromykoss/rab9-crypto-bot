@@ -46,7 +46,12 @@ PROSE_SPEC_ALLOWLIST = frozenset(
         "openspec/specs/wallet-watch.md",
     }
 )
-FROZEN_MARKER_RE = re.compile(r"\bFROZEN\b")
+# Маркер «спека заморожена»: либо статус в строке версии (`v1.2 FROZEN`), либо отдельная
+# строка-статус `FROZEN` до первого сценария. Просто слово FROZEN в шапке не годится:
+# «not FROZEN» тоже давало бы право на prose (находка ревью от 19.11).
+FROZEN_VERSION_RE = re.compile(r"\bv\d+\.\d+\s+FROZEN\b")
+FROZEN_STATUS_LINE_RE = re.compile(r"^\s*>?\s*\**\s*(?:status\s*:\s*)?FROZEN\s*\**\s*$", re.IGNORECASE)
+FROZEN_NEGATED_RE = re.compile(r"\b(?:not|no|не)\s+FROZEN\b", re.IGNORECASE)
 FROZEN_HEADER_LINES = 10
 PLAIN_STEP_RE = re.compile(
     r"^\s*(?:[-*]\s*)?(?:\*\*)?(GIVEN|WHEN|THEN)(?:\*\*)?\s*:?\s*(.*)$", re.IGNORECASE
@@ -135,11 +140,20 @@ def is_prose_scenario(heading):
 
 
 def rel_path_posix(path):
-    """Путь карточки от корня репо (если файл вне репо — как есть)."""
+    """Путь карточки от корня репо; для файла вне репо — его РЕЗОЛВНУТЫЙ путь.
+
+    Нерезолвнутый путь в allowlist сравнивать нельзя (находка ревью от 19.11): запуск линтера
+    из чужого cwd с относительным путём `openspec/specs/wallet-watch.md` давал совпадение с
+    allowlist для файла, лежащего ВНЕ репозитория, — prose-правило обходилось.
+    """
     try:
-        return Path(path).resolve().relative_to(REPO_ROOT).as_posix()
-    except (ValueError, OSError):
-        return Path(path).as_posix()
+        resolved = Path(path).resolve()
+    except OSError:
+        return "<unresolved>"  # заведомо не совпадёт с allowlist
+    try:
+        return resolved.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return resolved.as_posix()
 
 
 def prose_allowed(path, lines):
@@ -151,7 +165,12 @@ def prose_allowed(path, lines):
     if rel_path_posix(path) not in PROSE_SPEC_ALLOWLIST:
         return False
     header = [line for line in lines if line.strip()][:FROZEN_HEADER_LINES]
-    return any(FROZEN_MARKER_RE.search(line) for line in header)
+    for line in header:
+        if FROZEN_NEGATED_RE.search(line):
+            continue  # «not FROZEN» / «не FROZEN» — не маркер
+        if FROZEN_VERSION_RE.search(line) or FROZEN_STATUS_LINE_RE.match(line):
+            return True
+    return False
 
 
 def collect_steps(block):

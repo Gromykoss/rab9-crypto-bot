@@ -918,3 +918,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **19.11.2026 08:54** — fix(ci): close checker findings on lint-cards prose branch (eb14688 RETURN, FAIL) (`d2c4569`)
 - **19.11.2026 09:15** — feat(openspec): GWT-биндинг пяти FROZEN-спек (T6) — 42 из 46 prose-сценариев переведены в карточки с id и связаны с pytest-тестами (42 новых теста, 5 файлов) и записями `scenario_map.yaml`; спеки v-бампнуты (форма, не поведение); в CI-набор сценарного job'а добавлены websockets/requests_oauthlib и путь `tests/**`
 - **19.11.2026 09:19** — feat(openspec): GWT-binding of five FROZEN domains (T6) — 42 of 46 scenarios bound (`93a579b`)
+- **19.11.2026 09:26** — fix(tests): make the new GWT tests CI-safe (repo root, not an absolute path) (`6588eb4`)
