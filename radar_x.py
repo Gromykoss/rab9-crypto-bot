@@ -17,6 +17,19 @@ TRACKED_INFLUENCERS = [
     "aeyakovenko", "elonmusk", "Ansem", "blknoiz06", "0xMert_", "rajgokal",
 ]
 
+SPAM_PATTERNS = [
+    "voted YES for", "get listed on FOMO", "almost on moonshot",
+    "only N more votes", "is about to get listed on moonshot",
+    "is so close for moonshot", "just voted YES",
+]
+
+
+def is_spam_text(text: str) -> bool:
+    text_lower = (text or "").lower()
+    if any(p.lower() in text_lower for p in SPAM_PATTERNS):
+        return True
+    return "moonshot" in text_lower and ("vote" in text_lower or "voted" in text_lower)
+
 
 def _load_oauth():
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "x_oauth.json")
@@ -55,24 +68,19 @@ def search_x(query: str) -> dict:
         # Return KB data only
         return {
             "ok": True, "query": query,
-            "posts": [], "influencers": kb_influencers,
+            "posts": [], "post_records": [], "influencers": kb_influencers,
             "engagement": {}, "count": 0,
         }
 
     clean_query = f"{query} -is:retweet"[:500]
     posts = []
+    post_records = []
     live_influencers = []
     total_likes = 0
     total_rt = 0
     spam_count = 0
     kabal_warnings = []
     large_mention_count = 0
-
-    SPAM_PATTERNS = [
-        "voted YES for", "get listed on FOMO", "almost on moonshot",
-        "only N more votes", "is about to get listed on moonshot",
-        "is so close for moonshot", "just voted YES",
-    ]
 
     try:
         # user.fields: public_metrics (followers) + verified — вес аккаунта для KOL/catalyst
@@ -101,8 +109,7 @@ def search_x(query: str) -> dict:
                 if followers >= 50000:
                     large_mention_count += 1
                 text = t.get("text", "")[:200]
-                text_lower = text.lower()
-                if any(p.lower() in text_lower for p in SPAM_PATTERNS) or ("moonshot" in text_lower and ("vote" in text_lower or "voted" in text_lower)):
+                if is_spam_text(text):
                     spam_count += 1
                     continue  # skip spam vote-begging
                 metrics = t.get("public_metrics", {})
@@ -114,6 +121,7 @@ def search_x(query: str) -> dict:
                 if likes or rt:
                     post_str += f" [{likes}♥ {rt}↻]"
                 posts.append(post_str)
+                post_records.append({"username": username, "text": text})
                 if username.lower() in [h.lower() for h in TRACKED_INFLUENCERS]:
                     live_influencers.append(
                         f"⭐ LIVE: @{username} ({followers:,} followers): {text[:120]}"
@@ -141,6 +149,7 @@ def search_x(query: str) -> dict:
     return {
         "ok": True, "query": clean_query,
         "posts": posts[:MAX_RESULTS],
+        "post_records": post_records[:MAX_RESULTS],
         "influencers": all_influencers[:5],
         "engagement": {"likes": total_likes, "retweets": total_rt},
         "count": len(posts),

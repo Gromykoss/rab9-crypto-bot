@@ -1,4 +1,4 @@
-# Spec: analysis-filters — v1.3 FROZEN (2026-11-19, T6 prose closure)
+# Spec: analysis-filters — v1.4 FROZEN (2026-11-19, T6 social-weight closure)
 
 > R4-R9 перенесены из pumpportal-ingress v0.1 (ревью e61ce676). Правки v1.0 по
 > решению владельца 11.10: КАЧЕСТВО ВЫШЕ КОЛИЧЕСТВА — всё (включая alert фаз)
@@ -11,8 +11,9 @@
 > v1.1 → v1.2: GWT-биндинг — 9 сценариев в карточной форме с id, тесты
 > `tests/test_analysis_filters_gwt.py`.
 > v1.2 → v1.3: концентрация и confirmed-scam связаны с реальными verdict/queue
-> точками. Social-weight остаётся prose/open item: в production нет per-token
-> sentiment producer; глобальный BURNIE-снапшот намеренно не переиспользуется.
+> точками.
+> v1.3 → v1.4: per-token social-weight — offline-классификатор по кешу radar_x
+> (один X-вызов на t0, full analysis переиспользует кеш); BURNIE jsonl не читается.
 
 Purpose: отбор мигрантов перед полным AI-анализом и дисциплина доставки.
 Files: определяются design'ом фичи 2 (модули пайплайна: msf_analysis, msf_dedupe, handlers, delivery).
@@ -40,10 +41,9 @@ Known Traps: пороги на t=0 мигранта должны быть мяг
 
 ### Requirement: social-weight
 Система SHALL повышать приоритет в очереди анализа для токенов с живым X-аккаунтом и понижать при подтверждённой негативной тональности по конфигурируемой процедуре проверки; отсутствие аккаунта SHALL NOT блокировать анализ.
-#### Scenario: негативная тональность
-GIVEN проверка соцсетей токена вернула подтверждённый негатив выше порога
-WHEN формируется очередь
-THEN приоритет токена понижен, флаг — в вердикт
+### GIVEN проверка соцсетей токена вернула подтверждённый негатив выше порога `analysis-filters.social_negative_priority`
+- WHEN формируется очередь
+- THEN приоритет токена понижен, флаг — в вердикт
 
 ### Requirement: outcome-loop
 Система SHALL для каждого вердикта PASS/FLAG фиксировать исход через конфигурируемый интервал (старт 24ч: 2x / умер / флэт) в персистентном jsonl.

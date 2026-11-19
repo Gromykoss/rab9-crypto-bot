@@ -62,17 +62,38 @@ def empty_safety_flags() -> dict:
     return {"honeypot": "", "rugcheck": "", "phase": ""}
 
 
-def _apply_summary_risk_flags(verdict: str, security_hints: dict) -> str:
+def resolve_x_enrichment_raw(address: str) -> tuple[str, bool]:
+    """Кеш radar_x с t0; subprocess только при промахе. Возвращает (json, need_subprocess)."""
+    import json
+
+    from config import RADAR_X_CACHE_TTL_H
+    from operators.radar_x_cache import get_cached
+
+    cached_x = get_cached(address, ttl_seconds=RADAR_X_CACHE_TTL_H * 3600)
+    if cached_x and cached_x.get("radar"):
+        return json.dumps(cached_x["radar"], ensure_ascii=False), False
+    return "", True
+
+
+def _apply_summary_risk_flags(verdict: str, security_hints: dict, *, social_confirmed: bool = False) -> str:
     """Финальная сборка deterministic-флагов summary-вердикта."""
     from config import TOP10_CONCENTRATION_THRESHOLD_PCT
-    from operators import concentration_flag
+    from operators import concentration_flag, negative_sentiment_flag
 
+    extras = []
     warning = concentration_flag(
         security_hints.get("top10_pct"),
         TOP10_CONCENTRATION_THRESHOLD_PCT,
         source="gmgn_percent",
     )
-    return f"{verdict} | {warning}" if warning else verdict
+    if warning:
+        extras.append(warning)
+    social_flag = negative_sentiment_flag(social_confirmed)
+    if social_flag:
+        extras.append(social_flag)
+    if not extras:
+        return verdict
+    return f"{verdict} | {' | '.join(extras)}"
 
 
 def extract_recommended_pair(pair_resolve_text: str):
@@ -500,16 +521,18 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
             return ""
 
         from concurrent.futures import ThreadPoolExecutor, as_completed
-        x_raw = ""
+
+        x_raw, need_x_subprocess = resolve_x_enrichment_raw(address)
         gh_raw = ""
         with ThreadPoolExecutor(max_workers=6) as ex:
             futures = {
-                ex.submit(_run_radar, "radar_x.py", x_query): "x",
                 ex.submit(_run_radar, "radar_gh.py", token_name if token_name != "?" else address): "gh",
                 ex.submit(_run_radar, "chart_analysis.py", token_addr): "chart",
                 ex.submit(_run_radar, "onchain_check.py", token_addr): "onchain",
                 ex.submit(_run_radar, "creator_monitor.py", token_addr): "creator",
             }
+            if need_x_subprocess:
+                futures[ex.submit(_run_radar, "radar_x.py", x_query)] = "x"
             for f in as_completed(futures, timeout=20):
                 kind = futures[f]
                 try:
@@ -1060,11 +1083,22 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     if should_escalate:
         lines.append(f"⚠️ {escalate_reason}")
 
+    social_confirmed = False
+    try:
+        from config import RADAR_X_CACHE_TTL_H
+        from operators.radar_x_cache import get_cached
+
+        social_hit = get_cached(address, ttl_seconds=RADAR_X_CACHE_TTL_H * 3600)
+        if social_hit and (social_hit.get("social") or {}).get("confirmed"):
+            social_confirmed = True
+    except Exception:
+        pass
+
     if mode == "summary":
         # ── P0: RugCheck gate — force AVOID if high/rugged ──
         if rugcheck_level == "high" or rugcheck_report.get("rugged"):
             verdict = "⚠️ AVOID (RugCheck: HIGH RISK)"
-        verdict = _apply_summary_risk_flags(verdict, security_hints)
+        verdict = _apply_summary_risk_flags(verdict, security_hints, social_confirmed=social_confirmed)
         lines.append("")
         lines.append(f"🎯 {verdict}")
     else:

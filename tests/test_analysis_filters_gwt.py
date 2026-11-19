@@ -216,7 +216,99 @@ def test_supply_concentration_flag_fraction_and_percent():
     assert "RugCheck: HIGH RISK" in verdict and "CONCENTRATION" in verdict
     # Удаление вызова из build_compact_analysis_text обязано ломать этот тест.
     source = inspect.getsource(msf_analysis.build_compact_analysis_text)
-    assert "_apply_summary_risk_flags(verdict, security_hints)" in source
+    assert "_apply_summary_risk_flags(verdict, security_hints," in source
+
+
+def _negative_radar_payload():
+    return {
+        "ok": True,
+        "query": "test",
+        "posts": [
+            "@alice (100): obvious scam rug",
+            "@bob (200): honeypot drain stay away",
+        ],
+        "post_records": [
+            {"username": "alice", "text": "obvious scam rug"},
+            {"username": "bob", "text": "honeypot drain stay away"},
+        ],
+        "count": 2,
+        "spam_detected": 0,
+    }
+
+
+def _radar_cache_path(monkeypatch, tmp_path):
+    p = tmp_path / "radar_x_per_token.json"
+    monkeypatch.setenv("RADAR_X_CACHE_PATH", str(p))
+    return p
+
+
+# ── 5. social-weight ─────────────────────────────────────────────────────
+@pytest.mark.scenario("analysis-filters.social_negative_priority")
+def test_social_negative_priority_lowers_queue_and_verdict_flag(tmp_path, monkeypatch):
+    import inspect
+    from unittest.mock import AsyncMock
+
+    import msf_analysis
+
+    # ── confirmed negative → пониженный приоритет + флаг вердикта
+    am = _paths(monkeypatch, tmp_path)
+    _radar_cache_path(monkeypatch, tmp_path)
+    _freeze_time(monkeypatch)
+    monkeypatch.setattr(am, "T0_INTERVAL_MIN", 20)
+    am.T0_QUEUE.write_text(
+        json.dumps({"address": ADDR_A, "ts": NOW - (20 * 60 + 60), "baseline": {"liquidity_usd": 1500}}) + "\n"
+    )
+    calls = {"x": 0}
+
+    def _fake_search(_query):
+        calls["x"] += 1
+        return _negative_radar_payload()
+
+    monkeypatch.setattr("radar_x.search_x", _fake_search)
+    monkeypatch.setattr(am, "_extract_baseline", lambda a: {"price_usd": "0.01", "liquidity_usd": 24000})
+    monkeypatch.setattr(am, "_is_kabal", AsyncMock(return_value=False))
+
+    asyncio.run(am.t0_tick(_mock_sink()))
+
+    queued = _jsonl(am.ANALYSIS_QUEUE)
+    assert [r["address"] for r in queued] == [ADDR_A]
+    assert queued[0]["priority"] == pytest.approx(24000.0 * 0.75)
+    assert queued[0].get("verdict_flags") == ["negative_sentiment"]
+    assert calls["x"] == 1
+
+    verdict = msf_analysis._apply_summary_risk_flags(
+        "⚠️ AVOID (RugCheck: HIGH RISK)",
+        {},
+        social_confirmed=True,
+    )
+    assert "SOCIAL" in verdict and "негатив" in verdict.lower()
+
+    raw, need = msf_analysis.resolve_x_enrichment_raw(ADDR_A)
+    assert raw and not need
+    assert calls["x"] == 1
+    assert "resolve_x_enrichment_raw" in inspect.getsource(msf_analysis.build_compact_analysis_text)
+
+    # ── нейтраль / нет auth → очередь без штрафа, BURNIE jsonl не используется
+    neutral = tmp_path / "neutral"
+    neutral.mkdir(exist_ok=True)
+    am2 = _paths(monkeypatch, neutral)
+    _radar_cache_path(monkeypatch, neutral)
+    _freeze_time(monkeypatch)
+    monkeypatch.setattr(am2, "T0_INTERVAL_MIN", 20)
+    am2.T0_QUEUE.write_text(
+        json.dumps({"address": ADDR_B, "ts": NOW - (20 * 60 + 60)}) + "\n"
+    )
+    assert "community_sentiment" not in inspect.getsource(am2._prime_social_radar)
+    monkeypatch.setattr(
+        "radar_x.search_x",
+        lambda _q: {"ok": True, "posts": [], "post_records": [], "count": 0},
+    )
+    monkeypatch.setattr(am2, "_extract_baseline", lambda a: {"price_usd": "0.01", "liquidity_usd": 24000})
+    monkeypatch.setattr(am2, "_is_kabal", AsyncMock(return_value=False))
+    asyncio.run(am2.t0_tick(_mock_sink()))
+    queued_b = _jsonl(am2.ANALYSIS_QUEUE)
+    assert queued_b[0]["priority"] == 24000.0
+    assert not queued_b[0].get("verdict_flags")
 
 
 # ── 6. outcome-loop ────────────────────────────────────────────────────────

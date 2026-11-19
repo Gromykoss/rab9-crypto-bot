@@ -52,6 +52,55 @@ OUTCOME_DEAD_LIQ = float(_env("ANALYZER_OUTCOME_DEAD_LIQ_USD", "5000"))
 OUTCOME_AFTER_H = float(_env("ANALYZER_OUTCOME_AFTER_H", "24"))
 
 
+def _x_query_for(address: str) -> str:
+    return address[:12]
+
+
+def _prime_social_radar(address: str) -> tuple[dict, dict]:
+    """Один X-поиск на токен: кеш + offline-классификатор негатива."""
+    from config import (
+        RADAR_X_CACHE_MAX,
+        RADAR_X_CACHE_TTL_H,
+        SOCIAL_NEGATIVE_MIN_AUTHORS,
+        SOCIAL_NEGATIVE_SHARE_THRESHOLD,
+    )
+    from operators.operator_social_weight import classify_from_radar
+    from operators.radar_x_cache import get_cached, put_cached
+    from radar_x import search_x
+
+    ttl = RADAR_X_CACHE_TTL_H * 3600
+    hit = get_cached(address, ttl_seconds=ttl)
+    if hit:
+        return hit.get("radar") or {}, hit.get("social") or {}
+
+    query = _x_query_for(address)
+    try:
+        radar = search_x(query)
+    except Exception:
+        radar = {"ok": False, "posts": [], "post_records": []}
+
+    score, confirmed, reasons = classify_from_radar(
+        radar,
+        min_authors=SOCIAL_NEGATIVE_MIN_AUTHORS,
+        negative_share_threshold=SOCIAL_NEGATIVE_SHARE_THRESHOLD,
+    )
+    social = {
+        "score": score,
+        "confirmed": confirmed,
+        "reasons": reasons,
+        "verdict_flags": ["negative_sentiment"] if confirmed else [],
+    }
+    put_cached(
+        address,
+        query,
+        radar,
+        social=social,
+        ttl_seconds=ttl,
+        max_entries=RADAR_X_CACHE_MAX,
+    )
+    return radar, social
+
+
 def _append(path: Path, record: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
@@ -164,7 +213,17 @@ async def t0_tick(sink: Sink):
             _rewrite(T0_QUEUE, [l for l in _load(T0_QUEUE) if l != raw])
             continue
         kabal_bonus = 10.0 if await _is_kabal(address) else 0.0
-        queued = {"address": address, "ts": now, "priority": liq + kabal_bonus}
+        _, social = await asyncio.to_thread(_prime_social_radar, address)
+        priority = liq + kabal_bonus
+        from config import SOCIAL_NEGATIVE_PRIORITY_PENALTY
+
+        if social.get("confirmed"):
+            priority *= 1.0 - SOCIAL_NEGATIVE_PRIORITY_PENALTY
+        queued = {"address": address, "ts": now, "priority": priority}
+        if social.get("verdict_flags"):
+            queued["verdict_flags"] = list(social["verdict_flags"])
+        if social:
+            queued["social_weight"] = social
         safety = _safety_fields(rec, fresh)
         if safety:
             queued["safety"] = safety
