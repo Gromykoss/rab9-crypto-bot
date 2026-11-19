@@ -913,3 +913,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **18.11.2026 01:47** — feat(token-watch): second token (CLAUDIA) under observation — separate multi-token watcher (`b734fc9`)
 - **19.11.2026 07:04** — fix(token-watch): honest unknown authorities, no spam on bad state, named digest threshold, drop dead code (`204dbb1`)
 - **19.11.2026 07:34** — ci(gwt): whitelist ops runtime files without scenario cards (token_watch, radar_x, kg, loop_state) (`b5da475`)
+- **19.11.2026 08:33** — fix(ci): lint-cards recognises OpenSpec prose scenarios (FROZEN specs need no card id) (`eb14688`)

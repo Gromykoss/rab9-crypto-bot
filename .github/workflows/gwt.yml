@@ -29,8 +29,8 @@ jobs:
   lint-cards:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: lint GWT cards
@@ -40,9 +40,9 @@ jobs:
     needs: lint-cards
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: {fetch-depth: 0}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: scenario map completeness
@@ -64,9 +64,9 @@ jobs:
     needs: completeness
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: {fetch-depth: 0}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install pytest pytest-asyncio requests python-dotenv httpx pydantic
