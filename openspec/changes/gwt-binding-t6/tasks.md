@@ -7,14 +7,25 @@ MUST NOT (держим в голове при каждой задаче):
 
 Формат id: `<домен>.<snake_case>` (совпадает с `^[a-z0-9-]+\.[a-z0-9_]+$`).
 
-## Итог (19.11)
+## Итог (19.11, финал)
 
-42 сценария из 46 связаны (карточка + маркер + запись в карте + код домена). Не связаны четыре:
-`analysis-filters.supply_concentration_flag`, `analysis-filters.social_negative_priority`,
-`analysis-filters.confirmed_scam_drop` (реализации в домене нет: концентрация/соцслой/DROP-ветка
-в analyzer_main.py и sink.py отсутствуют), `standalone-analyzer.digest_offset_advance`
-(доставка — вне репозитория, delivery-reader-contract). Линтер: 0 ошибок, 4 предупреждения
-(ровно эти четыре prose-сценария) вместо прежних 46.
+**45 сценариев из 46** связаны (карточка с id + pytest-маркер + запись в `scenario_map.yaml` +
+код домена). Первая волна дала 42; ещё три (`analysis-filters.supply_concentration_flag`,
+`analysis-filters.social_negative_priority`, `analysis-filters.confirmed_scam_drop`) закрыты
+реальным поведением домена отдельными коммитами `ea179e5`…`ef2c4bd` — не заглушками: сначала
+появился код (оператор концентрации top-10, per-token social-weight на rate_gate с одним
+X-вызовом на токен, queue-level DROP в обе очереди + `sink(reject)`), затем карточка и тест.
+
+Не связан один сценарий — `standalone-analyzer` «агент забрал дайджест»
+(прежнее имя `digest_offset_advance`): помечен `<!-- no-ci -->` со ссылкой на
+`delivery-reader-contract` — доставка и offset принадлежат внешнему RAB9-агенту, в репозитории
+реализации нет и по контракту быть не должно. Линтер: **0 ошибок, 1 предупреждение**
+(ровно этот prose-сценарий) вместо 46 предупреждений на старте.
+
+Пять FROZEN-спек после T6: pumpportal-ingress **v0.4**, analysis-filters **v1.4**,
+standalone-analyzer **v1.4**, wallet-watch **v1.1**, accumulation-radar **v1.1** —
+текст шагов сценариев не менялся, менялась форма карточки (+3 версии закрыты реальным
+поведением по ходу T6).
 
 ## Волна 0 — каркас
 
@@ -54,6 +65,13 @@ MUST NOT (держим в голове при каждой задаче):
 - [x] T4.2 Негативная проверка честности тестов: мутация 2–3 констант домена по очереди →
       соответствующий сценарный тест обязан упасть; константа возвращается на место —
       критерий: по каждому домену ≥1 подтверждённая мутация.
-- [ ] T4.3 Полные гейты: pytest всего набора, линтер, `check_scenario_map --base`, прогон
+- [x] T4.3 Полные гейты: pytest всего набора, линтер, `check_scenario_map --base`, прогон
       workflow `gwt` на main — критерий: всё зелёное, ссылка на прогон в отчёте.
-- [ ] T4.4 Отчёт владельцу: связано N из 46, что осталось prose и почему, остаточные риски.
+      Факт 19.11: `pytest tests/ -q` → **101 passed** (сценарный срез `-m scenario` → 63 passed,
+      38 deselected); `lint_gwt_cards.py openspec/specs --map .ci/scenario_map.yaml` →
+      **0 errors, 1 expected warning**; `check_scenario_map.py --base HEAD~10` →
+      «scenario map completeness OK: 51 scenarios»; workflow `gwt` на `main` (коммит `6843650`) —
+      run [44530242330](https://github.com/Gromykoss/rab9-crypto-bot/actions/runs/44530242330),
+      jobs lint-cards / completeness / scenarios — все **success**.
+- [x] T4.4 Отчёт владельцу: связано N из 46, что осталось prose и почему, остаточные риски.
+      Отчёт отдан владельцу в чат 19.11 (45 из 46; остаток — `no-ci` доставка; риски в отчёте).

@@ -17,6 +17,9 @@ CDD-процесс: cdd-suite v1.4.0 (8 шагов, стоп-гейты, фри�
 | 2026-11-19 | standalone-analyzer | **v1.3** (GWT-биндинг T6: 14 сценариев → карточки с id + тесты; «агент забрал дайджест» остался prose) | openspec/specs/standalone-analyzer.md |
 | 2026-11-19 | wallet-watch | **v1.1** (GWT-биндинг T6: 4 сценария → карточки с id + тесты) | openspec/specs/wallet-watch.md |
 | 2026-11-19 | accumulation-radar | **v1.1** (GWT-биндинг T6: 6 сценариев → карточки с id + тесты) | openspec/specs/accumulation-radar.md |
+| 2026-11-19 | analysis-filters | **v1.3** (T6, закрытие prose реальным поведением: концентрация top-10 ≥50%/<70% и confirmed-scam DROP связаны с verdict/queue-точками — DROP чистит обе очереди и пишет `sink(reject)`) | openspec/specs/analysis-filters.md |
+| 2026-11-19 | analysis-filters | **v1.4** (T6 social-weight closure: per-token offline-классификатор негатива по снимку radar_x на rate_gate, ровно один X-вызов на токен, handoff в full analysis без второго search; BURNIE-jsonl не читается) | openspec/specs/analysis-filters.md |
+| 2026-11-19 | standalone-analyzer | **v1.4** (T6 prose closure: внешний сценарий доставки помечен `no-ci` по `delivery-reader-contract` — offset принадлежит RAB9-агенту; текст шагов и поведение не менялись) | openspec/specs/standalone-analyzer.md |
 
 ## Правила
 
