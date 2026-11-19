@@ -108,6 +108,8 @@ def append_social_verdict_line(text: str, handoff: dict | None) -> str:
     """Добавляет строку 🎯 с SOCIAL-флагом к раннему вердикту (SKIP и т.п.)."""
     if not social_confirmed_from_handoff(handoff):
         return text
+    if "SOCIAL:" in text:  # recap already carries the stored flag — no duplicate
+        return text
     flagged = _apply_summary_risk_flags("SUMMARY", {}, social_confirmed=True)
     if "SOCIAL" not in flagged:
         return text

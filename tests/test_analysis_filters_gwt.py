@@ -739,6 +739,21 @@ def test_social_dedupe_recap_carries_social(tmp_path, monkeypatch):
     assert "Already analyzed" in text and "SOCIAL" in text
 
 
+def test_social_dedupe_recap_no_duplicate_flag(tmp_path, monkeypatch):
+    import msf_analysis
+
+    msf_analysis.clear_analysis_queue_context()
+    handoff = _negative_social_handoff()
+    recap = (
+        "🔄 Already analyzed 2h ago — TKN\n"
+        "Verdict: ⏳ WAIT | ❓ НЕИЗВЕСТНО | ⚠️ SOCIAL: подтверждённый негатив в X-обсуждении\n"
+        "🔗 https://dexscreener.com/solana/" + ADDR_A
+    )
+    monkeypatch.setattr(msf_analysis, "check_dedupe", lambda _a: recap)
+    text, _ = msf_analysis.build_compact_analysis_text(ADDR_A, "summary", handoff)
+    assert text.count("SOCIAL:") == 1
+
+
 # ── 6. outcome-loop ────────────────────────────────────────────────────────
 @pytest.mark.scenario("analysis-filters.outcome_recorded_after_24h")
 def test_outcome_recorded_after_24h(tmp_path, monkeypatch):
