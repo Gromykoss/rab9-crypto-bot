@@ -52,6 +52,39 @@ OUTCOME_DEAD_LIQ = float(_env("ANALYZER_OUTCOME_DEAD_LIQ_USD", "5000"))
 OUTCOME_AFTER_H = float(_env("ANALYZER_OUTCOME_AFTER_H", "24"))
 
 
+def _bound_social_x_radar(radar: dict | None) -> dict:
+    """Урезанный снимок radar_x для персистентной очереди и handoff в analysis."""
+    if not isinstance(radar, dict):
+        return {
+            "ok": False,
+            "cacheable": False,
+            "api_called": False,
+            "query": "",
+            "posts": [],
+            "post_records": [],
+            "count": 0,
+        }
+    out = dict(radar)
+    cap = 50
+    records = list(out.get("post_records") or [])[:cap]
+    posts = list(out.get("posts") or [])[: len(records)]
+    out["post_records"] = records
+    out["posts"] = posts
+    out["count"] = len(records)
+    return out
+
+
+def _analysis_handoff_from_row(queue_row: dict) -> dict:
+    social = queue_row.get("social_weight") or {}
+    return {
+        "address": queue_row.get("address", ""),
+        "x_query": queue_row.get("social_x_query"),
+        "x_radar": queue_row.get("social_x_radar"),
+        "verdict_flags": list(queue_row.get("verdict_flags") or []),
+        "social_confirmed": bool(social.get("confirmed")),
+    }
+
+
 def _social_weight_sync(queue_row: dict) -> str:
     """X-поиск + классификатор на переходе QUEUED→ANALYZED. ``proceed`` | ``defer``."""
     address = queue_row.get("address", "")
@@ -67,37 +100,48 @@ def _social_weight_sync(queue_row: dict) -> str:
         )
         from msf_analysis import plan_x_query, probe_token_name_for_x
         from operators.operator_social_weight import classify_from_radar
-        from operators.radar_x_cache import get_cached, put_cached
+        from operators.radar_x_cache import put_cached
         from radar_x import search_x
 
         token_symbol = probe_token_name_for_x(address)
         x_query = plan_x_query(address, token_symbol)
         ttl = RADAR_X_CACHE_TTL_H * 3600
-        hit = get_cached(address, x_query, ttl_seconds=ttl)
-        radar = None
-        social = None
-        if hit:
-            radar = hit.get("radar")
-            social = hit.get("social")
-        if not isinstance(radar, dict) or not radar.get("cacheable"):
-            try:
-                radar = search_x(x_query)
-            except Exception:
-                return "proceed"
-            if not isinstance(radar, dict) or not radar.get("cacheable"):
-                return "proceed"
-            score, confirmed, reasons = classify_from_radar(
-                radar,
-                min_authors=SOCIAL_NEGATIVE_MIN_AUTHORS,
-                negative_share_threshold=SOCIAL_NEGATIVE_SHARE_THRESHOLD,
-                token_symbol=token_symbol,
-            )
-            social = {
-                "score": score,
-                "confirmed": confirmed,
-                "reasons": reasons,
-                "verdict_flags": ["negative_sentiment"] if confirmed else [],
+
+        if queue_row.get("social_penalized") and isinstance(queue_row.get("social_x_radar"), dict):
+            queue_row["social_x_query"] = str(queue_row.get("social_x_query") or x_query)
+            return "proceed"
+
+        try:
+            radar = search_x(x_query)
+        except Exception:
+            radar = {
+                "ok": False,
+                "cacheable": False,
+                "api_called": True,
+                "query": x_query,
+                "posts": [],
+                "post_records": [],
+                "count": 0,
             }
+        radar = _bound_social_x_radar(radar)
+        queue_row["social_x_query"] = x_query
+        queue_row["social_x_radar"] = radar
+
+        score, confirmed, reasons = classify_from_radar(
+            radar,
+            min_authors=SOCIAL_NEGATIVE_MIN_AUTHORS,
+            negative_share_threshold=SOCIAL_NEGATIVE_SHARE_THRESHOLD,
+            token_symbol=token_symbol,
+        )
+        social = {
+            "score": score,
+            "confirmed": confirmed,
+            "reasons": reasons,
+            "verdict_flags": ["negative_sentiment"] if confirmed else [],
+        }
+        queue_row["social_weight"] = social
+
+        if radar.get("cacheable"):
             try:
                 put_cached(
                     address,
@@ -109,27 +153,10 @@ def _social_weight_sync(queue_row: dict) -> str:
                 )
             except Exception:
                 pass
-        elif not isinstance(social, dict):
-            score, confirmed, reasons = classify_from_radar(
-                radar,
-                min_authors=SOCIAL_NEGATIVE_MIN_AUTHORS,
-                negative_share_threshold=SOCIAL_NEGATIVE_SHARE_THRESHOLD,
-                token_symbol=token_symbol,
-            )
-            social = {
-                "score": score,
-                "confirmed": confirmed,
-                "reasons": reasons,
-                "verdict_flags": ["negative_sentiment"] if confirmed else [],
-            }
 
-        social = social or {}
-        queue_row["social_weight"] = social
         if not social.get("confirmed"):
             return "proceed"
         queue_row["verdict_flags"] = list(social.get("verdict_flags") or ["negative_sentiment"])
-        if queue_row.get("social_penalized"):
-            return "proceed"
         base_p = float(queue_row.get("priority") or 0)
         queue_row["priority"] = base_p * (1.0 - SOCIAL_NEGATIVE_PRIORITY_PENALTY)
         queue_row["social_penalized"] = True
@@ -330,15 +357,13 @@ async def rate_gate(sink: Sink):
         _rewrite(ANALYSIS_QUEUE, entries)
         _append(RATE_LOG, {"ts": time.time(), "address": address})
         log.info("ANALYZED start: %s (priority=%.0f, done=%d/%d)", address[:12], best_p, done_this_hour, RATE_CAP_H)
-        from msf_analysis import set_analysis_queue_context
+        handoff = _analysis_handoff_from_row(best)
+        try:
+            await send_msf_pairresolve(sink, address, analysis_handoff=handoff)
+        finally:
+            from msf_analysis import clear_analysis_queue_context
 
-        social = best.get("social_weight") or {}
-        set_analysis_queue_context(
-            address=address,
-            verdict_flags=list(best.get("verdict_flags") or []),
-            social_confirmed=bool(social.get("confirmed")),
-        )
-        await send_msf_pairresolve(sink, address)
+            clear_analysis_queue_context()
         return
 
 

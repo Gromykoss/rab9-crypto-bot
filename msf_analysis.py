@@ -63,6 +63,7 @@ def empty_safety_flags() -> dict:
 
 
 _analysis_queue_ctx: dict = {}
+_active_analysis_handoff: dict | None = None
 
 
 def set_analysis_queue_context(**fields) -> None:
@@ -78,8 +79,44 @@ def take_analysis_queue_context(address: str) -> dict:
     return ctx
 
 
+def clear_analysis_queue_context() -> None:
+    _analysis_queue_ctx.clear()
+    global _active_analysis_handoff
+    _active_analysis_handoff = None
+
+
+def set_active_analysis_handoff(handoff: dict | None) -> None:
+    global _active_analysis_handoff
+    _active_analysis_handoff = handoff
+
+
+def _resolve_analysis_handoff(explicit: dict | None) -> dict | None:
+    if explicit is not None:
+        return explicit
+    return _active_analysis_handoff
+
+
+def social_confirmed_from_handoff(handoff: dict | None) -> bool:
+    if not handoff:
+        return False
+    if handoff.get("social_confirmed") is True:
+        return True
+    return "negative_sentiment" in list(handoff.get("verdict_flags") or [])
+
+
+def append_social_verdict_line(text: str, handoff: dict | None) -> str:
+    """Добавляет строку 🎯 с SOCIAL-флагом к раннему вердикту (SKIP и т.п.)."""
+    if not social_confirmed_from_handoff(handoff):
+        return text
+    flagged = _apply_summary_risk_flags("SUMMARY", {}, social_confirmed=True)
+    if "SOCIAL" not in flagged:
+        return text
+    social_part = flagged.split("|", 1)[-1].strip()
+    return f"{text.rstrip()}\n🎯 {social_part}"
+
+
 def plan_x_query(address: str, token_name: str | None = None) -> str:
-    """Тот же query, что enrichment radar_x в build_compact_analysis_text."""
+    """X-query при отсутствии handoff; на rate_gate — Dex name или address[:12] (см. spec v1.4)."""
     name = token_name if token_name is not None else "?"
     if name and name != "?":
         return str(name).lower()
@@ -109,9 +146,18 @@ def probe_token_name_for_x(address: str) -> str:
     return "?"
 
 
-def resolve_x_enrichment_raw(address: str, x_query: str | None = None) -> tuple[str, bool]:
-    """Кеш radar_x с rate_gate; subprocess только при промахе. Возвращает (json, need_subprocess)."""
+def resolve_x_enrichment_raw(
+    address: str,
+    x_query: str | None = None,
+    *,
+    analysis_handoff: dict | None = None,
+) -> tuple[str, bool]:
+    """Handoff с gate — финальный снимок (включая fail); иначе кеш/subprocess как раньше."""
     import json
+
+    handed = (analysis_handoff or {}).get("x_radar")
+    if isinstance(handed, dict):
+        return json.dumps(handed, ensure_ascii=False), False
 
     from config import RADAR_X_CACHE_TTL_H
     from operators.radar_x_cache import get_cached
@@ -259,7 +305,7 @@ def build_msf_signal_analysis_text(address: str):
     return "\n".join(summary_lines)
 
 
-def build_compact_analysis_text(address: str, mode: str = "full"):
+def build_compact_analysis_text(address: str, mode: str = "full", analysis_handoff: dict | None = None):
     """Compact analysis for auto-respond.
 
     Modes:
@@ -268,6 +314,8 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     """
     import requests
     from config import BIRDEYE_API_KEY
+
+    handoff = _resolve_analysis_handoff(analysis_handoff)
 
     safety_flags = empty_safety_flags()
     security_hints = {}
@@ -325,19 +373,21 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
 
     if dex_liq is not None and dex_mc is not None:
         if dex_liq < MIN_LIQUIDITY_USD:
-            return (
+            thin = (
                 f"⚫ SKIP: Liquidity too thin (${dex_liq:,.0f} < ${MIN_LIQUIDITY_USD:,})\n"
                 f"MC: {'${:,.0f}'.format(dex_mc) if dex_mc else '?'} | "
                 f"Vol 24h: {'${:,.0f}'.format(dex_vol) if dex_vol else '?'}\n"
                 f"🔗 https://dexscreener.com/solana/{address}"
-            ), safety_flags
+            )
+            return append_social_verdict_line(thin, handoff), safety_flags
         if dex_mc > MAX_MARKET_CAP_USD:
-            return (
+            large = (
                 f"⚫ SKIP: MC too large (${dex_mc:,.0f} > ${MAX_MARKET_CAP_USD:,})\n"
                 f"Liq: {'${:,.0f}'.format(dex_liq) if dex_liq else '?'} | "
                 f"Vol 24h: {'${:,.0f}'.format(dex_vol) if dex_vol else '?'}\n"
                 f"🔗 https://dexscreener.com/solana/{address}"
-            ), safety_flags
+            )
+            return append_social_verdict_line(large, handoff), safety_flags
 
     result = get_birdeye_pair_makers(pair, mode="normal")
     items = result.get("items") or []
@@ -552,8 +602,11 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
 
         # Build search query: token name + address
         radar_query = f"{token_name} {address}" if token_name != "?" else address
-        # X search: use lowercase for meme coins (Toly tweets "burnie" not "BURNIE")
-        x_query = plan_x_query(address, token_name)
+        handed_query = (handoff or {}).get("x_query")
+        if handed_query:
+            x_query = str(handed_query)
+        else:
+            x_query = plan_x_query(address, token_name)
 
         # Run radars + chart in parallel
         def _run_radar(script, query):
@@ -571,7 +624,9 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
 
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        x_raw, need_x_subprocess = resolve_x_enrichment_raw(address, x_query)
+        x_raw, need_x_subprocess = resolve_x_enrichment_raw(
+            address, x_query, analysis_handoff=handoff
+        )
         gh_raw = ""
         with ThreadPoolExecutor(max_workers=6) as ex:
             futures = {
@@ -1132,24 +1187,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
     if should_escalate:
         lines.append(f"⚠️ {escalate_reason}")
 
-    social_confirmed = False
-    queue_ctx = take_analysis_queue_context(address)
-    flags = list(queue_ctx.get("verdict_flags") or [])
-    if queue_ctx.get("social_confirmed") is True:
-        social_confirmed = True
-    elif "negative_sentiment" in flags:
-        social_confirmed = True
-    else:
-        try:
-            from config import RADAR_X_CACHE_TTL_H
-            from operators.radar_x_cache import get_cached
-
-            x_q = plan_x_query(address, token_name)
-            social_hit = get_cached(address, x_q, ttl_seconds=RADAR_X_CACHE_TTL_H * 3600)
-            if social_hit and (social_hit.get("social") or {}).get("confirmed"):
-                social_confirmed = True
-        except Exception:
-            pass
+    social_confirmed = social_confirmed_from_handoff(handoff)
 
     if mode == "summary":
         # ── P0: RugCheck gate — force AVOID if high/rugged ──

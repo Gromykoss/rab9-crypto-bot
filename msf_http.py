@@ -38,7 +38,7 @@ def _verifier_available(verification: dict | None) -> bool:
     return not any(marker in note for marker in unavailable_markers)
 
 
-async def send_msf_pairresolve(sink, address: str, manual: bool = False):
+async def send_msf_pairresolve(sink, address: str, manual: bool = False, analysis_handoff: dict | None = None):
     logger.info("MSF analysis started for: %s", address)
     destination = check_destination(TELEGRAM_GROUP_ID)
     if destination.verdict != Verdict.ALLOW:
@@ -83,7 +83,13 @@ async def send_msf_pairresolve(sink, address: str, manual: bool = False):
     except Exception as e:
         logger.warning("Cabal detector error (continuing): %s", e)
 
-    text, safety_flags = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
+    from msf_analysis import clear_analysis_queue_context, set_active_analysis_handoff
+
+    set_active_analysis_handoff(analysis_handoff)
+    try:
+        text, safety_flags = await asyncio.to_thread(build_compact_analysis_text, address, "summary")
+    finally:
+        clear_analysis_queue_context()
     logger.info("MSF analysis complete: %d chars", len(text))
 
     safety_gate = check_safety(

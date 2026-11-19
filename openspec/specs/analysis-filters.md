@@ -12,8 +12,10 @@
 > `tests/test_analysis_filters_gwt.py`.
 > v1.2 → v1.3: концентрация и confirmed-scam связаны с реальными verdict/queue
 > точками.
-> v1.3 → v1.4: per-token social-weight — offline-классификатор по кешу radar_x
-> (один X-вызов на t0, full analysis переиспользует кеш); BURNIE jsonl не читается.
+> v1.3 → v1.4: per-token social-weight — offline-классификатор по снимку radar_x
+> с rate_gate (один X-вызов на проанализированный токен; X-query = Dex name или
+> address[:12] на gate, handoff в full analysis без второго search); BURNIE jsonl
+> не читается.
 
 Purpose: отбор мигрантов перед полным AI-анализом и дисциплина доставки.
 Files: определяются design'ом фичи 2 (модули пайплайна: msf_analysis, msf_dedupe, handlers, delivery).

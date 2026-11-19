@@ -219,6 +219,7 @@ def test_supply_concentration_flag_fraction_and_percent():
     # Удаление вызова из build_compact_analysis_text обязано ломать этот тест.
     source = inspect.getsource(msf_analysis.build_compact_analysis_text)
     assert "_apply_summary_risk_flags(verdict, security_hints," in source
+    assert "social_confirmed_from_handoff(handoff)" in source
 
 
 def _negative_radar_payload():
@@ -300,11 +301,12 @@ def test_social_negative_priority_lowers_queue_and_verdict_flag(tmp_path, monkey
     )
     sent = {"flags": []}
 
-    async def _send(sink, address, manual=False):
+    async def _send(sink, address, manual=False, analysis_handoff=None):
         sent["address"] = address
-        ctx = msf_analysis.take_analysis_queue_context(address)
-        sent["flags"] = list(ctx.get("verdict_flags") or [])
-        sent["social_confirmed"] = bool(ctx.get("social_confirmed"))
+        handoff = analysis_handoff or {}
+        sent["flags"] = list(handoff.get("verdict_flags") or [])
+        sent["social_confirmed"] = bool(handoff.get("social_confirmed"))
+        sent["handoff"] = handoff
         return "sent"
 
     monkeypatch.setattr(am, "send_msf_pairresolve", _send)
@@ -315,6 +317,8 @@ def test_social_negative_priority_lowers_queue_and_verdict_flag(tmp_path, monkey
     assert neg_row["priority"] == pytest.approx(24000.0 * 0.75)
     assert neg_row.get("social_penalized") is True
     assert neg_row.get("verdict_flags") == ["negative_sentiment"]
+    assert isinstance(neg_row.get("social_x_radar"), dict)
+    assert neg_row.get("social_x_query") == "test"
     assert sent.get("address") == ADDR_B
     assert calls["x"] == 2
 
@@ -341,7 +345,7 @@ def test_social_negative_priority_lowers_queue_and_verdict_flag(tmp_path, monkey
         lambda _q: neutral_x.__setitem__("x", neutral_x["x"] + 1) or _cacheable_radar(),
     )
 
-    async def _send2(sink, address, manual=False):
+    async def _send2(sink, address, manual=False, analysis_handoff=None):
         return "sent"
 
     monkeypatch.setattr(am2, "send_msf_pairresolve", _send2)
@@ -421,6 +425,171 @@ def test_social_x_calls_match_analyzed_tokens(tmp_path, monkeypatch):
     raw, need = msf_analysis.resolve_x_enrichment_raw(rows[0]["address"], q)
     assert raw and not need
     assert calls["x"] == k
+
+
+@pytest.mark.parametrize(
+    "fail_radar",
+    [
+        {"ok": False, "cacheable": False, "api_called": True, "query": "tkn", "posts": [], "post_records": [], "count": 0},
+        {"ok": True, "cacheable": False, "api_called": False, "query": "tkn", "posts": [], "post_records": [], "count": 0},
+    ],
+    ids=["timeout", "http401"],
+)
+def test_social_handoff_one_get_on_failed_x(tmp_path, monkeypatch, fail_radar):
+    am = _paths(monkeypatch, tmp_path)
+    import msf_analysis
+
+    calls = {"x": 0}
+    captured = {}
+
+    def _search(_q):
+        calls["x"] += 1
+        return dict(fail_radar)
+
+    async def _send(sink, address, manual=False, analysis_handoff=None):
+        captured["handoff"] = analysis_handoff
+        return "sent"
+
+    monkeypatch.setattr("radar_x.search_x", _search)
+    monkeypatch.setattr(msf_analysis, "probe_token_name_for_x", lambda _a: "TKN")
+    monkeypatch.setattr(am, "send_msf_pairresolve", _send)
+    _enqueue(am, [{"address": ADDR_A, "ts": NOW, "priority": 5000.0}])
+    asyncio.run(am.rate_gate(_mock_sink()))
+    assert calls["x"] == 1
+    handoff = captured.get("handoff") or {}
+    assert isinstance(handoff.get("x_radar"), dict)
+    raw, need = msf_analysis.resolve_x_enrichment_raw(
+        ADDR_A, handoff.get("x_query"), analysis_handoff=handoff
+    )
+    assert raw and not need
+    assert calls["x"] == 1
+
+
+def test_social_birdeye_query_mismatch_one_get(tmp_path, monkeypatch):
+    from unittest.mock import AsyncMock
+
+    am = _paths(monkeypatch, tmp_path)
+    import msf_analysis
+
+    calls = {"x": 0, "queries": []}
+
+    def _search(q):
+        calls["x"] += 1
+        calls["queries"].append(q)
+        return _cacheable_radar()
+
+    monkeypatch.setattr("radar_x.search_x", _search)
+    monkeypatch.setattr(msf_analysis, "probe_token_name_for_x", lambda _a: "BONK")
+    monkeypatch.setattr(am, "send_msf_pairresolve", AsyncMock(return_value="sent"))
+    _enqueue(am, [{"address": ADDR_A, "ts": NOW, "priority": 9000.0}])
+    asyncio.run(am.rate_gate(_mock_sink()))
+    assert calls["x"] == 1
+    assert calls["queries"] == ["bonk"]
+    handoff = am._analysis_handoff_from_row(
+        {
+            "address": ADDR_A,
+            "social_x_query": "bonk",
+            "social_x_radar": _cacheable_radar(),
+            "social_weight": {"confirmed": False},
+        }
+    )
+    raw, need = msf_analysis.resolve_x_enrichment_raw(
+        ADDR_A, "wif", analysis_handoff=handoff
+    )
+    assert raw and not need
+    assert calls["x"] == 1
+
+
+def test_social_deferred_repicks_queue_radar_after_ttl(tmp_path, monkeypatch):
+    from unittest.mock import AsyncMock
+
+    am = _paths(monkeypatch, tmp_path)
+    import msf_analysis
+    from config import RADAR_X_CACHE_TTL_H
+    from operators.radar_x_cache import put_cached
+
+    calls = {"x": 0}
+
+    def _search(_q):
+        calls["x"] += 1
+        return _cacheable_radar(
+            post_records=[
+                {"username": "a", "text": "scam rug"},
+                {"username": "b", "text": "honeypot drain"},
+            ]
+        )
+
+    monkeypatch.setattr("radar_x.search_x", _search)
+    monkeypatch.setattr(msf_analysis, "probe_token_name_for_x", lambda _a: "NEG")
+    monkeypatch.setattr(am, "_extract_baseline", lambda a: {"price_usd": "0.01", "liquidity_usd": 24000})
+    monkeypatch.setattr(am, "_is_kabal", AsyncMock(return_value=False))
+    captured = {}
+
+    async def _send(sink, address, manual=False, analysis_handoff=None):
+        captured["handoff"] = analysis_handoff
+        return "sent"
+
+    monkeypatch.setattr(am, "send_msf_pairresolve", _send)
+    _enqueue(
+        am,
+        [
+            {"address": ADDR_A, "ts": NOW, "priority": 30000.0},
+            {"address": ADDR_B, "ts": NOW, "priority": 20000.0},
+        ],
+    )
+    asyncio.run(am.rate_gate(_mock_sink()))
+    assert calls["x"] == 2
+    asyncio.run(am.rate_gate(_mock_sink()))
+    assert calls["x"] == 2
+
+    monkeypatch.setattr(am.time, "time", lambda: NOW + (RADAR_X_CACHE_TTL_H + 1) * 3600)
+    for i in range(200):
+        put_cached(
+            f"flood{i:03d}AddrAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "q",
+            _cacheable_radar(),
+            ttl_seconds=1,
+            max_entries=200,
+        )
+    asyncio.run(am.rate_gate(_mock_sink()))
+    assert calls["x"] == 2
+    assert captured.get("handoff", {}).get("x_query") == "neg"
+
+
+def test_social_thin_liq_skip_carries_social_flag(tmp_path, monkeypatch):
+    import msf_analysis
+    from unittest.mock import Mock
+
+    handoff = {
+        "address": ADDR_A,
+        "x_query": "tkn",
+        "x_radar": {"ok": True, "cacheable": True, "post_records": [], "posts": [], "count": 0},
+        "verdict_flags": ["negative_sentiment"],
+        "social_confirmed": True,
+    }
+
+    class _Resp:
+        ok = True
+
+        def json(self):
+            return {
+                "pairs": [
+                    {
+                        "liquidity": {"usd": 8000},
+                        "marketCap": 50000,
+                        "volume": {"h24": 1000},
+                    }
+                ]
+            }
+
+    monkeypatch.setattr("requests.get", lambda *a, **k: _Resp())
+    monkeypatch.setattr(msf_analysis, "check_dedupe", lambda _a: None)
+    monkeypatch.setattr(msf_analysis, "get_token_address_from_dex", lambda _a: _a)
+    monkeypatch.setattr(msf_analysis, "build_pair_resolve_text", lambda _a: "pair: " + ADDR_A)
+    monkeypatch.setattr(msf_analysis, "extract_recommended_pair", lambda _t: ADDR_A)
+
+    text, _ = msf_analysis.build_compact_analysis_text(ADDR_A, "summary", handoff)
+    assert "SKIP" in text and "SOCIAL" in text
 
 
 # ── 6. outcome-loop ────────────────────────────────────────────────────────
