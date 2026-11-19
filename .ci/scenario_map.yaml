@@ -29,3 +29,339 @@ llm-intel.anti_rug_penalty_matrix:
   test: tests/test_llm_fallback.py::TestAntiRugPenalty
   code:
     - meme_score.py
+
+# gwt-binding-t6 (19.11.2026): сценарии пяти доменов связаны через карточки,
+# pytest-маркеры @pytest.mark.scenario и код домена.
+pumpportal-ingress.migration_accepted:
+  card: openspec/specs/pumpportal-ingress.md
+  test: tests/test_pumpportal_ingress_gwt.py::test_migration_accepted
+  code:
+    - pumpportal_listener.py
+pumpportal-ingress.invalid_address_filtered:
+  card: openspec/specs/pumpportal-ingress.md
+  test: tests/test_pumpportal_ingress_gwt.py::test_invalid_address_filtered
+  code:
+    - pumpportal_listener.py
+pumpportal-ingress.ingress_down_journal:
+  card: openspec/specs/pumpportal-ingress.md
+  test: tests/test_pumpportal_ingress_gwt.py::test_ingress_down_journal_survives_restart
+  code:
+    - pumpportal_listener.py
+pumpportal-ingress.ingress_recovery_replay:
+  card: openspec/specs/pumpportal-ingress.md
+  test: tests/test_pumpportal_ingress_gwt.py::test_ingress_recovery_replay
+  code:
+    - pumpportal_listener.py
+pumpportal-ingress.reconnect_after_drop:
+  card: openspec/specs/pumpportal-ingress.md
+  test: tests/test_pumpportal_ingress_gwt.py::test_reconnect_after_drop
+  code:
+    - pumpportal_listener.py
+pumpportal-ingress.sub_ack_received:
+  card: openspec/specs/pumpportal-ingress.md
+  test: tests/test_pumpportal_ingress_gwt.py::test_sub_ack_received
+  code:
+    - pumpportal_listener.py
+pumpportal-ingress.sub_ack_timeout:
+  card: openspec/specs/pumpportal-ingress.md
+  test: tests/test_pumpportal_ingress_gwt.py::test_sub_ack_timeout
+  code:
+    - pumpportal_listener.py
+pumpportal-ingress.ping_timeout_close:
+  card: openspec/specs/pumpportal-ingress.md
+  test: tests/test_pumpportal_ingress_gwt.py::test_ping_timeout_close
+  code:
+    - pumpportal_listener.py
+pumpportal-ingress.secret_never_logged:
+  card: openspec/specs/pumpportal-ingress.md
+  test: tests/test_pumpportal_ingress_gwt.py::test_secret_never_logged
+  code:
+    - pumpportal_listener.py
+wallet-watch.double_subscription_ack:
+  card: openspec/specs/wallet-watch.md
+  test: tests/test_wallet_watch_gwt.py::test_wallet_watch_double_subscription_ack
+  code:
+    - pumpportal_listener.py
+    - sink.py
+wallet-watch.whale_sell_to_sink:
+  card: openspec/specs/wallet-watch.md
+  test: tests/test_wallet_watch_gwt.py::test_wallet_watch_whale_sell_to_sink
+  code:
+    - pumpportal_listener.py
+    - sink.py
+wallet-watch.foreign_wallet_ignored:
+  card: openspec/specs/wallet-watch.md
+  test: tests/test_wallet_watch_gwt.py::test_wallet_watch_foreign_wallet_ignored
+  code:
+    - pumpportal_listener.py
+    - sink.py
+wallet-watch.no_dedup_repeat_move:
+  card: openspec/specs/wallet-watch.md
+  test: tests/test_wallet_watch_gwt.py::test_wallet_watch_no_dedup_repeat_move
+  code:
+    - pumpportal_listener.py
+    - sink.py
+accumulation-radar.trade_row_written:
+  card: openspec/specs/accumulation-radar.md
+  test: tests/test_accumulation_radar_gwt.py::test_trade_row_written
+  code:
+    - analyzer_main.py
+    - pumpportal_listener.py
+    - sink.py
+accumulation-radar.stream_survives_restart:
+  card: openspec/specs/accumulation-radar.md
+  test: tests/test_accumulation_radar_gwt.py::test_stream_survives_restart
+  code:
+    - analyzer_main.py
+    - pumpportal_listener.py
+    - sink.py
+accumulation-radar.organized_buy_on_dip:
+  card: openspec/specs/accumulation-radar.md
+  test: tests/test_accumulation_radar_gwt.py::test_organized_buy_on_dip
+  code:
+    - analyzer_main.py
+    - pumpportal_listener.py
+    - sink.py
+accumulation-radar.calm_market_no_signal:
+  card: openspec/specs/accumulation-radar.md
+  test: tests/test_accumulation_radar_gwt.py::test_calm_market_no_signal
+  code:
+    - analyzer_main.py
+    - pumpportal_listener.py
+    - sink.py
+accumulation-radar.anti_repeat_cooldown:
+  card: openspec/specs/accumulation-radar.md
+  test: tests/test_accumulation_radar_gwt.py::test_anti_repeat_cooldown
+  code:
+    - analyzer_main.py
+    - pumpportal_listener.py
+    - sink.py
+accumulation-radar.signal_into_digest:
+  card: openspec/specs/accumulation-radar.md
+  test: tests/test_accumulation_radar_gwt.py::test_signal_into_digest
+  code:
+    - analyzer_main.py
+    - pumpportal_listener.py
+    - sink.py
+analysis-filters.t0_survives_recheck:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_t0_survives_recheck_queued_for_full_analysis
+  code:
+    - analyzer_main.py
+    - sink.py
+analysis-filters.t0_dead_before_recheck:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_t0_dead_before_recheck_no_analysis_digest_line
+  code:
+    - analyzer_main.py
+    - sink.py
+analysis-filters.t0_queue_survives_restart:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_t0_queue_survives_restart
+  code:
+    - analyzer_main.py
+    - sink.py
+analysis-filters.outcome_recorded_after_24h:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_outcome_recorded_after_24h
+  code:
+    - analyzer_main.py
+    - sink.py
+analysis-filters.reject_batched_no_spam:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_reject_batched_no_spam
+  code:
+    - analyzer_main.py
+    - sink.py
+analysis-filters.kabal_alert_not_pulsing:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_kabal_alert_not_pulsing
+  code:
+    - analyzer_main.py
+    - sink.py
+analysis-filters.empty_digest_window:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_empty_digest_window_no_delivery
+  code:
+    - analyzer_main.py
+    - sink.py
+analysis-filters.rate_cap_queue_overflow:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_rate_cap_queue_overflow_deferred_and_persistent
+  code:
+    - analyzer_main.py
+    - sink.py
+analysis-filters.kabal_cap_overflow:
+  card: openspec/specs/analysis-filters.md
+  test: tests/test_analysis_filters_gwt.py::test_kabal_cap_overflow_uses_common_queue_and_formula
+  code:
+    - analyzer_main.py
+    - sink.py
+standalone-analyzer.t0_no_llm_on_arrival:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_t0_no_llm_on_arrival
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.full_run_on_analyzed:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_full_run_on_analyzed
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.no_telegram_calls:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_no_telegram_calls
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.cascade_conflict_resolved:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_cascade_conflict_resolved
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.hard_drop_overrides:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_hard_drop_overrides
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.bounded_queue_overflow:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_bounded_queue_overflow
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.baseline_in_verdict_record:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_baseline_in_verdict_record
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.verdict_written_to_sink:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_verdict_written_to_sink
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.manual_analyze_run:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_manual_analyze_run
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.manual_endpoint_authorized:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_manual_endpoint_authorized
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.manual_endpoint_unauthorized:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_manual_endpoint_unauthorized
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.digest_composition:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_digest_composition
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.telegram_demolition_intact:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_telegram_demolition_intact
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py
+standalone-analyzer.dedup_preserved_24h:
+  card: openspec/specs/standalone-analyzer.md
+  test: tests/test_standalone_analyzer_gwt.py::test_dedup_preserved_24h
+  code:
+    - analyzer_main.py
+    - cabal_detector.py
+    - loop_memory.py
+    - loop_verifier.py
+    - msf_dedupe.py
+    - msf_http.py
+    - sink.py
+    - wallet_intel.py

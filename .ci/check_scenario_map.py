@@ -69,16 +69,14 @@ WHITELIST = (
     # CDD meta (specs are the source of the map, not its subjects)
     "openspec/**",
     "CONTEXT.md",
-    # pumpportal-ingress (фича 1): GWT-binding домена — на закрытии фичи 2 (T6);
-    # ops runtime как burnie_sentiment_tracker (unit tests есть, маркеры — TODO T6)
-    "pumpportal_listener.py",
+    # pumpportal-ingress v0.4 / wallet-watch v1.1 / accumulation-radar v1.1 / analysis-filters v1.2 /
+    # standalone-analyzer v1.3: GWT-биндинг закрыт 19.11 (T6) — код домена в scenario_map.yaml,
+    # поэтому pumpportal_listener.py / analyzer_main.py / sink.py / msf_http.py здесь больше нет.
+    # Легаси-тесты без сценарных маркеров остаются освобождёнными.
     "pumpportal-listener.service",
     "tests/test_pumpportal_listener.py",
     "requirements.txt",
-    # standalone-analyzer (фича 2): GWT-биндинг домена — после код-спот-чека;
-    # удалённые Telegram-модули (never change again)
-    "sink.py",
-    "analyzer_main.py",
+    # удалённые Telegram-модули (never change again) + systemd-юниты владельца
     "rab9-analyzer.service",
     "tests/test_standalone_analyzer.py",
     "rab9_bot.py",
@@ -86,7 +84,6 @@ WHITELIST = (
     "keyboards.py",
     "alerts.py",
     "msf_listener.py",
-    "msf_http.py",
     "config.py",
     ".gitignore",
     # evals/deploy-gate + deploy.sh (флотовый стандарт eval-gates, мандат владельца 20-21.10, замкнуты 6f6e8f8)

@@ -11,6 +11,7 @@ on:
       - "meme_score.py"
       - "openspec/specs/**"
       - ".ci/**"
+      - "tests/**"
       - ".github/workflows/gwt.yml"
   push:
     branches: [main]
@@ -23,6 +24,7 @@ on:
       - "meme_score.py"
       - "openspec/specs/**"
       - ".ci/**"
+      - "tests/**"
       - ".github/workflows/gwt.yml"
 
 jobs:
@@ -34,7 +36,12 @@ jobs:
         with:
           python-version: "3.11"
       - name: lint GWT cards
-        run: python3 .ci/lint_gwt_cards.py openspec/specs --tests tests/test_llm_fallback.py
+        # все файлы со сценарными маркерами: llm-intel + пять доменов после GWT-биндинга
+        run: >-
+          python3 .ci/lint_gwt_cards.py openspec/specs
+          --tests tests/test_llm_fallback.py tests/test_pumpportal_ingress_gwt.py
+          tests/test_wallet_watch_gwt.py tests/test_accumulation_radar_gwt.py
+          tests/test_analysis_filters_gwt.py tests/test_standalone_analyzer_gwt.py
 
   completeness:
     needs: lint-cards
@@ -69,7 +76,9 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - run: pip install pytest pytest-asyncio requests python-dotenv httpx pydantic
+      # websockets + requests_oauthlib: домены pumpportal-ingress/wallet-watch/radar_x
+      # импортируют их на уровне модуля — без них сценарные тесты падают ImportError
+      - run: pip install pytest pytest-asyncio requests python-dotenv httpx pydantic websockets requests_oauthlib
       - name: affected scenarios
         run: |
           BASE="${{ github.event.before }}"

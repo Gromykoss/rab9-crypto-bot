@@ -914,3 +914,6 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **19.11.2026 07:04** — fix(token-watch): honest unknown authorities, no spam on bad state, named digest threshold, drop dead code (`204dbb1`)
 - **19.11.2026 07:34** — ci(gwt): whitelist ops runtime files without scenario cards (token_watch, radar_x, kg, loop_state) (`b5da475`)
 - **19.11.2026 08:33** — fix(ci): lint-cards recognises OpenSpec prose scenarios (FROZEN specs need no card id) (`eb14688`)
+- **19.11.2026 08:35** — chore(ci): actions on Node 24 (checkout@v5, setup-python@v6) (`03c9a01`)
+- **19.11.2026 08:54** — fix(ci): close checker findings on lint-cards prose branch (eb14688 RETURN, FAIL) (`d2c4569`)
+- **19.11.2026 09:15** — feat(openspec): GWT-биндинг пяти FROZEN-спек (T6) — 42 из 46 prose-сценариев переведены в карточки с id и связаны с pytest-тестами (42 новых теста, 5 файлов) и записями `scenario_map.yaml`; спеки v-бампнуты (форма, не поведение); в CI-набор сценарного job'а добавлены websockets/requests_oauthlib и путь `tests/**`
