@@ -93,6 +93,10 @@ async def send_msf_pairresolve(sink, address: str, manual: bool = False):
     )
     if safety_gate.verdict == Verdict.DROP:
         logger.warning("SAFETY DROP: suppressing analysis for %s (%s)", address[:12], safety_gate.reason)
+        await sink.write(
+            "reject", address, "?", f"DROP: confirmed scam ({safety_gate.reason}).",
+            manual=manual,
+        )
         return "dropped_safety"
     safety_inconclusive = safety_gate.verdict == Verdict.INCONCLUSIVE
     if safety_gate.verdict == Verdict.INCONCLUSIVE:
@@ -180,7 +184,8 @@ async def send_msf_pairresolve(sink, address: str, manual: bool = False):
 
 
 def _extract_baseline(address: str) -> dict:
-    """Outcome-бейзлайн (v1.2): price/liquidity на момент вердикта (DexScreener)."""
+    """Outcome-бейзлайн + живой safety-status для очереди и вердикта."""
+    baseline = {}
     try:
         r = requests.get(
             f"https://api.dexscreener.com/tokens/v1/solana/{address}",
@@ -193,13 +198,21 @@ def _extract_baseline(address: str) -> dict:
             default=None,
         )
         if best:
-            return {
+            baseline.update({
                 "price_usd": best.get("priceUsd"),
                 "liquidity_usd": (best.get("liquidity") or {}).get("usd"),
-            }
+            })
     except Exception as exc:
         logger.warning("baseline fetch failed: %s", type(exc).__name__)
-    return {}
+    try:
+        from honeypot_check import check_honeypot
+
+        hp = check_honeypot(address)
+        baseline["safety"] = {"honeypot": hp.get("status", "unknown")}
+    except Exception as exc:
+        logger.warning("baseline safety fetch failed: %s", type(exc).__name__)
+        baseline["safety"] = {"honeypot": "unknown"}
+    return baseline
 
 
 def start_msf_http_server(sink, loop: asyncio.AbstractEventLoop, signal_coro=None):

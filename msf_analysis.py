@@ -62,6 +62,19 @@ def empty_safety_flags() -> dict:
     return {"honeypot": "", "rugcheck": "", "phase": ""}
 
 
+def _apply_summary_risk_flags(verdict: str, security_hints: dict) -> str:
+    """Финальная сборка deterministic-флагов summary-вердикта."""
+    from config import TOP10_CONCENTRATION_THRESHOLD_PCT
+    from operators import concentration_flag
+
+    warning = concentration_flag(
+        security_hints.get("top10_pct"),
+        TOP10_CONCENTRATION_THRESHOLD_PCT,
+        source="gmgn_percent",
+    )
+    return f"{verdict} | {warning}" if warning else verdict
+
+
 def extract_recommended_pair(pair_resolve_text: str):
     match = PAIR_RECOMMENDATION_RE.search(pair_resolve_text or "")
     if not match:
@@ -773,14 +786,6 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
                 if verdict in downgrades:
                     verdict = downgrades[verdict]
 
-    from config import TOP10_CONCENTRATION_THRESHOLD_PCT
-    from operators import concentration_flag
-    concentration_warning = concentration_flag(
-        security_hints.get("top10_pct"), TOP10_CONCENTRATION_THRESHOLD_PCT
-    )
-    if concentration_warning:
-        verdict += f" | {concentration_warning}"
-
     # ── Proceed even without makers (Birdeye may be down) ──
     if not makers:
         if mode != "summary":
@@ -1059,6 +1064,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         # ── P0: RugCheck gate — force AVOID if high/rugged ──
         if rugcheck_level == "high" or rugcheck_report.get("rugged"):
             verdict = "⚠️ AVOID (RugCheck: HIGH RISK)"
+        verdict = _apply_summary_risk_flags(verdict, security_hints)
         lines.append("")
         lines.append(f"🎯 {verdict}")
     else:

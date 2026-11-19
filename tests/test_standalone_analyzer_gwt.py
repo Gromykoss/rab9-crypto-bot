@@ -305,7 +305,9 @@ def test_hard_drop_overrides(sb, monkeypatch):
     status = asyncio.run(sb.msf_http.send_msf_pairresolve(sb.sink, ADDR_A))
 
     assert status == "dropped_safety"
-    assert _read_jsonl(sb.jsonl) == []  # ни вердикта, ни отчёта — DROP перекрывает
+    dropped = _read_jsonl(sb.jsonl)
+    assert [rec["type"] for rec in dropped] == ["reject"]
+    assert "DROP: confirmed scam" in dropped[0]["text"]
     assert sb.llm == []
 
     # WHEN: любой queue-check подтверждает honeypot=fail
@@ -320,9 +322,9 @@ def test_hard_drop_overrides(sb, monkeypatch):
 
     # THEN: немедленный DROP кандидата → sink(reject) и очередь очищена
     records = _read_jsonl(sb.jsonl)
-    assert [rec["type"] for rec in records] == ["reject"]
-    assert records[0]["address"] == ADDR_B
-    assert "DROP: confirmed scam" in records[0]["text"]
+    assert [rec["type"] for rec in records] == ["reject", "reject"]
+    assert records[-1]["address"] == ADDR_B
+    assert "DROP: confirmed scam" in records[-1]["text"]
     assert _read_jsonl(sb.am.T0_QUEUE) == []
     assert _read_jsonl(sb.am.ANALYSIS_QUEUE) == []
 

@@ -17,8 +17,7 @@ import requests
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from msf_http import _extract_baseline, send_msf_pairresolve, start_msf_http_server
-from config import SOCIAL_NEGATIVE_PRIORITY_PENALTY, SOCIAL_NEGATIVE_THRESHOLD
-from operators import Verdict, check_safety, social_weight
+from operators import Verdict, check_safety
 from sink import Sink
 
 logging.basicConfig(
@@ -98,10 +97,17 @@ def _safety_fields(*records):
     for record in records:
         if not isinstance(record, dict):
             continue
-        safety = record.get("safety") if isinstance(record.get("safety"), dict) else record
-        for key in ("honeypot", "rugcheck", "phase"):
-            if safety.get(key) is not None:
-                merged[key] = safety[key]
+        candidates = [record]
+        candidates.extend(
+            value for value in (record.get("safety"), record.get("baseline"))
+            if isinstance(value, dict)
+        )
+        for candidate in candidates:
+            if isinstance(candidate.get("safety"), dict):
+                candidates.append(candidate["safety"])
+            for key in ("honeypot", "rugcheck", "phase"):
+                if candidate.get(key) is not None:
+                    merged[key] = candidate[key]
     return merged
 
 
@@ -127,22 +133,6 @@ async def _drop_if_confirmed_scam(sink: Sink, address: str, *records) -> bool:
     await sink.write("reject", address, "?", f"DROP: confirmed scam ({gate.reason}).")
     log.info("SAFETY DROP: %s removed from t0/analysis queues", address[:12])
     return True
-
-
-class _VerdictFlagSink:
-    """Scoped sink view that attaches queue-derived flags to verdict records."""
-
-    def __init__(self, sink, flags):
-        self._sink = sink
-        self._flags = [flag for flag in flags if flag]
-
-    async def write(self, record_type, address, token, text, **extra):
-        if record_type == "verdict" and self._flags:
-            text = f"{text}\n" + "\n".join(self._flags)
-        return await self._sink.write(record_type, address, token, text, **extra)
-
-    def __getattr__(self, name):
-        return getattr(self._sink, name)
 
 
 # ── T0_PENDING → QUEUED (L1-пороги) ──
@@ -174,17 +164,7 @@ async def t0_tick(sink: Sink):
             _rewrite(T0_QUEUE, [l for l in _load(T0_QUEUE) if l != raw])
             continue
         kabal_bonus = 10.0 if await _is_kabal(address) else 0.0
-        social = rec.get("social") if isinstance(rec.get("social"), dict) else {}
-        multiplier, social_flag = social_weight(
-            social.get("negative_score"),
-            confirmed=bool(social.get("confirmed")),
-            threshold=SOCIAL_NEGATIVE_THRESHOLD,
-            penalty=SOCIAL_NEGATIVE_PRIORITY_PENALTY,
-            has_x=social.get("has_x"),
-        )
-        queued = {"address": address, "ts": now, "priority": (liq + kabal_bonus) * multiplier}
-        if social_flag:
-            queued["verdict_flags"] = [social_flag]
+        queued = {"address": address, "ts": now, "priority": liq + kabal_bonus}
         safety = _safety_fields(rec, fresh)
         if safety:
             queued["safety"] = safety
@@ -245,7 +225,7 @@ async def rate_gate(sink: Sink):
     _rewrite(ANALYSIS_QUEUE, [l for i, l in enumerate(entries) if i != best_i])
     _append(RATE_LOG, {"ts": time.time(), "address": address})
     log.info("ANALYZED start: %s (priority=%.0f, done=%d/%d)", address[:12], best_p, done_this_hour, RATE_CAP_H)
-    await send_msf_pairresolve(_VerdictFlagSink(sink, best.get("verdict_flags") or []), address)
+    await send_msf_pairresolve(sink, address)
 
 
 # ── accumulation-radar P2 (спека v1.0: окно 24ч, 5 признаков) ──

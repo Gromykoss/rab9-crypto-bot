@@ -167,13 +167,7 @@ analysis-filters.supply_concentration_flag:
   code:
     - msf_analysis.py
     - operators/operator_analysis_filters.py
-    - config.py
-analysis-filters.social_negative_priority:
-  card: openspec/specs/analysis-filters.md
-  test: tests/test_analysis_filters_gwt.py::test_social_negative_priority_and_verdict_flag
-  code:
-    - analyzer_main.py
-    - operators/operator_analysis_filters.py
+    - operators/__init__.py
     - config.py
 analysis-filters.outcome_recorded_after_24h:
   card: openspec/specs/analysis-filters.md

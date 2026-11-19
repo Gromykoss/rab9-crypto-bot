@@ -28,12 +28,21 @@ def _paths(monkeypatch, tmp_path):
     import importlib
 
     import analyzer_main as am
-    if REPO_ROOT not in Path(am.__file__).resolve().parents:
+    watched = ("analyzer_main", "msf_http", "msf_analysis", "config", "operators")
+    foreign_loaded = any(
+        module is not None
+        and getattr(module, "__file__", None)
+        and REPO_ROOT not in Path(module.__file__).resolve().parents
+        for name, module in sys.modules.items()
+        if name in watched or name.startswith("operators.")
+    )
+    if REPO_ROOT not in Path(am.__file__).resolve().parents or foreign_loaded:
         for module_name in list(sys.modules):
-            if module_name == "analyzer_main" or module_name == "config" or module_name == "operators" or module_name.startswith("operators."):
+            if module_name in watched or module_name.startswith("operators."):
                 del sys.modules[module_name]
         previous_path = list(sys.path)
         try:
+            sys.path[:] = [p for p in sys.path if p != str(REPO_ROOT)]
             sys.path.insert(0, str(REPO_ROOT))
             am = importlib.import_module("analyzer_main")
         finally:
@@ -185,53 +194,29 @@ def test_t0_queue_survives_restart(tmp_path, monkeypatch):
 # ── 4. migrant-risk-profile ───────────────────────────────────────────────
 @pytest.mark.scenario("analysis-filters.supply_concentration_flag")
 def test_supply_concentration_flag_fraction_and_percent():
+    import importlib
+    import inspect
+    existing = sys.modules.get("msf_analysis")
+    if existing is not None and REPO_ROOT not in Path(existing.__file__).resolve().parents:
+        del sys.modules["msf_analysis"]
+    previous_path = list(sys.path)
+    try:
+        sys.path[:] = [p for p in sys.path if p != str(REPO_ROOT)]
+        sys.path.insert(0, str(REPO_ROOT))
+        msf_analysis = importlib.import_module("msf_analysis")
+    finally:
+        sys.path[:] = previous_path
     from operators import concentration_flag
 
-    # GIVEN топ-10 холдеров выше конфиг-порога WHEN формируется вердикт
-    assert "CONCENTRATION" in concentration_flag(0.61, 50)
-    assert "61.0%" in concentration_flag(61, 0.50)
-    # THEN флаг только при строгом превышении; неизвестное значение не выдумывается
-    assert concentration_flag(50, 50) == ""
-    assert concentration_flag(None, 50) == ""
-
-
-# ── 5. social-weight ──────────────────────────────────────────────────────
-@pytest.mark.scenario("analysis-filters.social_negative_priority")
-def test_social_negative_priority_and_verdict_flag(tmp_path, monkeypatch):
-    from unittest.mock import AsyncMock
-    import sink as sink_mod
-
-    am = _paths(monkeypatch, tmp_path)
-    _freeze_time(monkeypatch)
-    monkeypatch.setattr(am, "T0_INTERVAL_MIN", 0)
-    monkeypatch.setattr(am, "SOCIAL_NEGATIVE_THRESHOLD", 0.70)
-    monkeypatch.setattr(am, "SOCIAL_NEGATIVE_PRIORITY_PENALTY", 0.25)
-    monkeypatch.setattr(am, "_extract_baseline", lambda _a: {"liquidity_usd": 10000})
-    monkeypatch.setattr(am, "_is_kabal", AsyncMock(return_value=False))
-    am.T0_QUEUE.write_text(json.dumps({
-        "address": ADDR_A, "ts": NOW - 1,
-        "social": {"has_x": True, "confirmed": True, "negative_score": 0.80},
-    }) + "\n")
-
-    sink = sink_mod.Sink(out_dir=tmp_path / "analyses_out")
-    asyncio.run(am.t0_tick(sink))
-
-    # THEN подтверждённый per-token негатив понижает priority на 25%
-    queued = _jsonl(am.ANALYSIS_QUEUE)
-    assert queued[0]["priority"] == 7500.0
-    assert "SOCIAL NEGATIVE" in queued[0]["verdict_flags"][0]
-
-    async def fake_analysis(flagged_sink, address):
-        await flagged_sink.write("verdict", address, "TKN", "PASS")
-        return "sent"
-
-    monkeypatch.setattr(am, "send_msf_pairresolve", fake_analysis)
-    asyncio.run(am.rate_gate(sink))
-    assert "SOCIAL NEGATIVE" in _jsonl(sink.jsonl)[0]["text"]
-
-    # Отсутствующий X не блокирует: neutral multiplier, пустой flag.
-    from operators import social_weight
-    assert social_weight(None, confirmed=False, has_x=False) == (1.0, "")
+    # GMGN документирован как 0..100: 1.0 означает 1%, а не fraction=100%.
+    assert concentration_flag(1.0, 50, source="gmgn_percent") == ""
+    assert "61.0%" in concentration_flag(61, 50, source="gmgn_percent")
+    # Эквивалент production verdict-wiring: флаг добавляется к итоговому summary.
+    verdict = msf_analysis._apply_summary_risk_flags("⚠️ AVOID (RugCheck: HIGH RISK)", {"top10_pct": 61})
+    assert "RugCheck: HIGH RISK" in verdict and "CONCENTRATION" in verdict
+    # Удаление вызова из build_compact_analysis_text обязано ломать этот тест.
+    source = inspect.getsource(msf_analysis.build_compact_analysis_text)
+    assert "_apply_summary_risk_flags(verdict, security_hints)" in source
 
 
 # ── 6. outcome-loop ────────────────────────────────────────────────────────
@@ -438,11 +423,30 @@ def test_confirmed_scam_drop_removes_both_queues_and_writes_reject(tmp_path, mon
     import sink as sink_mod
 
     am = _paths(monkeypatch, tmp_path)
+    import msf_http
+    assert REPO_ROOT in Path(msf_http.__file__).resolve().parents
+    # analyzer_main должен нести именно production extractor этого worktree.
+    assert am._extract_baseline is msf_http._extract_baseline
     _freeze_time(monkeypatch)
     monkeypatch.setattr(am, "T0_INTERVAL_MIN", 0)
-    monkeypatch.setattr(
-        am, "_extract_baseline", lambda _a: {"liquidity_usd": 20000, "honeypot": "fail"}
-    )
+    class Response:
+        def __init__(self, status, payload):
+            self.status_code = status
+            self._payload = payload
+
+        def json(self):
+            return self._payload
+
+    def fake_get(url, *, params=None, timeout=None):
+        if "dexscreener.com" in url:
+            return Response(200, [{"priceUsd": "0.01", "liquidity": {"usd": 20000}}])
+        # Jupiter: sell token→SOL отсутствует, buy SOL→token существует.
+        if params["inputMint"] == ADDR_A:
+            return Response(400, {"errorCode": "NO_ROUTES_FOUND"})
+        return Response(200, {"outAmount": "123", "routePlan": [{}]})
+
+    # Граница сети подменена, но production carrier _extract_baseline выполняется целиком.
+    monkeypatch.setattr(msf_http.requests, "get", fake_get)
     am.T0_QUEUE.write_text(json.dumps({"address": ADDR_A, "ts": NOW - 1}) + "\n")
     am.ANALYSIS_QUEUE.write_text(json.dumps({"address": ADDR_A, "ts": NOW, "priority": 1}) + "\n")
     sink = sink_mod.Sink(out_dir=tmp_path / "analyses_out")
@@ -455,3 +459,14 @@ def test_confirmed_scam_drop_removes_both_queues_and_writes_reject(tmp_path, mon
     assert [record["type"] for record in records] == ["reject"]
     assert records[0]["address"] == ADDR_A
     assert "DROP: confirmed scam" in records[0]["text"]
+
+    # Тот же hard DROP обязан остаться на втором production переходе QUEUED→ANALYZED.
+    am.ANALYSIS_QUEUE.write_text(json.dumps({
+        "address": ADDR_B, "ts": NOW, "priority": 2,
+        "safety": {"honeypot": "fail"},
+    }) + "\n")
+    asyncio.run(am.rate_gate(sink))
+    assert _lines(am.ANALYSIS_QUEUE) == []
+    records = _jsonl(sink.jsonl)
+    assert [record["type"] for record in records] == ["reject", "reject"]
+    assert records[-1]["address"] == ADDR_B

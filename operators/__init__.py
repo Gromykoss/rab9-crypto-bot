@@ -1,7 +1,7 @@
 """Enforced-операторы RAB9: чистые проверки без side-effects."""
 
 from .operator_config_guard import MUTATING_ACTIONS, check_mutation
-from .operator_analysis_filters import concentration_flag, social_weight
+from .operator_analysis_filters import concentration_flag
 from .operator_destination import ALLOWED_DESTINATIONS, check_destination
 from .operator_safety import RUGCHECK_ALLOW_LEVELS, RUGCHECK_DROP_LEVELS, check_safety
 from .operator_verdict_gate import DEFAULT_VERDICT, REJECT_VERDICTS, check_verifier
@@ -22,5 +22,4 @@ __all__ = [
     "check_safety",
     "check_verifier",
     "concentration_flag",
-    "social_weight",
 ]
