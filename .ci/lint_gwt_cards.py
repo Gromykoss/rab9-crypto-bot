@@ -11,6 +11,11 @@
   (см. WHITELIST в check_scenario_map.py: «GWT-binding — на закрытии фичи 2 (T6)»),
   поэтому id не требуется, но полнота GIVEN/WHEN/THEN проверяется — без этого
   prose-ветка стала бы дырой в гейте.
+
+Prose-форма допустима ТОЛЬКО в этих пяти FROZEN-файлах (allowlist ниже) и только если в
+шапке файла есть маркер FROZEN. Любой `Scenario:`-заголовок в другом файле — ошибка:
+иначе карточку в любой спеке можно переписать в prose и обойти id, дедуп-проверку,
+UNTESTED и сверку с pytest-маркерами.
 """
 
 import argparse
@@ -30,6 +35,19 @@ WHEN_RE = re.compile(r"^\s*-\s*(?:\*\*)?WHEN(?:\*\*)?\s*(.*)$", re.IGNORECASE)
 THEN_RE = re.compile(r"^\s*-\s*(?:\*\*)?THEN(?:\*\*)?\s*(.*)$", re.IGNORECASE)
 NO_CI_RE = re.compile(r"<!--\s*no-ci\s*-->", re.IGNORECASE)
 PROSE_SCENARIO_RE = re.compile(r"^\s*Scenario:", re.IGNORECASE)
+REPO_ROOT = Path(__file__).resolve().parents[1]
+# prose-форма — только эти FROZEN-спеки (пути от корня репо); всё остальное обязано быть карточками
+PROSE_SPEC_ALLOWLIST = frozenset(
+    {
+        "openspec/specs/accumulation-radar.md",
+        "openspec/specs/analysis-filters.md",
+        "openspec/specs/pumpportal-ingress.md",
+        "openspec/specs/standalone-analyzer.md",
+        "openspec/specs/wallet-watch.md",
+    }
+)
+FROZEN_MARKER_RE = re.compile(r"\bFROZEN\b")
+FROZEN_HEADER_LINES = 10
 PLAIN_STEP_RE = re.compile(
     r"^\s*(?:[-*]\s*)?(?:\*\*)?(GIVEN|WHEN|THEN)(?:\*\*)?\s*:?\s*(.*)$", re.IGNORECASE
 )
@@ -116,6 +134,26 @@ def is_prose_scenario(heading):
     return bool(PROSE_SCENARIO_RE.match(heading))
 
 
+def rel_path_posix(path):
+    """Путь карточки от корня репо (если файл вне репо — как есть)."""
+    try:
+        return Path(path).resolve().relative_to(REPO_ROOT).as_posix()
+    except (ValueError, OSError):
+        return Path(path).as_posix()
+
+
+def prose_allowed(path, lines):
+    """prose-форма — только для FROZEN-спек из allowlist, и только с маркером FROZEN в шапке.
+
+    Иначе `#### Scenario:` становится обходом карточных правил: id, дедуп, UNTESTED и
+    сверка с pytest-маркерами не проверяются вовсе.
+    """
+    if rel_path_posix(path) not in PROSE_SPEC_ALLOWLIST:
+        return False
+    header = [line for line in lines if line.strip()][:FROZEN_HEADER_LINES]
+    return any(FROZEN_MARKER_RE.search(line) for line in header)
+
+
 def collect_steps(block):
     """GIVEN/WHEN/THEN из блока: годятся и пункты `- WHEN ...`, и строки без пункта."""
     steps = {"GIVEN": [], "WHEN": [], "THEN": []}
@@ -141,11 +179,12 @@ def parse_card(path):
     errors = []
     warnings = []
     scenarios = []
+    prose = []
 
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except OSError as exc:
-        return [], [f"cannot read card: {exc}"], []
+        return [], [f"cannot read card: {exc}"], [], []
 
     for index, line in enumerate(lines):
         match = SCENARIO_HEADER_RE.match(line)
@@ -169,12 +208,19 @@ def parse_card(path):
             continue
 
         if is_prose_scenario(heading):
+            if not prose_allowed(path, lines):
+                errors.append(
+                    f"prose scenario outside FROZEN allowlist: {path}:{start_line}: {heading}"
+                )
+                continue
             steps = collect_steps(block)
             for key in ("GIVEN", "WHEN", "THEN"):
                 if not steps[key]:
                     errors.append(f"prose scenario without {key}: {path}:{start_line}: {heading}")
-                elif not any(steps[key]):
+                elif any(not step for step in steps[key]):
+                    # поэлементно: пустой шаг не должен маскироваться соседним непустым
                     errors.append(f"empty {key}: {path}:{start_line}: {heading}")
+            prose.append({"label": heading, "path": path, "line": start_line})
             warnings.append(f"unbound prose scenario (no id): {heading}")
             continue
 
@@ -219,7 +265,7 @@ def parse_card(path):
             if not then_lines:
                 errors.append(f"scenario without THEN: {scenario_id}: {path}:{start_line}")
 
-    return scenarios, errors, warnings
+    return scenarios, errors, warnings, prose
 
 
 def collect_cards(specs_dir):
@@ -229,13 +275,26 @@ def collect_cards(specs_dir):
     per_file = {}
     all_scenarios = []
     seen = {}
+    seen_prose = {}
 
     for path in sorted(specs_dir.glob("*.md"), key=lambda item: item.name):
-        scenarios, errors, warnings = parse_card(path)
+        scenarios, errors, warnings, prose = parse_card(path)
         per_file[path] = {"errors": errors, "warnings": warnings}
         all_scenarios.extend(scenarios)
         for scenario in scenarios:
             seen.setdefault(scenario["id"], []).append(scenario)
+        for item in prose:
+            label = re.sub(r"\s+", " ", item["label"].strip()).lower()
+            seen_prose.setdefault(label, []).append(item)
+
+    for label in sorted(seen_prose):
+        locations = seen_prose[label]
+        if len(locations) < 2:
+            continue
+        detail = ", ".join(f"{item['path']}:{item['line']}" for item in locations)
+        message = f"duplicate prose scenario name: {label}: {detail}"
+        for item in locations:
+            per_file[item["path"]]["errors"].append(message)
 
     for scenario_id in sorted(seen):
         locations = seen[scenario_id]
