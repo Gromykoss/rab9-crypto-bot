@@ -79,6 +79,10 @@ jobs:
       # websockets + requests_oauthlib: домены pumpportal-ingress/wallet-watch/radar_x
       # импортируют их на уровне модуля — без них сценарные тесты падают ImportError
       - run: pip install pytest pytest-asyncio requests python-dotenv httpx pydantic websockets requests_oauthlib
+      # pumpportal_listener.py на импорте делает fail-fast, если в .env нет RAB9_HTTP_SECRET
+      # (в CI .env не приходит — файл в .gitignore); тестам нужен только непустой дубль
+      - name: dummy test env
+        run: echo "RAB9_HTTP_SECRET=ci-dummy-secret" > .env
       - name: affected scenarios
         run: |
           BASE="${{ github.event.before }}"

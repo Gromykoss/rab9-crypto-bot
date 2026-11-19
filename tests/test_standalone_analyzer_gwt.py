@@ -32,7 +32,9 @@ from unittest.mock import AsyncMock
 import pytest
 import requests
 
-sys.path.insert(0, "/home/hermes-workspace/rab9")
+REPO_ROOT = Path(__file__).resolve().parents[1]  # корень репо: локально и в CI (не хардкод пути)
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 ADDR_A = "4EMfevH3bDfnThB8EeNfF9KPiSD9YhEvgiFtUYFaWdEr"
 ADDR_B = "5UUH9RTDiSpq6HKS6bp4NdU9PNJpXRXuiw6ShBTBhgH2"
@@ -505,7 +507,7 @@ def test_telegram_demolition_intact(sb, monkeypatch):
     THEN пайплайн работает, telegram не импортируется."""
     # GIVEN: в репозитории нет telegram-импортов в модулях ядра и пайплайна
     for name in ("analyzer_main.py", "sink.py", "msf_http.py", "msf_dedupe.py"):
-        source = Path("/home/hermes-workspace/rab9", name).read_text()
+        source = (REPO_ROOT / name).read_text()
         assert "from telegram" not in source and "import telegram" not in source, name
     # GIVEN: модули пайплайна живы
     import cabal_detector  # noqa: F401

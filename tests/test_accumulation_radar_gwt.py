@@ -9,11 +9,14 @@ import contextlib
 import json
 import os
 import sys
+from pathlib import Path
 import time
 
 import pytest
 
-sys.path.insert(0, "/home/hermes-workspace/rab9")
+REPO_ROOT = Path(__file__).resolve().parents[1]  # корень репо: локально и в CI (не хардкод пути)
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 BURNIE_MINT = "CGEDT9QZDvvH5GmVkWJH2BXiMJqMJySC9ihWyr7Spump"
 

@@ -13,11 +13,14 @@ import asyncio
 import json
 import logging
 import sys
+from pathlib import Path
 import types
 
 import pytest
 
-sys.path.insert(0, "/home/hermes-workspace/rab9")
+REPO_ROOT = Path(__file__).resolve().parents[1]  # корень репо: локально и в CI (не хардкод пути)
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 WALLET_A = "4EMfevH3Ysbw6S5CATzsgBJbutLV62MtrJJmo3F9zaQ9"
 WALLET_B = "DAqCpTpQN1JNCDYLXWir28q1J2eXSufiNNADsSnUQTBZ"  # не в wallet_watch.json

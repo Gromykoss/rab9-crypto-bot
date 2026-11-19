@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import sys
+from pathlib import Path
 import time
 from unittest import mock
 
@@ -24,7 +25,9 @@ import pytest
 import websockets
 from websockets.frames import Close
 
-sys.path.insert(0, "/home/hermes-workspace/rab9")
+REPO_ROOT = Path(__file__).resolve().parents[1]  # корень репо: локально и в CI (не хардкод пути)
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 ADDR = "4EMfevH3bDfnThB8EeNfF9KPiSD9YhEvgiFtUYFaWdEr"
 ADDR_DEFERRED_1 = "5UUH9RTDiSpq6HKS6bp4NdU9PNJpXRXuiw6ShBTBhgH2"
