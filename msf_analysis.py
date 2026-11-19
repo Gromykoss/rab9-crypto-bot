@@ -62,16 +62,65 @@ def empty_safety_flags() -> dict:
     return {"honeypot": "", "rugcheck": "", "phase": ""}
 
 
-def resolve_x_enrichment_raw(address: str) -> tuple[str, bool]:
-    """Кеш radar_x с t0; subprocess только при промахе. Возвращает (json, need_subprocess)."""
+_analysis_queue_ctx: dict = {}
+
+
+def set_analysis_queue_context(**fields) -> None:
+    _analysis_queue_ctx.clear()
+    _analysis_queue_ctx.update(fields)
+
+
+def take_analysis_queue_context(address: str) -> dict:
+    if _analysis_queue_ctx.get("address") != address:
+        return {}
+    ctx = dict(_analysis_queue_ctx)
+    _analysis_queue_ctx.clear()
+    return ctx
+
+
+def plan_x_query(address: str, token_name: str | None = None) -> str:
+    """Тот же query, что enrichment radar_x в build_compact_analysis_text."""
+    name = token_name if token_name is not None else "?"
+    if name and name != "?":
+        return str(name).lower()
+    return address[:12]
+
+
+def probe_token_name_for_x(address: str) -> str:
+    """Символ до полного анализа (DexScreener; совпадает с ранними fallbacks build_compact)."""
+    try:
+        from pair_sources import get_dexscreener_candidates
+
+        dex_candidates = get_dexscreener_candidates(address)
+        for c in (dex_candidates.get("candidates") or [])[:1]:
+            if c.get("token_name") and c["token_name"] != "n/a":
+                return str(c["token_name"])
+    except Exception:
+        pass
+    try:
+        pair_resolve_text = build_pair_resolve_text(address)
+        for line in pair_resolve_text.splitlines():
+            if "name:" in line and "base " in line:
+                name_part = line.split("name:", 1)[1].strip()
+                if name_part and name_part != "n/a" and len(name_part) <= 30:
+                    return name_part
+    except Exception:
+        pass
+    return "?"
+
+
+def resolve_x_enrichment_raw(address: str, x_query: str | None = None) -> tuple[str, bool]:
+    """Кеш radar_x с rate_gate; subprocess только при промахе. Возвращает (json, need_subprocess)."""
     import json
 
     from config import RADAR_X_CACHE_TTL_H
     from operators.radar_x_cache import get_cached
 
-    cached_x = get_cached(address, ttl_seconds=RADAR_X_CACHE_TTL_H * 3600)
-    if cached_x and cached_x.get("radar"):
-        return json.dumps(cached_x["radar"], ensure_ascii=False), False
+    query = x_query or plan_x_query(address, probe_token_name_for_x(address))
+    cached_x = get_cached(address, query, ttl_seconds=RADAR_X_CACHE_TTL_H * 3600)
+    radar = (cached_x or {}).get("radar") if cached_x else None
+    if isinstance(radar, dict) and radar.get("cacheable") and radar.get("ok"):
+        return json.dumps(radar, ensure_ascii=False), False
     return "", True
 
 
@@ -504,7 +553,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         # Build search query: token name + address
         radar_query = f"{token_name} {address}" if token_name != "?" else address
         # X search: use lowercase for meme coins (Toly tweets "burnie" not "BURNIE")
-        x_query = token_name.lower() if token_name != "?" else address[:12]
+        x_query = plan_x_query(address, token_name)
 
         # Run radars + chart in parallel
         def _run_radar(script, query):
@@ -522,7 +571,7 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
 
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        x_raw, need_x_subprocess = resolve_x_enrichment_raw(address)
+        x_raw, need_x_subprocess = resolve_x_enrichment_raw(address, x_query)
         gh_raw = ""
         with ThreadPoolExecutor(max_workers=6) as ex:
             futures = {
@@ -1084,15 +1133,23 @@ def build_compact_analysis_text(address: str, mode: str = "full"):
         lines.append(f"⚠️ {escalate_reason}")
 
     social_confirmed = False
-    try:
-        from config import RADAR_X_CACHE_TTL_H
-        from operators.radar_x_cache import get_cached
+    queue_ctx = take_analysis_queue_context(address)
+    flags = list(queue_ctx.get("verdict_flags") or [])
+    if queue_ctx.get("social_confirmed") is True:
+        social_confirmed = True
+    elif "negative_sentiment" in flags:
+        social_confirmed = True
+    else:
+        try:
+            from config import RADAR_X_CACHE_TTL_H
+            from operators.radar_x_cache import get_cached
 
-        social_hit = get_cached(address, ttl_seconds=RADAR_X_CACHE_TTL_H * 3600)
-        if social_hit and (social_hit.get("social") or {}).get("confirmed"):
-            social_confirmed = True
-    except Exception:
-        pass
+            x_q = plan_x_query(address, token_name)
+            social_hit = get_cached(address, x_q, ttl_seconds=RADAR_X_CACHE_TTL_H * 3600)
+            if social_hit and (social_hit.get("social") or {}).get("confirmed"):
+                social_confirmed = True
+        except Exception:
+            pass
 
     if mode == "summary":
         # ── P0: RugCheck gate — force AVOID if high/rugged ──

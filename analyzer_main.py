@@ -52,53 +52,90 @@ OUTCOME_DEAD_LIQ = float(_env("ANALYZER_OUTCOME_DEAD_LIQ_USD", "5000"))
 OUTCOME_AFTER_H = float(_env("ANALYZER_OUTCOME_AFTER_H", "24"))
 
 
-def _x_query_for(address: str) -> str:
-    return address[:12]
-
-
-def _prime_social_radar(address: str) -> tuple[dict, dict]:
-    """Один X-поиск на токен: кеш + offline-классификатор негатива."""
-    from config import (
-        RADAR_X_CACHE_MAX,
-        RADAR_X_CACHE_TTL_H,
-        SOCIAL_NEGATIVE_MIN_AUTHORS,
-        SOCIAL_NEGATIVE_SHARE_THRESHOLD,
-    )
-    from operators.operator_social_weight import classify_from_radar
-    from operators.radar_x_cache import get_cached, put_cached
-    from radar_x import search_x
-
-    ttl = RADAR_X_CACHE_TTL_H * 3600
-    hit = get_cached(address, ttl_seconds=ttl)
-    if hit:
-        return hit.get("radar") or {}, hit.get("social") or {}
-
-    query = _x_query_for(address)
+def _social_weight_sync(queue_row: dict) -> str:
+    """X-поиск + классификатор на переходе QUEUED→ANALYZED. ``proceed`` | ``defer``."""
+    address = queue_row.get("address", "")
+    if not address:
+        return "proceed"
     try:
-        radar = search_x(query)
-    except Exception:
-        radar = {"ok": False, "posts": [], "post_records": []}
+        from config import (
+            RADAR_X_CACHE_MAX,
+            RADAR_X_CACHE_TTL_H,
+            SOCIAL_NEGATIVE_MIN_AUTHORS,
+            SOCIAL_NEGATIVE_PRIORITY_PENALTY,
+            SOCIAL_NEGATIVE_SHARE_THRESHOLD,
+        )
+        from msf_analysis import plan_x_query, probe_token_name_for_x
+        from operators.operator_social_weight import classify_from_radar
+        from operators.radar_x_cache import get_cached, put_cached
+        from radar_x import search_x
 
-    score, confirmed, reasons = classify_from_radar(
-        radar,
-        min_authors=SOCIAL_NEGATIVE_MIN_AUTHORS,
-        negative_share_threshold=SOCIAL_NEGATIVE_SHARE_THRESHOLD,
-    )
-    social = {
-        "score": score,
-        "confirmed": confirmed,
-        "reasons": reasons,
-        "verdict_flags": ["negative_sentiment"] if confirmed else [],
-    }
-    put_cached(
-        address,
-        query,
-        radar,
-        social=social,
-        ttl_seconds=ttl,
-        max_entries=RADAR_X_CACHE_MAX,
-    )
-    return radar, social
+        token_symbol = probe_token_name_for_x(address)
+        x_query = plan_x_query(address, token_symbol)
+        ttl = RADAR_X_CACHE_TTL_H * 3600
+        hit = get_cached(address, x_query, ttl_seconds=ttl)
+        radar = None
+        social = None
+        if hit:
+            radar = hit.get("radar")
+            social = hit.get("social")
+        if not isinstance(radar, dict) or not radar.get("cacheable"):
+            try:
+                radar = search_x(x_query)
+            except Exception:
+                return "proceed"
+            if not isinstance(radar, dict) or not radar.get("cacheable"):
+                return "proceed"
+            score, confirmed, reasons = classify_from_radar(
+                radar,
+                min_authors=SOCIAL_NEGATIVE_MIN_AUTHORS,
+                negative_share_threshold=SOCIAL_NEGATIVE_SHARE_THRESHOLD,
+                token_symbol=token_symbol,
+            )
+            social = {
+                "score": score,
+                "confirmed": confirmed,
+                "reasons": reasons,
+                "verdict_flags": ["negative_sentiment"] if confirmed else [],
+            }
+            try:
+                put_cached(
+                    address,
+                    x_query,
+                    radar,
+                    social=social,
+                    ttl_seconds=ttl,
+                    max_entries=RADAR_X_CACHE_MAX,
+                )
+            except Exception:
+                pass
+        elif not isinstance(social, dict):
+            score, confirmed, reasons = classify_from_radar(
+                radar,
+                min_authors=SOCIAL_NEGATIVE_MIN_AUTHORS,
+                negative_share_threshold=SOCIAL_NEGATIVE_SHARE_THRESHOLD,
+                token_symbol=token_symbol,
+            )
+            social = {
+                "score": score,
+                "confirmed": confirmed,
+                "reasons": reasons,
+                "verdict_flags": ["negative_sentiment"] if confirmed else [],
+            }
+
+        social = social or {}
+        queue_row["social_weight"] = social
+        if not social.get("confirmed"):
+            return "proceed"
+        queue_row["verdict_flags"] = list(social.get("verdict_flags") or ["negative_sentiment"])
+        if queue_row.get("social_penalized"):
+            return "proceed"
+        base_p = float(queue_row.get("priority") or 0)
+        queue_row["priority"] = base_p * (1.0 - SOCIAL_NEGATIVE_PRIORITY_PENALTY)
+        queue_row["social_penalized"] = True
+        return "defer"
+    except Exception:
+        return "proceed"
 
 
 def _append(path: Path, record: dict) -> None:
@@ -213,17 +250,8 @@ async def t0_tick(sink: Sink):
             _rewrite(T0_QUEUE, [l for l in _load(T0_QUEUE) if l != raw])
             continue
         kabal_bonus = 10.0 if await _is_kabal(address) else 0.0
-        _, social = await asyncio.to_thread(_prime_social_radar, address)
         priority = liq + kabal_bonus
-        from config import SOCIAL_NEGATIVE_PRIORITY_PENALTY
-
-        if social.get("confirmed"):
-            priority *= 1.0 - SOCIAL_NEGATIVE_PRIORITY_PENALTY
         queued = {"address": address, "ts": now, "priority": priority}
-        if social.get("verdict_flags"):
-            queued["verdict_flags"] = list(social["verdict_flags"])
-        if social:
-            queued["social_weight"] = social
         safety = _safety_fields(rec, fresh)
         if safety:
             queued["safety"] = safety
@@ -258,33 +286,60 @@ async def rate_gate(sink: Sink):
     if not entries:
         return
     hour_ago = time.time() - 3600
-    # N1-minor hardening: счётчик из rate-журнала ANALYZED (устойчив к ротации sink)
     done_this_hour = sum(
         1 for raw in _load(RATE_LOG)
         if _ts_of(raw) >= hour_ago
     )
-    best, best_i, best_p = None, -1, -1.0
-    for i, raw in enumerate(entries):
-        try:
-            rec = json.loads(raw)
-        except ValueError:
-            continue
-        p = float(rec.get("priority") or 0)
-        if p > best_p:
-            best, best_i, best_p = rec, i, p
-    if best is None:
-        return
-    address = best.get("address", "")
-    if await _drop_if_confirmed_scam(sink, address, best):
-        return
     if done_this_hour >= RATE_CAP_H + KABAL_CAP_H:
-        log.info("RATE CAP: %d/%d+KABAL — %s остаётся в очереди", done_this_hour, RATE_CAP_H, address[:12])
         return
-    # ANALYZED: дедуп-ключ пишется ВНУТРИ полного прогона (record_analysis)
-    _rewrite(ANALYSIS_QUEUE, [l for i, l in enumerate(entries) if i != best_i])
-    _append(RATE_LOG, {"ts": time.time(), "address": address})
-    log.info("ANALYZED start: %s (priority=%.0f, done=%d/%d)", address[:12], best_p, done_this_hour, RATE_CAP_H)
-    await send_msf_pairresolve(sink, address)
+
+    max_passes = max(len(entries), 1)
+    deferred_this_pass: set[str] = set()
+    for _ in range(max_passes):
+        best, best_i, best_p = None, -1, -1.0
+        for i, raw in enumerate(entries):
+            try:
+                rec = json.loads(raw)
+            except ValueError:
+                continue
+            addr = rec.get("address", "")
+            if addr in deferred_this_pass:
+                continue
+            p = float(rec.get("priority") or 0)
+            if p > best_p:
+                best, best_i, best_p = rec, i, p
+        if best is None:
+            return
+        address = best.get("address", "")
+        if await _drop_if_confirmed_scam(sink, address, best):
+            entries.pop(best_i)
+            _rewrite(ANALYSIS_QUEUE, entries)
+            continue
+        gate = await asyncio.to_thread(_social_weight_sync, best)
+        if gate == "defer":
+            entries[best_i] = json.dumps(best, ensure_ascii=False)
+            _rewrite(ANALYSIS_QUEUE, entries)
+            deferred_this_pass.add(address)
+            log.info(
+                "SOCIAL defer: %s priority→%.0f (negative, first strike)",
+                address[:12],
+                float(best.get("priority") or 0),
+            )
+            continue
+        entries.pop(best_i)
+        _rewrite(ANALYSIS_QUEUE, entries)
+        _append(RATE_LOG, {"ts": time.time(), "address": address})
+        log.info("ANALYZED start: %s (priority=%.0f, done=%d/%d)", address[:12], best_p, done_this_hour, RATE_CAP_H)
+        from msf_analysis import set_analysis_queue_context
+
+        social = best.get("social_weight") or {}
+        set_analysis_queue_context(
+            address=address,
+            verdict_flags=list(best.get("verdict_flags") or []),
+            social_confirmed=bool(social.get("confirmed")),
+        )
+        await send_msf_pairresolve(sink, address)
+        return
 
 
 # ── accumulation-radar P2 (спека v1.0: окно 24ч, 5 признаков) ──

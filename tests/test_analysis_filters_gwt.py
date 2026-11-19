@@ -13,6 +13,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]  # корень репо: лок
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from operators.operator_social_weight import classify_negative, _post_negative
+
 NOW = 1_800_000_000.0  # фиксированное «сейчас» (никакого реального времени)
 ADDR_A = "4EMfevH3bDfnThB8EeNfF9KPiSD9YhEvgiFtUYFaWdEr"
 ADDR_B = "5UUH9RTDiSpq6HKS6bp4NdU9PNJpXRXuiw6ShBTBhgH2"
@@ -242,73 +244,183 @@ def _radar_cache_path(monkeypatch, tmp_path):
     return p
 
 
+def _cacheable_radar(posts=None, **extra):
+    base = {
+        "ok": True,
+        "cacheable": True,
+        "api_called": True,
+        "query": "t",
+        "posts": [],
+        "post_records": posts or [],
+        "count": len(posts or []),
+        "spam_detected": 0,
+    }
+    base.update(extra)
+    return base
+
+
+def _enqueue(am, rows):
+    am.ANALYSIS_QUEUE.parent.mkdir(parents=True, exist_ok=True)
+    am.ANALYSIS_QUEUE.write_text("".join(json.dumps(r) + "\n" for r in rows))
+
+
 # ── 5. social-weight ─────────────────────────────────────────────────────
 @pytest.mark.scenario("analysis-filters.social_negative_priority")
 def test_social_negative_priority_lowers_queue_and_verdict_flag(tmp_path, monkeypatch):
-    import inspect
     from unittest.mock import AsyncMock
 
-    import msf_analysis
-
-    # ── confirmed negative → пониженный приоритет + флаг вердикта
     am = _paths(monkeypatch, tmp_path)
+    import msf_analysis
     _radar_cache_path(monkeypatch, tmp_path)
     _freeze_time(monkeypatch)
-    monkeypatch.setattr(am, "T0_INTERVAL_MIN", 20)
-    am.T0_QUEUE.write_text(
-        json.dumps({"address": ADDR_A, "ts": NOW - (20 * 60 + 60), "baseline": {"liquidity_usd": 1500}}) + "\n"
-    )
     calls = {"x": 0}
 
     def _fake_search(_query):
         calls["x"] += 1
-        return _negative_radar_payload()
+        if calls["x"] == 1:
+            return _cacheable_radar(
+                post_records=[
+                    {"username": "alice", "text": "obvious scam rug"},
+                    {"username": "bob", "text": "honeypot drain stay away"},
+                ]
+            )
+        return _cacheable_radar()
 
     monkeypatch.setattr("radar_x.search_x", _fake_search)
+    monkeypatch.setattr(msf_analysis, "probe_token_name_for_x", lambda _a: "TEST")
     monkeypatch.setattr(am, "_extract_baseline", lambda a: {"price_usd": "0.01", "liquidity_usd": 24000})
     monkeypatch.setattr(am, "_is_kabal", AsyncMock(return_value=False))
 
-    asyncio.run(am.t0_tick(_mock_sink()))
+    _enqueue(
+        am,
+        [
+            {"address": ADDR_A, "ts": NOW, "priority": 24000.0},
+            {"address": ADDR_B, "ts": NOW, "priority": 10000.0},
+        ],
+    )
+    sent = {"flags": []}
+
+    async def _send(sink, address, manual=False):
+        sent["address"] = address
+        ctx = msf_analysis.take_analysis_queue_context(address)
+        sent["flags"] = list(ctx.get("verdict_flags") or [])
+        sent["social_confirmed"] = bool(ctx.get("social_confirmed"))
+        return "sent"
+
+    monkeypatch.setattr(am, "send_msf_pairresolve", _send)
+    asyncio.run(am.rate_gate(_mock_sink()))
 
     queued = _jsonl(am.ANALYSIS_QUEUE)
-    assert [r["address"] for r in queued] == [ADDR_A]
-    assert queued[0]["priority"] == pytest.approx(24000.0 * 0.75)
-    assert queued[0].get("verdict_flags") == ["negative_sentiment"]
-    assert calls["x"] == 1
+    neg_row = next(r for r in queued if r["address"] == ADDR_A)
+    assert neg_row["priority"] == pytest.approx(24000.0 * 0.75)
+    assert neg_row.get("social_penalized") is True
+    assert neg_row.get("verdict_flags") == ["negative_sentiment"]
+    assert sent.get("address") == ADDR_B
+    assert calls["x"] == 2
 
-    verdict = msf_analysis._apply_summary_risk_flags(
-        "⚠️ AVOID (RugCheck: HIGH RISK)",
+    asyncio.run(am.rate_gate(_mock_sink()))
+    assert sent.get("address") == ADDR_A
+    assert calls["x"] == 2
+    assert sent.get("flags") == ["negative_sentiment"]
+    assert sent.get("social_confirmed") is True
+
+    verdict_line = msf_analysis._apply_summary_risk_flags(
+        "SOLID",
         {},
-        social_confirmed=True,
+        social_confirmed=sent.get("social_confirmed"),
     )
-    assert "SOCIAL" in verdict and "негатив" in verdict.lower()
+    assert "SOCIAL" in verdict_line and "негатив" in verdict_line.lower()
 
-    raw, need = msf_analysis.resolve_x_enrichment_raw(ADDR_A)
-    assert raw and not need
-    assert calls["x"] == 1
-    assert "resolve_x_enrichment_raw" in inspect.getsource(msf_analysis.build_compact_analysis_text)
-
-    # ── нейтраль / нет auth → очередь без штрафа, BURNIE jsonl не используется
-    neutral = tmp_path / "neutral"
-    neutral.mkdir(exist_ok=True)
-    am2 = _paths(monkeypatch, neutral)
-    _radar_cache_path(monkeypatch, neutral)
-    _freeze_time(monkeypatch)
-    monkeypatch.setattr(am2, "T0_INTERVAL_MIN", 20)
-    am2.T0_QUEUE.write_text(
-        json.dumps({"address": ADDR_B, "ts": NOW - (20 * 60 + 60)}) + "\n"
-    )
-    assert "community_sentiment" not in inspect.getsource(am2._prime_social_radar)
+    neutral_root = tmp_path / "neutral"
+    neutral_root.mkdir()
+    am2 = _paths(monkeypatch, neutral_root)
+    _radar_cache_path(monkeypatch, neutral_root)
+    neutral_x = {"x": 0}
     monkeypatch.setattr(
         "radar_x.search_x",
-        lambda _q: {"ok": True, "posts": [], "post_records": [], "count": 0},
+        lambda _q: neutral_x.__setitem__("x", neutral_x["x"] + 1) or _cacheable_radar(),
     )
-    monkeypatch.setattr(am2, "_extract_baseline", lambda a: {"price_usd": "0.01", "liquidity_usd": 24000})
-    monkeypatch.setattr(am2, "_is_kabal", AsyncMock(return_value=False))
-    asyncio.run(am2.t0_tick(_mock_sink()))
-    queued_b = _jsonl(am2.ANALYSIS_QUEUE)
-    assert queued_b[0]["priority"] == 24000.0
-    assert not queued_b[0].get("verdict_flags")
+
+    async def _send2(sink, address, manual=False):
+        return "sent"
+
+    monkeypatch.setattr(am2, "send_msf_pairresolve", _send2)
+    _enqueue(am2, [{"address": ADDR_B, "ts": NOW, "priority": 24000.0}])
+    asyncio.run(am2.rate_gate(_mock_sink()))
+    assert neutral_x["x"] == 1
+    assert not _jsonl(am2.ANALYSIS_QUEUE)
+    import inspect
+
+    assert "community_sentiment" not in inspect.getsource(am._social_weight_sync)
+    src = inspect.getsource(am.t0_tick)
+    assert "_social_weight_sync" not in src
+    assert "_prime_social" not in src
+
+
+def test_social_x_calls_one_per_analyzed_including_deferred(tmp_path, monkeypatch):
+    from unittest.mock import AsyncMock
+
+    am = _paths(monkeypatch, tmp_path)
+    import msf_analysis
+    _radar_cache_path(monkeypatch, tmp_path)
+    calls = {"x": 0}
+
+    def _fake_search(_q):
+        calls["x"] += 1
+        if calls["x"] == 1:
+            return _cacheable_radar(
+                post_records=[
+                    {"username": "a", "text": "scam rug"},
+                    {"username": "b", "text": "honeypot drain"},
+                ]
+            )
+        return _cacheable_radar()
+
+    monkeypatch.setattr("radar_x.search_x", _fake_search)
+    monkeypatch.setattr(msf_analysis, "probe_token_name_for_x", lambda _a: "TKN")
+    monkeypatch.setattr(am, "send_msf_pairresolve", AsyncMock(return_value="sent"))
+    _enqueue(
+        am,
+        [
+            {"address": ADDR_A, "ts": NOW, "priority": 30000.0},
+            {"address": ADDR_B, "ts": NOW, "priority": 20000.0},
+        ],
+    )
+    asyncio.run(am.rate_gate(_mock_sink()))
+    asyncio.run(am.rate_gate(_mock_sink()))
+    assert calls["x"] == 2
+
+
+def test_social_x_calls_match_analyzed_tokens(tmp_path, monkeypatch):
+    from unittest.mock import AsyncMock
+
+    am = _paths(monkeypatch, tmp_path)
+    import msf_analysis
+    _radar_cache_path(monkeypatch, tmp_path)
+    _freeze_time(monkeypatch)
+    calls = {"x": 0}
+
+    def _fake_search(_q):
+        calls["x"] += 1
+        return _cacheable_radar()
+
+    monkeypatch.setattr("radar_x.search_x", _fake_search)
+    monkeypatch.setattr(msf_analysis, "probe_token_name_for_x", lambda a: "TKN")
+    monkeypatch.setattr(am, "send_msf_pairresolve", AsyncMock(return_value="sent"))
+
+    k = 3
+    rows = [
+        {"address": f"{i:02d}" + ADDR_A[2:], "ts": NOW, "priority": 1000.0 * (k - i)}
+        for i in range(k)
+    ]
+    _enqueue(am, rows)
+    for _ in range(k):
+        asyncio.run(am.rate_gate(_mock_sink()))
+    assert calls["x"] == k
+    q = msf_analysis.plan_x_query(rows[0]["address"], "TKN")
+    raw, need = msf_analysis.resolve_x_enrichment_raw(rows[0]["address"], q)
+    assert raw and not need
+    assert calls["x"] == k
 
 
 # ── 6. outcome-loop ────────────────────────────────────────────────────────
@@ -562,3 +674,40 @@ def test_confirmed_scam_drop_removes_both_queues_and_writes_reject(tmp_path, mon
     records = _jsonl(sink.jsonl)
     assert [record["type"] for record in records] == ["reject", "reject"]
     assert records[-1]["address"] == ADDR_B
+
+
+def _lexicon_posts(*pairs):
+    return [{"username": u, "text": t} for u, t in pairs]
+
+
+def test_social_lexicon_negation_not_negative():
+    posts = _lexicon_posts(
+        ("alice", "this is not a scam"),
+        ("bob", "anti-rug team, looks fine"),
+    )
+    _, confirmed, _ = classify_negative(posts)
+    assert not confirmed
+
+
+def test_social_lexicon_ticker_rugger_ignored():
+    posts = _lexicon_posts(
+        ("alice", "aping $RUGGER now"),
+        ("bob", "RUGGER is the play"),
+    )
+    _, confirmed, _ = classify_negative(posts, token_symbol="RUGGER")
+    assert not confirmed
+
+
+def test_social_lexicon_no_substring_shrug_drug():
+    posts = _lexicon_posts(
+        ("alice", "I shrug at this chart"),
+        ("bob", "not drug related, just a ticker"),
+    )
+    assert not _post_negative(posts[0]["text"])
+    assert not _post_negative(posts[1]["text"])
+    _, confirmed, _ = classify_negative(posts)
+    assert not confirmed
+
+
+def test_social_lexicon_russian_negation():
+    assert not _post_negative("это не скам, норм проект")
