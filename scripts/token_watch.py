@@ -30,8 +30,6 @@
 ВАЖНО: 18.11 прямой вызов Telegram API с токеном из ~/rab9/.env дал 401 —
 у проекта токен бота ядра (@rab2610bot), для отчётов он не годится; канонный
 путь доставки — stdout + deliver=telegram у крона (как у BURNIE-контура).
-Примечание: import operators/check_destination оставлен для проверки allowlist
-чата .env, если кто-то вернёт прямую отправку.
 """
 
 from __future__ import annotations
@@ -44,15 +42,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 RAB9_DIR = Path("/home/hermes-workspace/rab9")
-if str(RAB9_DIR) not in sys.path:
-    sys.path.insert(0, str(RAB9_DIR))
-try:
-    from operators import Verdict, check_destination  # noqa: E402
-except Exception:  # pragma: no cover — ниже fail-closed
-    Verdict = None  # type: ignore[assignment]
-    check_destination = None  # type: ignore[assignment]
-
-ENV = RAB9_DIR / ".env"
 STATE_PATH = RAB9_DIR / "data" / "token_watch_state.json"
 
 # ── что наблюдаем ────────────────────────────────────────────────────────────
@@ -78,26 +67,13 @@ SUPPLY_CHANGE_PCT = 0.5    # сжигание/допечатка саплая
 NEW_PAIRS_24H = 3          # рост числа пар за сутки
 ALERT_COOLDOWN_MIN = 120   # антиспам на тип алерта
 DIGEST_UTC_HOUR = 4        # 04:00 UTC = 09:00 Бишкек
+DIGEST_TREND_PCT = 15.0    # заметное суточное движение для вердикта
 BISHKEK = timezone(timedelta(hours=5))
 DEX_HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) RAB9/1.0"}
 RPC_URL = "https://api.mainnet-beta.solana.com"
 
 
 # ── окружение и доставка ─────────────────────────────────────────────────────
-def read_env():
-    tok = grp = ""
-    try:
-        for line in ENV.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line.startswith("TELEGRAM_BOT_TOKEN="):
-                tok = line.split("=", 1)[1].strip().strip("\"'")
-            elif line.startswith("TELEGRAM_GROUP_ID="):
-                grp = line.split("=", 1)[1].strip().strip("\"'")
-    except OSError:
-        pass
-    return tok, grp
-
-
 def now_bk() -> datetime:
     return datetime.now(timezone.utc).astimezone(BISHKEK)
 
@@ -189,20 +165,30 @@ def load_state() -> dict:
     if STATE_PATH.exists():
         try:
             return json.loads(STATE_PATH.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            pass
+        except json.JSONDecodeError as exc:
+            backup = STATE_PATH.with_name(
+                "%s.corrupt-%s" % (STATE_PATH.name, datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")))
+            try:
+                STATE_PATH.replace(backup)
+                print("повреждённый снапшот сохранён: %s (%s)" % (backup, exc), file=sys.stderr)
+            except OSError as backup_exc:
+                print("снапшот повреждён и не изолирован: %s" % backup_exc, file=sys.stderr)
+        except OSError as exc:
+            print("снапшот не прочитан: %s" % exc, file=sys.stderr)
     return {"tokens": {}}
 
 
-def save_state(state: dict) -> None:
+def save_state(state: dict) -> bool:
     """Атомарная запись снапшота (CP-5: tmp → replace)."""
     try:
         STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
         tmp = STATE_PATH.with_suffix(".json.tmp")
         tmp.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
         tmp.replace(STATE_PATH)
+        return True
     except OSError as exc:
         print("снапшот не сохранён: %s" % exc, file=sys.stderr)
+        return False
 
 
 # ── форматирование ───────────────────────────────────────────────────────────
@@ -282,12 +268,14 @@ def handle_token(cfg: dict, state: dict) -> list:
     snaps = ts.get("snapshots") or []
     stamp = now_bk().strftime("%d.%m %H:%M")
 
+    auth = ts.get("authorities") or fetch_authorities(mint)
+    if auth:
+        ts["authorities"] = auth
+
     # первое касание: база + объявление владельцу, что наблюдение живо
     if not ts.get("announced"):
-        auth = fetch_authorities(mint)
         sup = fetch_supply(mint)
         ts["announced"] = now_bk().isoformat()
-        ts["authorities"] = auth
         if sup:
             ts["base_supply"] = sup
         msgs.append(
@@ -303,8 +291,8 @@ def handle_token(cfg: dict, state: dict) -> list:
             "Раз в сутки в 09:00 (Бишкек) — короткая сводка."
             % (cfg["symbol"], short(mint), fp(price), fu(dex.get("mc")), fu(liq), fu(vol24),
                dex["pairs"], dex["dexes"],
-               "отозваны ✅" if not auth.get("mint_authority") else "АКТИВНЫ ⚠️",
-               "отозваны ✅" if not auth.get("freeze_authority") else "АКТИВНЫ ⚠️",
+               "н/д" if not auth else ("отозваны ✅" if auth.get("mint_authority") is None else "АКТИВНЫ ⚠️"),
+               "н/д" if not auth else ("отозваны ✅" if auth.get("freeze_authority") is None else "АКТИВНЫ ⚠️"),
                fnum(ts.get("base_supply") or 0), cfg.get("history") or "нет"))
 
     s1h, s24h = _snap_ago(snaps, now, 1), _snap_ago(snaps, now, 24)
@@ -442,9 +430,9 @@ def maybe_digest(cfg: dict, state: dict) -> list:
     ts["last_digest"] = today
     ratio = dex.get("ratio")
     chg = dex.get("chg_24h") or 0
-    if chg >= 15 and _f(ratio) >= 1.0:
+    if chg >= DIGEST_TREND_PCT and _f(ratio) >= 1.0:
         verdict = "🟢 РАЗОГРЕВ — цена растёт на покупках"
-    elif chg <= -15:
+    elif chg <= -DIGEST_TREND_PCT:
         verdict = "🔴 ОТКАТ — за сутки заметное падение"
     elif ratio is not None and ratio < SELL_RATIO:
         verdict = "🟡 СЛАБОСТЬ — продажи перевешивают"
@@ -473,7 +461,9 @@ def main() -> int:
             out.extend(maybe_digest(cfg, state))
         except Exception as exc:  # noqa: BLE001 — один токен не должен ломать остальные
             print("%s: %s" % (cfg.get("symbol"), exc), file=sys.stderr)
-    save_state(state)
+    if not save_state(state):
+        print("сообщения подавлены: состояние не удалось сохранить", file=sys.stderr)
+        return 1
     for msg in out:
         print(msg)          # stdout → доставка кроном (deliver=telegram)
     return 0
