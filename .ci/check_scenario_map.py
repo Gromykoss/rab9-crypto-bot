@@ -104,6 +104,9 @@ WHITELIST = (
     "loop_state.json",
     "scripts/kg_benchmark.py",
     "scripts/knowledge_graph.py",
+    # 23.11 ops runtime без scenario-карточек: веб-читалка X (unit tests в tests/test_x_web.py)
+    "x_web.py",
+    "tests/test_x_web.py",
 )
 
 

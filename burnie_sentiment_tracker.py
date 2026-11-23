@@ -28,6 +28,15 @@ from typing import Any
 from operators import Verdict, check_destination
 
 ROOT = Path(__file__).resolve().parent
+# 23.11.2026: транспорт X переведён с платного API на веб-сессию (cookies → GraphQL).
+# Шим крона запускает каноничный файл через runpy, поэтому ROOT добавляем в sys.path сами.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+try:
+    import x_web
+except Exception:  # отсутствие модуля не должно ронять трекер — сработает fallback на xurl
+    x_web = None  # type: ignore[assignment]
+
 RAB9_DIR = Path("/home/hermes-workspace/rab9")
 # xurl: cron-PATH не включает ~/.local/bin и node → резолвим явно.
 # shutil.which() ловит symlink в интерактиве; fallback — нативный Go-бинарник
@@ -37,6 +46,11 @@ XURL_BIN = shutil.which("xurl") or (
 )
 OUTFILE = RAB9_DIR / "data" / "community_sentiment.jsonl"
 ACCOUNT = "BurnieSendersX"
+# Транспорт X-чтения: "web" — веб-сессия (cookies, без кредитов X API), "api" — прежний xurl.
+X_BACKEND = (os.environ.get("X_BACKEND") or "web").strip().lower()
+if x_web is not None:
+    x_web.set_account(ACCOUNT)
+
 NEGATIVE_QUERY = (
     # 21.10: tier Free СТАБИЛЬНО (флэп туда-обратно 20-21.10) — single-term + клиентский
     # фильтр. Вернуть операторные запросы только после устойчивого 200 в матрице.
@@ -377,6 +391,16 @@ AI_BUY_TERMS = (
 
 
 def run_xurl(args: list[str], timeout: int = 45) -> tuple[int, dict[str, Any] | None, str]:
+    """Чтение X: веб-сессия (cookies → GraphQL x.com) либо прежний платный X API.
+
+    23.11.2026: X API начал отдавать 402 credits-depleted на все чтения, владелец
+    распорядился уйти от платного API. Транспорт по умолчанию — web (x_web.run_compat,
+    форма ответа та же — X API v2); X_BACKEND=api возвращает прежний путь через xurl
+    (откат одной переменной окружения, без правки кода).
+    """
+    if X_BACKEND == "web" and x_web is not None:
+        return x_web.run_compat(list(args), timeout=timeout)
+    # --- прежний путь: платный X API через xurl ---
     # Retry на переходящий 401 (X-side auth glitch 18-20.10: тот же эндпоинт/токен
     # отдаёт 401, через секунды — 200; ретрай после паузы лечит прогон).
     for attempt in (1, 2, 3):

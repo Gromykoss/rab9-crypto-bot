@@ -33,7 +33,7 @@ RAB9 — Python-бот крипто-сигналов MSF: Telegram-мемы -> �
 | safety-gates | `AGENTS.md` Enforced-законы | `cabal_detector.py`, `wallet_intel.py`, `honeypot_check.py`, `rugcheck_client.py`, `operators`, `msf_dedupe.py` | `tests` |
 | llm-verification | `AGENTS.md`, `PROJECT.md` | `loop_verifier.py`, `loop_stops.py`, `radar_x.py`, `radar_gh.py` | `tests` |
 | delivery-alerts | `AGENTS.md` Destination lock | `alerts.py`, `alert_state.json`, `handlers.py`, `msf_http.py` | `tests` |
-| burnie-monitoring | `CHRONOLOGY.md`, `PROJECT.md` | `burnie_sentiment_tracker.py`, `burnie_price_watch.py`, `kpi_report.py` | `tests` |
+| burnie-monitoring | `CHRONOLOGY.md`, `PROJECT.md` | `burnie_sentiment_tracker.py`, `burnie_price_watch.py`, `kpi_report.py` (+ `x_web.py` — веб-сессия X) | `tests` |
 | token-watch (второй токен) | `CHRONOLOGY.md`, `AGENTS.md` | `scripts/token_watch.py` (+ шим `~/.hermes/profiles/rab9/scripts/token_watch.py`), `data/token_watch_state.json` | `cache/scratch/test_token_watch.py` (12 проверок) |
 | persistence-config | `AGENTS.md`, `INDEX.md` | `data`, `data/rab9_trades.db`, `trade_db.py`, `config.py`, `.env.example`, `requirements.txt` | `tests` |
 
@@ -45,6 +45,7 @@ RAB9 — Python-бот крипто-сигналов MSF: Telegram-мемы -> �
 - **DeepSeek/Grok/MoA/loop verifier/X radar** -> `loop_verifier.py` + `radar_x.py` + `radar_gh.py` + `PROJECT.md`.
 - **Telegram доставка / allowlist / alerts** -> `alerts.py` + `msf_http.py` + `handlers.py` + Destination lock в `AGENTS.md`.
 - **BURNIE cron / sentiment / price-watch / KPI** -> `burnie_sentiment_tracker.py` + `burnie_price_watch.py` + `kpi_report.py` + свежая `CHRONOLOGY.md`.
+- **X-чтение (фолловеры / таймлайн / поиск / кто ретвитнул)** -> `x_web.py` (веб-сессия cookies → GraphQL x.com, без кредитов X API) + `burnie_sentiment_tracker.run_xurl` (транспорт, флаг `X_BACKEND`); платный API — только как откат.
 - **Второй токен / мультитокенный вотч (CLAUDIA)** -> `scripts/token_watch.py` + свежая `CHRONOLOGY.md` (BURNIE-контур не читается и не меняется).
 - **БД / конфиг / зависимости** -> `trade_db.py` + `config.py` + `data/rab9_trades.db` + `requirements.txt` без чтения секретов из `.env`.
 
