@@ -939,3 +939,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **23.11.2026 03:20** — chore: CHRONOLOGY auto-append (write-back 13c8967) (`15f6d5b`)
 - **24.11.2026 07:25** — feat(radar_x): RADAR_X_BACKEND=off — выключение платного X API флагом (skip, нейтральный social-weight) (`a2e5241`)
 - **24.11.2026 07:25** — chore(spec-drift): write back SHA a2e5241 for RADAR_X_BACKEND=off intent (`756073d`)
+- **24.11.2026 07:30** — feat(radar_x): единый шлюз транспорта X (off|api|web) + веб-сессия за флагом (off по умолчанию) (`7ca8c0b`)

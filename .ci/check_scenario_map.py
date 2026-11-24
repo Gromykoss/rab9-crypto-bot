@@ -109,6 +109,11 @@ WHITELIST = (
     "tests/test_x_web.py",
     # 24.11 карточка t_eb994c6a: транспорт X-поиска в radar_x (unit tests в tests/test_radar_x_backend.py)
     "tests/test_radar_x_backend.py",
+    # 24.11 карточка t_eb994c6a (шаг 2а): delivery-reader — рантайм-скрипт доставки digest+alert
+    # в чат (контракт standalone-analyzer.delivery-reader-contract, сценарий помечен no-ci);
+    # юнит-тесты офлайн, GWT-карточки у скрипта нет
+    "scripts/delivery_reader.py",
+    "tests/test_delivery_reader.py",
 )
 
 
