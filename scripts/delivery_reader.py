@@ -8,10 +8,15 @@
   * sink-файл `data/analyses_out/analyses.jsonl` читается целиком (инкрементально по offset-файлу
     `data/analyses_out/delivery_offset.json`, поле `last_delivered_id` — последний доставленный id);
   * записи ПОСЛЕ offset = очередь; записи ДО offset = уже доставлены (повторной доставки нет);
-  * в чат уходит ТОЛЬКО `digest` (свод окна) и `alert` (фазы кабала/KOL); `verdict`/`reject`
-    отдельными сообщениями НЕ уходят — они либо внутри дайджеста, либо помечаются доставленными молча;
+  * в чат уходят ТОЛЬКО токены с потенциалом роста (владелец 24.11: «не нужно присылать
+    бесперспективные токены, присылай только нужные»). `verdict`-запись попадает в сообщение, если
+    одновременно: капа ≥ `MC_MIN_USD`, оценка ≥ `SCORE_MIN`, ончейн-риск низкий (🟢), умные деньги
+    набирают позицию, топ-10 не выше `TOP10_MAX_PCT`, по адресу нет кабал-алерта за сутки;
+  * `alert` (кабал/KOL) и `digest` отдельными сообщениями НЕ уходят: алерты по микрокапам — шум для
+    владельца (в sink остаются, их чинит стоп-лист в детекторе), сводка окна больше не повод для
+    сообщения — она идёт приложением к карточкам токенов;
+  * нет токенов, прошедших фильтр = пустой stdout = тишина (для no_agent-крона это «сообщения нет»);
   * не чаще одного сообщения в час (интервал настраивается `--interval`);
-  * пустое окно = пустой stdout = тишина (для no_agent-крона это «сообщения нет»);
   * при ротации/обрезании sink offset сбрасывается, но даётся не более `MAX_QUEUE` последних записей.
 
 Режимы ручного запуска (в крон не попадают):
@@ -37,11 +42,17 @@ SINK_PATH = ROOT / "data" / "analyses_out" / "analyses.jsonl"
 STATE_PATH = ROOT / "data" / "analyses_out" / "delivery_offset.json"
 LOCK_PATH = ROOT / "data" / "analyses_out" / "delivery_reader.lock"
 
-DELIVER_TYPES = ("digest", "alert")
+DELIVER_TYPES = ("digest", "alert")   # исторический список типов sink (сообщение строится иначе)
 MIN_INTERVAL_S = 3600          # «не чаще раза в час»
 MAX_QUEUE = 200                # сколько последних записей брать, если offset потерян
 MAX_RECORDS_PER_MSG = 20       # ограничение размера одного сообщения (записи)
 MAX_CHARS = 3800               # ограничение размера одного сообщения (символы)
+
+# ── фильтр «нужных» токенов (владелец 24.11: «присылай только токены, в которых видишь потенциал роста») ──
+MC_MIN_USD = 5_000_000         # порог владельца: ниже него в чат не идёт ничего
+SCORE_MIN = 85                 # оценка анализатора: тир «ХОРОШИЙ» и выше
+TOP10_MAX_PCT = 30             # концентрация у топ-10 выше — риск дампа
+POTENTIAL_LOOKBACK_S = 86400   # окно, в котором кабал-алерт по адресу отменяет «потенциал роста»
 
 
 def _now() -> float:
@@ -121,8 +132,148 @@ def _ru_signal(text: str) -> str:
     return probe
 
 
+# ── разбор verdict-записи и правило «потенциала роста» ──
+
+VERDICT_SCORE_RE = re.compile(r"(?:Оценка\s+|Score:\s*)(\d+)\s*/\s*125")
+VERDICT_MC_RE = re.compile(r"MC:\s*\$([\d.,]+)\s*([KMB]?)")
+TOP10_RE = re.compile(r"топ10=(\d+)%")
+HOLDERS_RE = re.compile(r"держатели=(\d+)")
+SM_STATS_RE = re.compile(r"SM\s+(\d+)\s+сделок\s*\((\d+)\s*пок\s*/\s*(\d+)\s*прод\)")
+KOL_RE = re.compile(r"KOL\s+(\d+)")
+PP_RE = re.compile(r"Пок/Прод:\s*([\d.]+)x")
+ACTION_RE = re.compile(r"Что делать:\s*([^\n]+)")
+POOL_RE = re.compile(r"https://dexscreener\.com/\S+")
+
+
+def _to_usd(match):
+    if not match:
+        return None
+    try:
+        value = float(match.group(1).replace(",", "").replace(" ", ""))
+    except ValueError:
+        return None
+    return value * {"K": 1e3, "M": 1e6, "B": 1e9, "": 1}[match.group(2)]
+
+
+def money(value) -> str:
+    """$161500000 → «$161,5 млн» (владелец просил расшифровку метрик, а не сырые цифры)."""
+    if value is None:
+        return "?"
+
+    def _ru(part: float) -> str:
+        return f"{part:.1f}".replace(".", ",")
+
+    if value >= 1e9:
+        return f"${_ru(value / 1e9)} млрд"
+    if value >= 1e6:
+        return f"${_ru(value / 1e6)} млн"
+    if value >= 1e3:
+        return f"${value / 1e3:.0f} тыс."
+    return f"${value:.0f}"
+
+
+def parse_token_info(row: dict):
+    """Разобрать verdict-запись в поля, по которым считается потенциал роста.
+
+    Возврат None, если запись не похожа на оценку токена (нет оценки или капы) — такие в чат не идут.
+    """
+    text = row.get("text") or ""
+    score = VERDICT_SCORE_RE.search(text)
+    mc = _to_usd(VERDICT_MC_RE.search(text))
+    if not score or mc is None:
+        return None
+    top10 = TOP10_RE.search(text)
+    holders = HOLDERS_RE.search(text)
+    sm = SM_STATS_RE.search(text)
+    kol = KOL_RE.search(text)
+    pp = PP_RE.search(text)
+    action = ACTION_RE.search(text)
+    pool = POOL_RE.search(text)
+    address = _clean(row.get("address"))
+    return {
+        "token": _clean(row.get("token")) or "?",
+        "address": address,
+        "score": int(score.group(1)),
+        "mc": mc,
+        "risk_green": "риск=🟢" in text,
+        "sm_accumulating": "Умные деньги: набор" in text,
+        "avoid": "AVOID" in text,
+        "top10": int(top10.group(1)) if top10 else None,
+        "holders": int(holders.group(1)) if holders else None,
+        "sm_deals": f"{sm.group(1)} сделок ({sm.group(2)} покупок / {sm.group(3)} продаж)" if sm else "",
+        "kol": int(kol.group(1)) if kol else None,
+        "buy_sell": pp.group(1) if pp else "",
+        "action": _clean(action.group(1)) if action else "",
+        "link": pool.group(0) if pool else (f"https://dexscreener.com/solana/{address}" if address else ""),
+    }
+
+
+def potential_blockers(info: dict, cabal: set) -> list:
+    """Причины, по которым токен НЕ идёт в чат. Пусто = идёт (вижу потенциал роста)."""
+    blockers = []
+    if info["mc"] < MC_MIN_USD:
+        blockers.append(f"капа {money(info['mc'])} ниже порога {money(MC_MIN_USD)}")
+    if info["score"] < SCORE_MIN:
+        blockers.append(f"оценка {info['score']}/125 ниже {SCORE_MIN}")
+    if info["avoid"]:
+        blockers.append("анализатор пометил AVOID (RugCheck: высокий риск)")
+    if not info["risk_green"]:
+        blockers.append("ончейн-риск не низкий (🔴)")
+    if not info["sm_accumulating"]:
+        blockers.append("умные деньги не набирают позицию")
+    if info["top10"] is not None and info["top10"] > TOP10_MAX_PCT:
+        blockers.append(f"топ-10 держат {info['top10']}% (порог {TOP10_MAX_PCT}%)")
+    if info["address"] and info["address"] in cabal:
+        blockers.append("по адресу есть кабал-алерт за сутки (признак разгона)")
+    return blockers
+
+
+def cabal_addresses(rows, now=None) -> set:
+    """Адреса, по которым за POTENTIAL_LOOKBACK_S был алерт разгона (CABAL_EXPLOSION)."""
+    moment = _now() if now is None else now
+    found = set()
+    for row in rows:
+        if row.get("type") != "alert":
+            continue
+        try:
+            ts = float(row.get("ts") or 0)
+        except (TypeError, ValueError):
+            ts = 0
+        if moment - ts > POTENTIAL_LOOKBACK_S:
+            continue
+        if "CABAL_EXPLOSION" in (row.get("text") or ""):
+            address = _clean(row.get("address"))
+            if address:
+                found.add(address)
+    return found
+
+
+def _render_token(info: dict) -> str:
+    """Карточка токена, прошедшего фильтр: факты + что советует анализатор."""
+    out = [f"{info['token']} — капа {money(info['mc'])} · оценка {info['score']}/125"]
+    facts = []
+    if info["sm_deals"]:
+        facts.append(f"умные деньги набирают ({info['sm_deals']})")
+    if info["kol"]:
+        facts.append(f"KOL-упоминаний {info['kol']}")
+    if info["holders"] is not None:
+        facts.append(f"держателей {info['holders']}")
+    if info["top10"] is not None:
+        facts.append(f"топ-10 {info['top10']}%")
+    facts.append("ончейн-риск низкий")
+    out.append("   Признаки роста: " + ", ".join(facts))
+    if info["buy_sell"]:
+        out.append(f"   Покупок/продаж за сутки: {info['buy_sell']}x")
+    if info["action"]:
+        out.append(f"   Анализатор советует: {info['action']}")
+    if info["link"]:
+        out.append(f"   Пул: {info['link']}")
+    out.append("   Вердикт: СЛЕДИТЬ — признаки роста подтверждены (скоринг, умные деньги, ончейн)")
+    return "\n".join(out)
+
+
 def _render_alert(row: dict) -> str:
-    """Один алерт кабала → понятный русский блок с вердиктом."""
+    """Один алерт кабала → понятный русский блок с вердиктом (в чат сейчас не уходит)."""
     body = (row.get("text") or "").strip()
     name = _clean(row.get("token"))
     symbol = ""
@@ -263,33 +414,24 @@ def build_queue(rows, last_delivered_id):
     return rows[-MAX_QUEUE:], False
 
 
-def render(window, delivered_count: int, skipped: int) -> str:
-    """Собрать текст сообщения для чата владельца (только digest + alert).
+def render(window, cards, checked: int) -> str:
+    """Сообщение владельцу: только токены с потенциалом роста.
 
-    Формат отчёта — человеческий (владелец 24.11: «приведи отчёт в порядок»):
-    русские формулировки фаз/риска/сигналов, вердикт по каждому алерту, сводка окна
-    расшифрована; служебная бухгалтерия очереди в чат не идёт.
+    Владелец 24.11: «не нужно присылать бесперспективные токены, присылай только нужные»;
+    24.11 (порог): «MC ≥ $5 млн». Кабал-алерты и сводка окна поводом для сообщения не являются.
     """
-    digests = [r for r in window if r.get("type") == "digest"]
-    alerts = [r for r in window if r.get("type") == "alert"]
     first_ts = window[0].get("ts") if window else None
     last_ts = window[-1].get("ts") if window else None
-
     parts = [
-        "📬 RAB9 · анализатор — отчёт за окно",
-        f"Данные: {_fmt_ts(first_ts)} – {_fmt_ts(last_ts)} · отправлено {_fmt_ts(_now())}",
-        f"Проверено записей: {len(window)} — алертов {len(alerts)}, сводок окна {len(digests)}, "
-        f"оценок/отказов без алерта {skipped}",
+        "🎯 RAB9 · анализатор — токены с потенциалом роста",
+        f"Окно: {_fmt_ts(first_ts)} – {_fmt_ts(last_ts)} · проверено оценок: {checked}, "
+        f"прошло фильтр: {len(cards)}",
+        f"Фильтр: капа ≥ {money(MC_MIN_USD)} · оценка ≥ {SCORE_MIN}/125 · ончейн-риск низкий · "
+        f"умные деньги набирают · топ-10 ≤ {TOP10_MAX_PCT}% · без кабал-алерта за сутки",
+        "",
     ]
-
-    if alerts:
-        parts += ["", "———— ⚠️ АЛЕРТЫ КАБАЛА / KOL ————"]
-        for number, row in enumerate(alerts, 1):
-            parts.append(f"{number}) {_render_alert(row)}")
-    if digests:
-        parts += ["", "———— СВОДКА ОКНА ————"]
-        for row in digests:
-            parts.append(_render_digest(row))
+    for number, (_row, info) in enumerate(cards, 1):
+        parts.append(f"{number}) {_render_token(info)}")
 
     text = "\n".join(parts).strip()
     if len(text) > MAX_CHARS:
@@ -333,17 +475,31 @@ def run(args) -> int:
         now = _now()
         interval_ok = args.force or (now - last_delivery_ts) >= float(args.interval)
 
-        deliverable = [r for r in queue if r.get("type") in DELIVER_TYPES]
+        cabal = cabal_addresses(rows, now)
+        checked = 0
+        cards = []
+        for row in queue:
+            if row.get("type") != "verdict":
+                continue
+            info = parse_token_info(row)
+            if info is None:
+                continue
+            checked += 1
+            if not potential_blockers(info, cabal):
+                cards.append((row, info))
 
-        if not deliverable:
-            # Очередь прочитана, но доставлять нечего (verdict/reject — молча).
+        if not cards:
+            # Очередь прочитана, но токенов с потенциалом роста нет — владелец просил не слать шум.
             if queue:
                 state["last_delivered_id"] = queue[-1]["id"]
             state["last_read_ts"] = now
             state["offset_lost"] = bool(offset_lost)
             save_state(state_path, state)
             if args.verbose or args.dry_run:
-                print("[SILENT] новых digest/alert нет — сообщение не отправлено")
+                print(
+                    f"[SILENT] оценок за окно: {checked}, ни одна не прошла фильтр «потенциал роста» "
+                    f"(кабал-алертов и сводок в чат не шлём)"
+                )
             return 0
 
         if not interval_ok:
@@ -352,13 +508,13 @@ def run(args) -> int:
             save_state(state_path, state)
             if args.verbose or args.dry_run:
                 wait_s = int(float(args.interval) - (now - last_delivery_ts))
-                print(f"[SILENT] интервал не истёк (ещё {wait_s} с), в очереди {len(deliverable)} записей")
+                print(f"[SILENT] интервал не истёк (ещё {wait_s} с), токенов в очереди: {len(cards)}")
             return 0
 
         window = queue[:MAX_RECORDS_PER_MSG]
-        sent_ids = {r.get("id") for r in deliverable}
-        skipped = sum(1 for r in window if r.get("type") not in DELIVER_TYPES)
-        text = render(window, len(deliverable), skipped)
+        window_ids = {r.get("id") for r in window}
+        window_cards = [(row, info) for row, info in cards if row.get("id") in window_ids]
+        text = render(window, window_cards, checked)
 
         if args.dry_run:
             print("--- DRY-RUN, состояние не меняется ---")
@@ -370,17 +526,14 @@ def run(args) -> int:
         state["last_delivered_id"] = window[-1]["id"]
         state["last_delivered_ts"] = now
         state["last_read_ts"] = now
-        state["delivered_records"] = int(state.get("delivered_records") or 0) + len(
-            [r for r in window if r.get("id") in sent_ids]
-        )
+        state["delivered_records"] = int(state.get("delivered_records") or 0) + len(window_cards)
         history = state.get("history") or []
         history.append(
             {
                 "at": now,
                 "records": len(window),
-                "delivered": len([r for r in window if r.get("id") in sent_ids]),
-                "digests": [r.get("id") for r in window if r.get("type") == "digest"],
-                "alerts": [r.get("id") for r in window if r.get("type") == "alert"],
+                "delivered": len(window_cards),
+                "tokens": [info["token"] for _row, info in window_cards],
             }
         )
         state["history"] = history[-20:]

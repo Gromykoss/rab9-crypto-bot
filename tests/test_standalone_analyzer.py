@@ -146,3 +146,32 @@ def test_accumulation_radar_no_signal_on_selling(tmp_path, monkeypatch):
     sink = Mock(); sink.write = AsyncMock(return_value="x")
     asyncio.run(am.accumulation_radar(sink))
     sink.write.assert_not_awaited()
+
+
+def test_cabal_detector_skips_known_major_mints():
+    """Стоп-лист известных минтов (владелец 24.11): у USDC/USDT/SOL пар много по природе, не кабал.
+
+    24.11 детектор дважды выдал «КАБАЛ: USD Coin ($USDC)» по настоящему USDC — ложное срабатывание.
+    Проверка офлайн: стоп-лист срабатывает ДО запроса пар в DexScreener.
+    """
+    import cabal_detector as cd
+
+    majors = (
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
+        "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",  # USDT
+        "So11111111111111111111111111111111111111112",    # Wrapped SOL
+        "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",   # mSOL
+        "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # JitoSOL
+    )
+    for mint in majors:
+        assert cd.is_known_major(mint) is True
+        result = cd.analyze(mint)
+        assert result["ok"] is True
+        assert result["phase"] == "clean" and result["risk_level"] == "low"
+        assert result["skipped"] == "known_major_mint"
+        assert result["patterns"] == []
+
+    # обычный мемкоин (тот же тест-минт, что в кабал-алертах 24.11) стоп-лист не трогает
+    assert cd.is_known_major("4u7Set7EcDjHZKtDFaY5F7fHvp4J799R2ktZSU3Npump") is False
+    assert cd.is_known_major(None) is False
+

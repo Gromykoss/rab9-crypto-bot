@@ -23,6 +23,23 @@ CABAL_STATE_FILE = os.path.join(DATA_DIR, "cabal_state.json")
 # ── KOL wallet database ──
 KOL_WALLETS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kol_wallets.json")
 
+# ── стоп-лист известных минтов (владелец 24.11: «стоп-лист известных минтов (USDC, USDT, SOL и т.п.)»).
+#    У стейблов и обёрнутых нативов десятки пар и мульти-DEX — это структура рынка, а не кабал:
+#    24.11 детектор дважды выдал «КАБАЛ: USD Coin ($USDC)» по настоящему USDC (30 пар, 5 DEX).
+#    Адреса сверены по DexScreener 24.11.2026.
+KNOWN_MAJOR_MINTS = {
+    "So11111111111111111111111111111111111111112",    # Wrapped SOL
+    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
+    "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",  # USDT
+    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",   # mSOL (Marinade)
+    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # JitoSOL
+}
+
+
+def is_known_major(address):
+    """True, если минт в стоп-листе известных токенов (алерты по ним — ложные срабатывания)."""
+    return (address or "").strip() in KNOWN_MAJOR_MINTS
+
 def load_kol_wallets():
     if os.path.exists(KOL_WALLETS_FILE):
         with open(KOL_WALLETS_FILE) as f:
@@ -215,6 +232,19 @@ def detect_cabal_explosion(address, pairs):
 # ── Main detector ──
 def analyze(address):
     """Full cabal pattern analysis."""
+    if is_known_major(address):
+        # Известный токен: пар много по природе (стейбл/обёрнутый натив) — кабала тут нет.
+        return {
+            "ok": True,
+            "token": "?",
+            "symbol": "?",
+            "address": address,
+            "patterns": [],
+            "phase": "clean",
+            "risk_level": "low",
+            "skipped": "known_major_mint",
+        }
+
     pairs = dexscreener_pairs(address)
     
     if not pairs:
