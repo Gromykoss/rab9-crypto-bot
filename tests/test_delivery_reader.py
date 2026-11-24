@@ -10,7 +10,10 @@
 6) битая строка jsonl пропускается;
 7) пустой sink = пустой stdout (крон молчит);
 8) dry-run не меняет offset-файл;
-9) размер одного сообщения ограничен (окно ≤ MAX_RECORDS_PER_MSG), остаток остаётся в очереди.
+9) размер одного сообщения ограничен (окно ≤ MAX_RECORDS_PER_MSG), остаток остаётся в очереди;
+10) отчёт читается человеком: фазы/риск/сигналы кабала по-русски, вердикт по каждому алерту,
+    ссылка на пул, сводка окна расшифрована, служебной бухгалтерии очереди нет;
+11) незнакомая форма записи отдаётся как есть (данные не теряются).
 """
 
 import importlib.util
@@ -95,14 +98,103 @@ def test_verdict_and_reject_only_is_silent(tmp_path, capsys):
 
 
 def test_alert_goes_verdict_does_not(tmp_path, capsys):
+    alert_body = (
+        "⚠️ КАБАЛ: Satoshi  Coin ($Satoshi)\n"
+        "Фаза: CABAL_EXPLOSION | Риск: high\n"
+        "  • 3+ pairs in 24h (11 total, 3 DEXes)\n"
+        "  • Volume > MC: 9.7x (pump in progress)\n"
+        "  • Price +131% in 24h"
+    )
     rc, _sink, _state_path = _run(
         tmp_path,
-        [_row("v1", "verdict", "ОТЧЁТ-НЕ-СЛАТЬ"), _row("a1", "alert", "⚠️ КАБАЛ: 3+ pairs")],
+        [_row("v1", "verdict", "ОТЧЁТ-НЕ-СЛАТЬ"), _row("a1", "alert", alert_body)],
     )
     assert rc == 0
     out = capsys.readouterr().out
-    assert "⚠️ КАБАЛ: 3+ pairs" in out
     assert "ОТЧЁТ-НЕ-СЛАТЬ" not in out
+    # алерт переписан по-русски: имя/символ, фаза, расшифровка, вердикт
+    assert "Satoshi Coin ($Satoshi)" in out                      # двойной пробел в имени убран
+    assert "взрыв кабала" in out and "риск: высокий" in out
+    assert "за сутки создано ≥3 новых пула: всего 11, площадок 3" in out
+    assert "объём за сутки в 9.7× больше капитализации" in out
+    assert "цена за сутки: +131%" in out
+    assert "Вердикт: НЕ СЛЕДИТЬ" in out
+
+
+def test_alert_kol_phase_verdict_and_pool_link(tmp_path, capsys):
+    body = "⚠️ КАБАЛ: PENGUIN ($PENGUIN)\nФаза: KOL_ACTIVATION | Риск: elevated\n  • 3+ pairs in 24h (3 total, 2 DEXes)"
+    rc, _sink, _state_path = _run(tmp_path, [_row("a1", "alert", body)], extra=["--force"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "активация KOL" in out and "риск: повышенный" in out
+    assert "Вердикт: НАБЛЮДАТЬ" in out
+    assert "https://dexscreener.com/solana/Addr111" in out       # адрес записи → ссылка на пул
+
+
+def test_unknown_alert_shape_is_relayed_verbatim(tmp_path, capsys):
+    rc, _sink, _state_path = _run(
+        tmp_path, [{"id": "a1", "ts": time.time(), "type": "alert", "token": "", "address": "", "text": "НЕФОРМАТ"}],
+        extra=["--force"],
+    )
+    assert rc == 0
+    assert "НЕФОРМАТ" in capsys.readouterr().out                 # данные не теряются
+
+
+def test_cabal_signals_translated():
+    assert dr._ru_signal("3+ pairs in 24h (30 total, 2 DEXes)") == "за сутки создано ≥3 новых пула: всего 30, площадок 2"
+    assert dr._ru_signal("Meteora preference: 2 DLMM pairs (cabal DEX)") == "предпочтение Meteora: 2 DLMM-пулов (любимая площадка кабалов)"
+    assert dr._ru_signal("Multi-DEX: meteora, pumpswap") == "торгуется сразу на нескольких площадках: meteora, pumpswap"
+    assert dr._ru_signal("Massive pair explosion: 11 pairs") == "массовое размножение пулов: 11"
+    assert dr._ru_signal("Volume > MC: 2.7x (pump in progress)") == "объём за сутки в 2.7× больше капитализации — идёт разгон"
+    assert dr._ru_signal("Price +149% in 24h") == "цена за сутки: +149%"
+    assert dr._ru_signal("Неизвестный сигнал") == "Неизвестный сигнал"   # неизвестное — как есть
+
+
+def test_digest_meta_rendered_in_russian():
+    row = {
+        "id": "d1",
+        "ts": time.time(),
+        "type": "digest",
+        "text": "Дайджест окна 4.0ч: 3 записей (verdict=1, reject=1, alert=1).",
+        "digest_meta": {
+            "window_start": 1000.0,
+            "window_end": 1000.0 + 4 * 3600,
+            "counts": {"verdict": 1, "reject": 1, "alert": 1},
+            "entries": [
+                {"type": "alert", "token": "Satoshi"},
+                {"type": "reject", "token": "?"},
+                {"type": "verdict", "token": "JENSEN"},
+            ],
+        },
+    }
+    text = dr._render_digest(row)
+    assert "Сводка за 4 ч" in text
+    assert "оценка 1, отказ 1, алерт 1" in text
+    assert "Satoshi (алерт)" in text and "JENSEN (оценка)" in text
+
+
+def test_digest_text_format_hours_from_text_when_meta_window_is_seconds():
+    row = {
+        "id": "d1",
+        "ts": time.time(),
+        "type": "digest",
+        "text": "Дайджест окна 4.0ч: 3 записей (verdict=1, reject=1, alert=1).",
+        "digest_meta": {"window_start": 1000.0, "window_end": 1057.0, "counts": {"verdict": 1, "reject": 1, "alert": 1}},
+    }
+    assert "Сводка за 4 ч" in dr._render_digest(row)             # окно берём из самого дайджеста, а не 0.0 ч
+
+
+def test_header_has_no_queue_bookkeeping(tmp_path, capsys):
+    rc, _sink, _state_path = _run(
+        tmp_path,
+        [_row("a1", "alert", "⚠️ КАБАЛ: X ($X)\nФаза: KOL_ACTIVATION | Риск: elevated"), _row("v1", "verdict", "V")],
+        extra=["--force"],
+    )
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "RAB9 · анализатор — отчёт за окно" in out
+    assert "Проверено записей: 2 — алертов 1, сводок окна 0, оценок/отказов без алерта 1" in out
+    assert "В очереди" not in out                                # служебная бухгалтерия убрана
 
 
 def test_hourly_gate_blocks_second_message(tmp_path, capsys):

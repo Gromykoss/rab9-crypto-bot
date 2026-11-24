@@ -26,6 +26,7 @@ import argparse
 import fcntl
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -53,6 +54,152 @@ def _fmt_ts(ts) -> str:
     except (TypeError, ValueError):
         return "?"
     return dt.strftime("%d.%m %H:%M UTC")
+
+
+# ── человеческий вид отчёта (владелец 24.11: «приведи отчёт в порядок») ──
+
+PHASE_RU = {
+    "CABAL_EXPLOSION": "взрыв кабала — массовое создание пулов и разгон объёма",
+    "KOL_ACTIVATION": "активация KOL — токен продвигают крупные аккаунты",
+    "PUMPFUN_WHALE_AIRDROP": "аирдроп китов на Pump.fun — раздача через кошельки-киты",
+    "MONITORING": "наблюдение",
+}
+RISK_RU = {"high": "высокий", "elevated": "повышенный", "medium": "средний", "low": "низкий"}
+PHASE_VERDICT = {
+    "CABAL_EXPLOSION": ("НЕ СЛЕДИТЬ", "идёт организованный разгон: пулы множатся, объём растёт под сброс"),
+    "KOL_ACTIVATION": ("НАБЛЮДАТЬ", "разогрев через KOL, явного разгона объёма нет"),
+    "PUMPFUN_WHALE_AIRDROP": ("НАБЛЮДАТЬ", "раздача через аирдроп китов"),
+}
+TYPE_RU = {
+    "verdict": "оценка",
+    "reject": "отказ",
+    "alert": "алерт",
+    "digest": "сводка",
+    "manual": "ручной анализ",
+}
+
+# Формулировки сигналов кабала (источник — cabal_detector.py, там они английские).
+_SIGNAL_RULES = (
+    (
+        re.compile(r"^3\+ pairs in 24h \((\d+) total, (\d+) DEXes?\)$"),
+        lambda m: f"за сутки создано ≥3 новых пула: всего {m.group(1)}, площадок {m.group(2)}",
+    ),
+    (
+        re.compile(r"^Meteora preference: (\d+) DLMM pairs \(cabal DEX\)$"),
+        lambda m: f"предпочтение Meteora: {m.group(1)} DLMM-пулов (любимая площадка кабалов)",
+    ),
+    (re.compile(r"^Multi-DEX: (.+)$"), lambda m: f"торгуется сразу на нескольких площадках: {m.group(1)}"),
+    (
+        re.compile(r"^Massive pair explosion: (\d+) pairs$"),
+        lambda m: f"массовое размножение пулов: {m.group(1)}",
+    ),
+    (
+        re.compile(r"^Volume > MC: ([\d.]+)x \(pump in progress\)$"),
+        lambda m: f"объём за сутки в {m.group(1)}× больше капитализации — идёт разгон",
+    ),
+    (re.compile(r"^Price ([+-]?[\d.]+)% in 24h$"), lambda m: f"цена за сутки: {m.group(1)}%"),
+)
+ALERT_HEAD_RE = re.compile(r"^⚠️?\s*КАБАЛ:\s*(?P<name>.+?)\s*\(\$(?P<symbol>[^)]+)\)\s*$")
+ALERT_PHASE_RE = re.compile(r"^Фаза:\s*(?P<phase>[A-Z_]+)\s*\|\s*Риск:\s*(?P<risk>\w+)")
+DIGEST_RE = re.compile(
+    r"Дайджест окна\s*([\d.]+)\s*ч:\s*(\d+)\s*записей\s*"
+    r"\(verdict=(\d+),\s*reject=(\d+),\s*alert=(\d+)\)"
+)
+
+
+def _clean(value) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
+def _ru_signal(text: str) -> str:
+    """Английский сигнал кабала → русская формулировка (неизвестный — как есть)."""
+    probe = _clean(text)
+    for pattern, build in _SIGNAL_RULES:
+        found = pattern.match(probe)
+        if found:
+            return build(found)
+    return probe
+
+
+def _render_alert(row: dict) -> str:
+    """Один алерт кабала → понятный русский блок с вердиктом."""
+    body = (row.get("text") or "").strip()
+    name = _clean(row.get("token"))
+    symbol = ""
+    phase = ""
+    risk = ""
+    signals = []
+    for line in body.splitlines():
+        probe = line.strip()
+        if not probe:
+            continue
+        found = ALERT_HEAD_RE.match(probe)
+        if found:
+            name = _clean(found.group("name")) or name
+            symbol = _clean(found.group("symbol"))
+            continue
+        found = ALERT_PHASE_RE.match(probe)
+        if found:
+            phase = found.group("phase").upper()
+            risk = found.group("risk").lower()
+            continue
+        if probe.startswith("•"):
+            signals.append(_ru_signal(probe.lstrip("•").strip()))
+
+    if not name:
+        return body                      # незнакомая форма — не переписываем, отдаём как есть
+    out = [f"{name} (${symbol})" if symbol else name]
+    if phase:
+        out.append(f"   Фаза: {PHASE_RU.get(phase, phase)} · риск: {RISK_RU.get(risk, risk or '?')}")
+    out += [f"   • {s}" for s in signals if s]
+    address = _clean(row.get("address"))
+    if address:
+        out.append(f"   Пул: https://dexscreener.com/solana/{address}")
+    verdict = PHASE_VERDICT.get(phase)
+    if verdict:
+        out.append(f"   Вердикт: {verdict[0]} — {verdict[1]}")
+    return "\n".join(out)
+
+
+def _render_digest(row: dict) -> str:
+    """Сводка окна: расшифрованные счётчики + список токенов окна."""
+    text = (row.get("text") or "").strip()
+    meta = row.get("digest_meta") or {}
+    counts = meta.get("counts") or {}
+    window_h = None
+    if meta.get("window_start") and meta.get("window_end"):
+        try:
+            window_h = (float(meta["window_end"]) - float(meta["window_start"])) / 3600
+        except (TypeError, ValueError):
+            window_h = None
+    total = sum(int(counts.get(key) or 0) for key in counts)
+
+    found = DIGEST_RE.search(text)
+    if window_h is None or window_h < 0.5:
+        # окно накопления порога измеряется секундами — берём окно, заявленное самим дайджестом
+        if found:
+            window_h = float(found.group(1))
+    if not counts:
+        if not found:
+            return text                  # незнакомая форма — отдаём как есть
+        total = int(found.group(2))
+        counts = {"verdict": int(found.group(3)), "reject": int(found.group(4)), "alert": int(found.group(5))}
+
+    window_text = f"{window_h:.1f} ч".replace(".0 ч", " ч") if window_h is not None else "окно"
+    parts = [f"Сводка за {window_text}: записей {total} — " + ", ".join(
+        f"{TYPE_RU.get(key, key)} {int(counts.get(key) or 0)}" for key in ("verdict", "reject", "alert")
+    )]
+    entries = [e for e in (meta.get("entries") or []) if isinstance(e, dict)]
+    tokens = []
+    for entry in entries[:6]:
+        token = _clean(entry.get("token"))
+        if not token or token == "?":
+            continue
+        entry_type = str(entry.get("type") or "?")
+        tokens.append(f"{token} ({TYPE_RU.get(entry_type, entry_type)})")
+    if tokens:
+        parts.append("   В окне: " + ", ".join(tokens))
+    return "\n".join(parts)
 
 
 def read_sink(path: Path):
@@ -117,26 +264,32 @@ def build_queue(rows, last_delivered_id):
 
 
 def render(window, delivered_count: int, skipped: int) -> str:
-    """Собрать текст сообщения для чата владельца (только digest + alert)."""
+    """Собрать текст сообщения для чата владельца (только digest + alert).
+
+    Формат отчёта — человеческий (владелец 24.11: «приведи отчёт в порядок»):
+    русские формулировки фаз/риска/сигналов, вердикт по каждому алерту, сводка окна
+    расшифрована; служебная бухгалтерия очереди в чат не идёт.
+    """
     digests = [r for r in window if r.get("type") == "digest"]
     alerts = [r for r in window if r.get("type") == "alert"]
     first_ts = window[0].get("ts") if window else None
     last_ts = window[-1].get("ts") if window else None
 
     parts = [
-        "📬 RAB9 · анализатор → доставка",
-        f"Окно: {_fmt_ts(first_ts)} – {_fmt_ts(last_ts)}",
-        f"В очереди: {len(window)} записей (дайджестов: {len(digests)}, алертов: {len(alerts)}); "
-        f"вердиктов/отказов без отдельного сообщения: {skipped}",
+        "📬 RAB9 · анализатор — отчёт за окно",
+        f"Данные: {_fmt_ts(first_ts)} – {_fmt_ts(last_ts)} · отправлено {_fmt_ts(_now())}",
+        f"Проверено записей: {len(window)} — алертов {len(alerts)}, сводок окна {len(digests)}, "
+        f"оценок/отказов без алерта {skipped}",
     ]
-    if digests:
-        parts += ["", "———— ДАЙДЖЕСТ ЗА ОКНО ————"]
-        for row in digests:
-            parts.append((row.get("text") or "").strip())
+
     if alerts:
-        parts += ["", "———— ⚠️ АЛЕРТЫ (кабал/KOL) ————"]
-        for row in alerts:
-            parts.append((row.get("text") or "").strip())
+        parts += ["", "———— ⚠️ АЛЕРТЫ КАБАЛА / KOL ————"]
+        for number, row in enumerate(alerts, 1):
+            parts.append(f"{number}) {_render_alert(row)}")
+    if digests:
+        parts += ["", "———— СВОДКА ОКНА ————"]
+        for row in digests:
+            parts.append(_render_digest(row))
 
     text = "\n".join(parts).strip()
     if len(text) > MAX_CHARS:
