@@ -131,11 +131,23 @@ def test_digest_and_alert_are_not_delivered(tmp_path, capsys):
 
 
 def test_low_cap_token_archived(tmp_path, capsys):
-    # владелец 24.11: «не нужно присылать бесперспективные токены» + порог MC ≥ $5 млн
+    # владелец 24.11: «не нужно присылать бесперспективные токены» + порог MC ≥ $500 тыс.
     rc, _sink, state_path = _run(tmp_path, [_good("v1", token="DUVAL", mc="$102K", score=90)])
     assert rc == 0
     assert capsys.readouterr().out == ""
     assert _state(state_path)["last_delivered_id"] == "v1"
+
+
+def test_cap_threshold_is_500k(tmp_path, capsys):
+    """Порог владельца: $5 млн → $500 тыс. (24.11, его реплика «согласен, опустить до 500 тыс.»)."""
+    assert dr.MC_MIN_USD == 500_000
+    assert dr.money(dr.MC_MIN_USD) == "$500 тыс."
+    rc, _sink, _state_path = _run(tmp_path, [_good("v1", token="OKC", mc="$520K")])
+    assert rc == 0
+    assert "OKC" in capsys.readouterr().out                  # 520 тыс. — уже проходит
+    rc, _sink, _state_path = _run(tmp_path, [_good("v2", token="LOWC", mc="$480K")])
+    assert rc == 0
+    assert capsys.readouterr().out == ""                     # 480 тыс. — ещё нет
 
 
 def test_big_cap_but_avoid_and_red_risk_archived(tmp_path, capsys):
