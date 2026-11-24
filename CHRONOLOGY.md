@@ -937,3 +937,4 @@ n8n-вебхук перестал передавать сигналы из Ме�
 - **23.11.2026 03:16** — feat(burnie): X-чтение через веб-сессию (cookies → GraphQL x.com) вместо платного X API (`b1a4f54`)
 - **23.11.2026 03:19** — chore(spec-drift): write back SHA b1a4f54 for X-web-read intents (03:10, 03:16) (`13c8967`)
 - **23.11.2026 03:20** — chore: CHRONOLOGY auto-append (write-back 13c8967) (`15f6d5b`)
+- **24.11.2026 07:25** — feat(radar_x): RADAR_X_BACKEND=off — выключение платного X API флагом (skip, нейтральный social-weight) (`a2e5241`)
