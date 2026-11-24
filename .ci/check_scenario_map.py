@@ -119,6 +119,11 @@ WHITELIST = (
     # msf_dedupe.DEDUPE_PATH уводятся в tmp_path на каждый тест), repo-level
     # тест-инфраструктура, не принадлежит ни одному scenario-домену
     "tests/conftest.py",
+    # 24.11 решение владельца через fleet-шину (гейты фильтра доставки не трогать 3 суток,
+    # 27.11 — сводка по гейтам): gate-report — read-only рантайм-скрипт статистики гейтов,
+    # ничего не меняет и не принадлежит scenario-домену (юнит-тесты офлайн)
+    "scripts/gate_report.py",
+    "tests/test_gate_report.py",
 )
 
 
