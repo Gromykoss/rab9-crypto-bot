@@ -7,11 +7,27 @@ Usage: python3 radar_x.py "token_name"
 import json
 import sys
 import os
+import time
+from pathlib import Path
 from requests_oauthlib import OAuth1
 import requests
 
 TIMEOUT = 10
 MAX_RESULTS = 10
+
+# ── Транспорт X-поиска (карточка t_eb994c6a, 24.11.2026) ────────────────────
+#   off — платный X API выключен, ни одного запроса наружу (значение по умолчанию);
+#   api — платный X API v2 (OAuth1, приложение HermesRAB2);
+#   web — веб-сессия x.com (x_web.py), кредиты X API не расходуются.
+# Задаётся env/config-флагом RADAR_X_BACKEND (в .env: RADAR_X_BACKEND=off).
+BACKENDS = ("off", "api", "web")
+DEFAULT_BACKEND = "off"
+
+ROOT_DIR = Path(__file__).resolve().parent
+# Темп веб-поиска (шаг 2б): не больше WEB_MAX_PER_HOUR поисков в скользящий час.
+WEB_MAX_PER_HOUR = int(os.environ.get("RADAR_X_WEB_MAX_PER_HOUR", "20"))
+WEB_RATE_PATH = ROOT_DIR / "data" / "radar_x_web_rate.json"
+WEB_STOP_PATH = ROOT_DIR / "data" / "radar_x_web_stop.json"
 
 TRACKED_INFLUENCERS = [
     "aeyakovenko", "elonmusk", "Ansem", "blknoiz06", "0xMert_", "rajgokal",
@@ -29,6 +45,44 @@ def is_spam_text(text: str) -> bool:
     if any(p.lower() in text_lower for p in SPAM_PATTERNS):
         return True
     return "moonshot" in text_lower and ("vote" in text_lower or "voted" in text_lower)
+
+
+def backend() -> str:
+    """Активный транспорт X-поиска: env → config(.env) → DEFAULT_BACKEND."""
+    raw = (os.environ.get("RADAR_X_BACKEND") or "").strip().lower()
+    if raw not in BACKENDS:
+        try:
+            from config import RADAR_X_BACKEND as cfg_backend
+
+            raw = str(cfg_backend).strip().lower()
+        except Exception:
+            raw = ""
+    return raw if raw in BACKENDS else DEFAULT_BACKEND
+
+
+def enabled() -> bool:
+    """Есть ли транспорт вообще: off — ни одного запроса наружу."""
+    return backend() != "off"
+
+
+def _off_result(query: str) -> dict:
+    """Нейтральный снимок при выключенном транспорте: ни сети, ни кеша.
+
+    ok=False + cacheable=False: social-weight анализатора получает пустой
+    список постов → вердикт нейтральный (confirmed=False), кеш не растёт.
+    """
+    return {
+        "ok": False,
+        "query": query,
+        "posts": [],
+        "post_records": [],
+        "influencers": [],
+        "engagement": {},
+        "count": 0,
+        "cacheable": False,
+        "api_called": False,
+        "backend": "off",
+    }
 
 
 def _load_oauth():
@@ -63,6 +117,20 @@ def search_x(query: str) -> dict:
                 kb_influencers.append(
                     f"⚠️ KB-HISTORICAL (unverified): @{inf['handle']} ({inf['role']}) — {inf['evidence']} [CHECK: did they actually post?]"
                 )
+
+    backend = os.environ.get("RADAR_X_BACKEND", "api").strip().lower()
+    if backend == "off":
+        # RADAR_X_BACKEND=off: платный X API выключен флагом (директива 24.11).
+        # Skip без вызова api.x.com; ok=False + пустые posts ->
+        # classify_from_radar даёт нейтральный social-weight, пенальти нет,
+        # кэш не пишем (cacheable=False).
+        return {
+            "ok": False, "query": query,
+            "posts": [], "post_records": [], "influencers": kb_influencers,
+            "engagement": {}, "count": 0,
+            "cacheable": False, "api_called": False,
+            "backend": "off", "skipped": True,
+        }
 
     if not auth:
         # Return KB data only — не кешируем как успешный API-поиск
