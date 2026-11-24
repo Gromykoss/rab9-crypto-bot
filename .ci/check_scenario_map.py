@@ -107,6 +107,8 @@ WHITELIST = (
     # 23.11 ops runtime без scenario-карточек: веб-читалка X (unit tests в tests/test_x_web.py)
     "x_web.py",
     "tests/test_x_web.py",
+    # 24.11 карточка t_eb994c6a: транспорт X-поиска в radar_x (unit tests в tests/test_radar_x_backend.py)
+    "tests/test_radar_x_backend.py",
 )
 
 

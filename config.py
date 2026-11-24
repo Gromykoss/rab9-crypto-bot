@@ -40,6 +40,14 @@ SOCIAL_NEGATIVE_PRIORITY_PENALTY = float(os.getenv("SOCIAL_NEGATIVE_PRIORITY_PEN
 RADAR_X_CACHE_TTL_H = float(os.getenv("RADAR_X_CACHE_TTL_H", "6"))
 RADAR_X_CACHE_MAX = int(os.getenv("RADAR_X_CACHE_MAX", "200"))
 
+# Транспорт X-поиска (карточка t_eb994c6a, 24.11.2026): off|api|web.
+#   off — платный X API выключен, ни одного запроса наружу (по умолчанию: защита от сжигания кредитов);
+#   api — платный X API v2 (OAuth1, приложение HermesRAB2);
+#   web — веб-сессия x.com (x_web.py), кредиты X API не расходуются.
+RADAR_X_BACKEND = (os.getenv("RADAR_X_BACKEND", "off") or "off").strip().lower()
+if RADAR_X_BACKEND not in {"off", "api", "web"}:
+    RADAR_X_BACKEND = "off"
+
 ALERT_COOLDOWN_SECONDS = int(os.getenv("ALERT_COOLDOWN_SECONDS", "3600"))
 LEGACY_WATCHLIST_ALERTS_ENABLED = os.getenv("LEGACY_WATCHLIST_ALERTS_ENABLED", "false").lower() in {
     "1",

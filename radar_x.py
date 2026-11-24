@@ -103,12 +103,9 @@ def _load_kb():
     return {}
 
 
-def search_x(query: str) -> dict:
-    """Search X API v2 + check influencer knowledge base."""
-    auth = _load_oauth()
+def _kb_influencers(query: str) -> list[str]:
+    """Исторический бэкграунд инфлюенсеров из базы знаний (без сети)."""
     kb = _load_kb()
-
-    # Check knowledge base for known influencer backing
     kb_influencers = []
     query_upper = query.upper()
     for token_name, data in kb.items():
@@ -117,31 +114,11 @@ def search_x(query: str) -> dict:
                 kb_influencers.append(
                     f"⚠️ KB-HISTORICAL (unverified): @{inf['handle']} ({inf['role']}) — {inf['evidence']} [CHECK: did they actually post?]"
                 )
+    return kb_influencers
 
-    backend = os.environ.get("RADAR_X_BACKEND", "api").strip().lower()
-    if backend == "off":
-        # RADAR_X_BACKEND=off: платный X API выключен флагом (директива 24.11).
-        # Skip без вызова api.x.com; ok=False + пустые posts ->
-        # classify_from_radar даёт нейтральный social-weight, пенальти нет,
-        # кэш не пишем (cacheable=False).
-        return {
-            "ok": False, "query": query,
-            "posts": [], "post_records": [], "influencers": kb_influencers,
-            "engagement": {}, "count": 0,
-            "cacheable": False, "api_called": False,
-            "backend": "off", "skipped": True,
-        }
 
-    if not auth:
-        # Return KB data only — не кешируем как успешный API-поиск
-        return {
-            "ok": True, "query": query,
-            "posts": [], "post_records": [], "influencers": kb_influencers,
-            "engagement": {}, "count": 0,
-            "cacheable": False, "api_called": False,
-        }
-
-    clean_query = f"{query} -is:retweet"[:500]
+def _shape_v2_result(clean_query: str, raw_posts: list, users: dict, kb_influencers: list[str]) -> dict:
+    """Посты в форме X API v2 → снимок радара (один шейпер на api и web)."""
     posts = []
     post_records = []
     live_influencers = []
@@ -151,66 +128,31 @@ def search_x(query: str) -> dict:
     kabal_warnings = []
     large_mention_count = 0
 
-    api_ok = False
-    try:
-        # user.fields: public_metrics (followers) + verified — вес аккаунта для KOL/catalyst
-        # tweet.fields: referenced_tweets — RT/quote/reply к офиц. аккаунту
-        r = requests.get(
-            "https://api.x.com/2/tweets/search/recent",
-            params={
-                "query": clean_query, "max_results": MAX_RESULTS,
-                "tweet.fields": "created_at,author_id,public_metrics,referenced_tweets,in_reply_to_user_id",
-                # 22.11.2026: expansion-объекты платные — оставляем только author_id
-                # (вес аккаунта); referenced_tweets.id код не использует.
-                "expansions": "author_id",
-                "user.fields": "username,public_metrics,verified,verified_type",
-            },
-            auth=auth, timeout=TIMEOUT,
-        )
-        api_ok = bool(r.ok)
-        if r.ok:
-            data = r.json()
-            users = {u["id"]: u for u in data.get("includes", {}).get("users", [])}
-            for t in data.get("data", []):
-                author_id = t.get("author_id", "")
-                user = users.get(author_id, {})
-                username = user.get("username", "?")
-                followers = user.get("public_metrics", {}).get("followers_count", 0)
-                if followers >= 50000:
-                    large_mention_count += 1
-                text = t.get("text", "")[:200]
-                if is_spam_text(text):
-                    spam_count += 1
-                    continue  # skip spam vote-begging
-                metrics = t.get("public_metrics", {})
-                likes = metrics.get("like_count", 0)
-                rt = metrics.get("retweet_count", 0)
-                total_likes += likes
-                total_rt += rt
-                post_str = f"@{username} ({followers:,}): {text}"
-                if likes or rt:
-                    post_str += f" [{likes}♥ {rt}↻]"
-                posts.append(post_str)
-                post_records.append({"username": username, "text": text})
-                if username.lower() in [h.lower() for h in TRACKED_INFLUENCERS]:
-                    live_influencers.append(
-                        f"⭐ LIVE: @{username} ({followers:,} followers): {text[:120]}"
-                    )
-    except Exception:
-        api_ok = False
-
-    if not api_ok:
-        return {
-            "ok": False,
-            "query": clean_query,
-            "posts": [],
-            "post_records": [],
-            "influencers": kb_influencers,
-            "engagement": {},
-            "count": 0,
-            "cacheable": False,
-            "api_called": True,
-        }
+    for t in raw_posts:
+        author_id = t.get("author_id", "")
+        user = users.get(author_id, {})
+        username = user.get("username", "?")
+        followers = user.get("public_metrics", {}).get("followers_count", 0)
+        if followers >= 50000:
+            large_mention_count += 1
+        text = t.get("text", "")[:200]
+        if is_spam_text(text):
+            spam_count += 1
+            continue  # skip spam vote-begging
+        metrics = t.get("public_metrics", {})
+        likes = metrics.get("like_count", 0)
+        rt = metrics.get("retweet_count", 0)
+        total_likes += likes
+        total_rt += rt
+        post_str = f"@{username} ({followers:,}): {text}"
+        if likes or rt:
+            post_str += f" [{likes}♥ {rt}↻]"
+        posts.append(post_str)
+        post_records.append({"username": username, "text": text})
+        if username.lower() in [h.lower() for h in TRACKED_INFLUENCERS]:
+            live_influencers.append(
+                f"⭐ LIVE: @{username} ({followers:,} followers): {text[:120]}"
+            )
 
     # Merge KB + live influencers
     all_influencers = kb_influencers + live_influencers
@@ -243,8 +185,216 @@ def search_x(query: str) -> dict:
     }
 
 
+def search_x(query: str) -> dict:
+    """Снимок X по запросу. Транспорт — по RADAR_X_BACKEND (off|api|web)."""
+    mode = backend()
+    if mode == "off":
+        # Платный X API выключен флагом (директива владельца 24.11, карточка t_eb994c6a).
+        # Ни одного запроса наружу; ok=False + пустые posts → classify_from_radar
+        # даёт нейтральный social-weight, пенальти нет, кэш не пишется.
+        return _off_result(query)
+    kb_influencers = _kb_influencers(query)
+    if mode == "web":
+        return _search_x_web(query, kb_influencers)
+    return _search_x_api(query, kb_influencers)
+
+
+def _api_fail(clean_query: str, kb_influencers: list[str]) -> dict:
+    return {
+        "ok": False,
+        "query": clean_query,
+        "posts": [],
+        "post_records": [],
+        "influencers": kb_influencers,
+        "engagement": {},
+        "count": 0,
+        "cacheable": False,
+        "api_called": True,
+        "backend": "api",
+    }
+
+
+def _search_x_api(query: str, kb_influencers: list[str]) -> dict:
+    """Платный X API v2 (OAuth1). Без кредов — только KB, ни одного запроса."""
+    auth = _load_oauth()
+    if not auth:
+        # Return KB data only — не кешируем как успешный API-поиск
+        return {
+            "ok": True, "query": query,
+            "posts": [], "post_records": [], "influencers": kb_influencers,
+            "engagement": {}, "count": 0,
+            "cacheable": False, "api_called": False, "backend": "api",
+        }
+
+    clean_query = f"{query} -is:retweet"[:500]
+    try:
+        # user.fields: public_metrics (followers) + verified — вес аккаунта для KOL/catalyst
+        # tweet.fields: referenced_tweets — RT/quote/reply к офиц. аккаунту
+        r = requests.get(
+            "https://api.x.com/2/tweets/search/recent",
+            params={
+                "query": clean_query, "max_results": MAX_RESULTS,
+                "tweet.fields": "created_at,author_id,public_metrics,referenced_tweets,in_reply_to_user_id",
+                # 22.11.2026: expansion-объекты платные — оставляем только author_id
+                # (вес аккаунта); referenced_tweets.id код не использует.
+                "expansions": "author_id",
+                "user.fields": "username,public_metrics,verified,verified_type",
+            },
+            auth=auth, timeout=TIMEOUT,
+        )
+    except Exception:
+        return _api_fail(clean_query, kb_influencers)
+    if not r.ok:
+        return _api_fail(clean_query, kb_influencers)
+    data = r.json()
+    users = {u["id"]: u for u in data.get("includes", {}).get("users", [])}
+    out = _shape_v2_result(clean_query, data.get("data", []), users, kb_influencers)
+    out["backend"] = "api"
+    return out
+
+
+# ── Веб-транспорт (шаг 2б): x_web.py + темп + стоп на challenge/401/403 ──
+_STOP_MARKERS = ("challenge", "verify you", "suspicious", "locked", "rate limit")
+
+
+def _web_state_load() -> dict:
+    try:
+        data = json.loads(WEB_RATE_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _web_state_save(state: dict) -> None:
+    try:
+        WEB_RATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = WEB_RATE_PATH.with_suffix(".tmp")
+        tmp.write_text(json.dumps(state), encoding="utf-8")
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, WEB_RATE_PATH)
+    except OSError:
+        pass
+
+
+def web_stop_reason() -> str:
+    """Причина активного стопа веб-поиска или пустая строка (для докладов)."""
+    try:
+        state = json.loads(WEB_STOP_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    if isinstance(state, dict) and state.get("stopped"):
+        return str(state.get("reason") or "stopped")
+    return ""
+
+
+def _web_mark_stopped(reason: str, status: int | None = None) -> None:
+    """Стоп до ручного снятия: data/radar_x_web_stop.json (доклад в шину)."""
+    try:
+        WEB_STOP_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = WEB_STOP_PATH.with_suffix(".tmp")
+        tmp.write_text(
+            json.dumps(
+                {"stopped": True, "reason": str(reason)[:300], "status": status, "ts": time.time()}
+            ),
+            encoding="utf-8",
+        )
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, WEB_STOP_PATH)
+    except OSError:
+        pass
+
+
+def _web_rate_reserve() -> tuple[bool, str]:
+    """Зарезервировать слот поиска: ≤ WEB_MAX_PER_HOUR в скользящий час."""
+    import fcntl
+
+    if web_stop_reason():
+        return False, "stopped"
+    now = time.time()
+    lock_path = WEB_RATE_PATH.with_suffix(".lock")
+    try:
+        WEB_RATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(lock_path, "a+") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                state = _web_state_load()
+                hits = [float(x) for x in (state.get("hits") or []) if now - float(x) < 3600]
+                if len(hits) >= WEB_MAX_PER_HOUR:
+                    return False, "rate_limit"
+                hits.append(now)
+                state["hits"] = hits
+                _web_state_save(state)
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
+    except OSError:
+        state = _web_state_load()
+        hits = [float(x) for x in (state.get("hits") or []) if now - float(x) < 3600]
+        if len(hits) >= WEB_MAX_PER_HOUR:
+            return False, "rate_limit"
+        hits.append(now)
+        state["hits"] = hits
+        _web_state_save(state)
+    return True, "ok"
+
+
+def _web_fail(clean_query: str, kb_influencers: list[str], err: str, status: int | None) -> dict:
+    text = str(err or "нет ответа")[:300]
+    if status in (401, 403, 429) or any(m in text.lower() for m in _STOP_MARKERS):
+        _web_mark_stopped(text, status)
+    return {
+        "ok": False,
+        "query": clean_query,
+        "posts": [],
+        "post_records": [],
+        "influencers": kb_influencers,
+        "engagement": {},
+        "count": 0,
+        "cacheable": False,
+        "api_called": True,
+        "backend": "web",
+        "error": text,
+    }
+
+
+def _search_x_web(query: str, kb_influencers: list[str]) -> dict:
+    """Веб-сессия x.com (x_web.py): кредиты X API не расходуются, темп ограничен."""
+    clean_query = f"{query} -is:retweet"[:500]
+    allowed, why = _web_rate_reserve()
+    if not allowed:
+        return {
+            "ok": False,
+            "query": clean_query,
+            "posts": [],
+            "post_records": [],
+            "influencers": kb_influencers,
+            "engagement": {},
+            "count": 0,
+            "cacheable": False,
+            "api_called": False,
+            "backend": "web",
+            "skipped": why,
+        }
+    try:
+        import x_web
+
+        code, payload, err = x_web.search_recent(clean_query, count=MAX_RESULTS)
+    except Exception as exc:
+        return _web_fail(clean_query, kb_influencers, f"{type(exc).__name__}: {exc}", None)
+    if code != 0:
+        return _web_fail(clean_query, kb_influencers, err, code)
+    users = {
+        str(u.get("id")): u for u in ((payload or {}).get("includes") or {}).get("users", [])
+    }
+    out = _shape_v2_result(clean_query, (payload or {}).get("data") or [], users, kb_influencers)
+    out["backend"] = "web"
+    return out
+
+
 def lookup_account(username: str) -> dict | None:
     """Look up X account metrics by username."""
+    if not enabled():
+        # RADAR_X_BACKEND=off: платный X API выключен, профиль не запрашиваем (24.11).
+        return None
     auth = _load_oauth()
     if not auth:
         return None
