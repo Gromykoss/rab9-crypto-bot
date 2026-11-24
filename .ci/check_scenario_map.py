@@ -114,6 +114,11 @@ WHITELIST = (
     # юнит-тесты офлайн, GWT-карточки у скрипта нет
     "scripts/delivery_reader.py",
     "tests/test_delivery_reader.py",
+    # 24.11 карточка t_9d4635fe: общий tests/conftest.py — hermetic-изоляция
+    # персистентного состояния прода (кэш radar_x_per_token через env и
+    # msf_dedupe.DEDUPE_PATH уводятся в tmp_path на каждый тест), repo-level
+    # тест-инфраструктура, не принадлежит ни одному scenario-домену
+    "tests/conftest.py",
 )
 
 

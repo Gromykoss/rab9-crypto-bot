@@ -505,6 +505,9 @@ def test_social_deferred_repicks_queue_radar_after_ttl(tmp_path, monkeypatch):
     from unittest.mock import AsyncMock
 
     am = _paths(monkeypatch, tmp_path)
+    # Кэш radar_x_per_token изолируется в tmp_path: без этого put_cached ниже
+    # (200 записей flood*) пишет в боевой data/radar_x_per_token.json.
+    _radar_cache_path(monkeypatch, tmp_path)
     import msf_analysis
     from config import RADAR_X_CACHE_TTL_H
     from operators.radar_x_cache import put_cached
